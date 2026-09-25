@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArseFinland FanSphere | Live Sports Fan Community</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              red: '#DC2626',
+              dark: '#0B1120',
+              card: '#1E293B',
+              border: '#334155',
+              gold: '#F59E0B'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-[#0B1120] text-slate-100 h-screen h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden selection:bg-red-600 selection:text-white">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shrink-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+      <!-- Logo & Club Branding -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center shadow-md shadow-red-600/30 font-bold text-lg text-white">
+          ⚽
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-base tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-rose-300 to-amber-300">
+              ArseFinland
+            </span>
+            <span class="bg-red-950 text-red-400 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-red-800/50">
+              FanSphere
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block leading-none">The Meeting Place for Football Fans in Finland</p>
+        </div>
+      </div>
+
+      <!-- Right Controls: Profile & Live Status -->
+      <div class="flex items-center gap-2.5">
+        <!-- Live Fans Pill -->
+        <div class="flex items-center gap-1.5 bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 text-xs font-medium px-2.5 py-1 rounded-full">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+          <span id="onlineCountBadge">24 Fans Online</span>
+        </div>
+
+        <!-- Sound Toggle -->
+        <button id="soundToggleBtn" title="Toggle audio alerts" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <!-- User Profile Pill / Switcher -->
+        <button id="openProfileModalBtn" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded-lg text-xs transition">
+          <span id="navUserBadge" class="w-2 h-2 rounded-full bg-red-500"></span>
+          <span id="navUsername" class="font-medium text-slate-200">GunnerFIN</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE NAVIGATION TABS (visible only on small screens) -->
+  <div class="lg:hidden bg-slate-900 border-b border-slate-800 flex justify-around text-xs font-semibold py-1.5 px-2 shrink-0">
+    <button id="mobileTabForum" class="flex-1 py-1.5 px-3 rounded-lg text-center text-red-400 bg-slate-800 flex items-center justify-center gap-1.5">
+      <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+      <span>Forum Feed</span>
+    </button>
+    <button id="mobileTabChat" class="flex-1 py-1.5 px-3 rounded-lg text-center text-slate-400 flex items-center justify-center gap-1.5">
+      <i data-lucide="messages-square" class="w-3.5 h-3.5"></i>
+      <span>Live Fan Chat</span>
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+    </button>
+  </div>
+
+  <!-- MAIN ZERO-SCROLL LAYOUT -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 overflow-hidden">
+
+    <!-- ================= COLUMN 1: LEFT SIDEBAR (COMMUNITY & TOPICS) ================= -->
+    <aside id="leftSidebar" class="hidden lg:flex lg:col-span-3 flex-col gap-2.5 h-full min-h-0 overflow-hidden">
+      
+      <!-- Fan Club Card (Compact) -->
+      <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/80 shadow-sm shrink-0">
+        <div class="flex items-center gap-2.5 mb-2">
+          <div class="text-2xl">🔴⚪</div>
+          <div class="min-w-0">
+            <h2 class="font-bold text-slate-100 text-sm truncate">ArseFinland Official</h2>
+            <p class="text-[10px] text-slate-400 truncate">Finnish Arsenal Supporters Club</p>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-300 leading-snug mb-2.5">
+          Connecting Finnish supporters with real-time match chatter, tactical analysis, and active football debate.
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-center text-xs">
+          <div class="bg-slate-900/70 py-1.5 px-2 rounded-xl border border-slate-700/50">
+            <span class="block font-bold text-red-400 text-xs">1,580+</span>
+            <span class="text-slate-400 text-[10px]">Finnish Members</span>
+          </div>
+          <div class="bg-slate-900/70 py-1.5 px-2 rounded-xl border border-slate-700/50">
+            <span class="block font-bold text-emerald-400 text-xs">Top 1</span>
+            <span class="text-slate-400 text-[10px]">EPL Fan Hub</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories / Filter Tags (Compact Grid) -->
+      <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/80 shadow-sm shrink-0">
+        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i data-lucide="tag" class="w-3 h-3 text-red-400"></i>
+          Discussions By Topic
+        </h3>
+        <nav id="categoryFilters" class="grid grid-cols-2 gap-1.5 text-[11px]">
+          <button data-tag="All" class="tag-filter-btn col-span-2 flex items-center justify-between px-2.5 py-1.5 rounded-lg font-medium bg-red-600/20 text-red-400 border border-red-500/30 transition">
+            <span>🔥 All Topics</span>
+            <span id="tagCountAll" class="bg-slate-900/80 text-slate-300 px-1.5 py-0.5 rounded-full text-[9px]">5</span>
+          </button>
+          <button data-tag="Match Thread" class="tag-filter-btn flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-300 hover:bg-slate-700/50 transition">
+            <span>🔴 Match</span>
+          </button>
+          <button data-tag="Meetups" class="tag-filter-btn flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-300 hover:bg-slate-700/50 transition">
+            <span>📍 Meetups</span>
+          </button>
+          <button data-tag="Tactics" class="tag-filter-btn flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-300 hover:bg-slate-700/50 transition">
+            <span>📋 Tactics</span>
+          </button>
+          <button data-tag="Transfers" class="tag-filter-btn flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-300 hover:bg-slate-700/50 transition">
+            <span>✈️ Transfers</span>
+          </button>
+          <button data-tag="Memes" class="tag-filter-btn col-span-2 flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-300 hover:bg-slate-700/50 transition">
+            <span>😂 Memes & Banter</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Community Guidelines (Compact) -->
+      <div class="bg-slate-800/80 rounded-2xl p-3 border border-slate-700/80 shadow-sm shrink-0">
+        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+          <i data-lucide="shield-check" class="w-3 h-3 text-red-400"></i>
+          Community Guidelines
+        </h3>
+        <ul class="space-y-1 text-[11px] text-slate-300">
+          <li class="flex items-center gap-1.5">
+            <span class="text-red-400 font-bold">•</span>
+            <span class="truncate">Respectful football debate.</span>
+          </li>
+          <li class="flex items-center gap-1.5">
+            <span class="text-red-400 font-bold">•</span>
+            <span class="truncate">Tag discussion topics appropriately.</span>
+          </li>
+          <li class="flex items-center gap-1.5">
+            <span class="text-red-400 font-bold">•</span>
+            <span class="truncate">Welcome all Finnish & global supporters!</span>
+          </li>
+        </ul>
+      </div>
+
+    </aside>
+
+    <!-- ================= COLUMN 2: CENTER (REDDIT-LIKE FORUM, PAGINATED ZERO-SCROLL) ================= -->
+    <section id="centerForum" class="col-span-1 lg:col-span-4 flex flex-col gap-2 h-full min-h-0 overflow-hidden">
+      
+      <!-- Forum Top Bar: Create Post CTA & Sort Controls -->
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm space-y-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-red-600/30 text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
+            ✍️
+          </div>
+          <button id="openCreatePostBtn" class="flex-1 bg-slate-900/80 hover:bg-slate-900 text-slate-400 hover:text-slate-200 text-left px-3 py-1.5 rounded-xl border border-slate-700 text-xs transition flex items-center justify-between">
+            <span class="truncate">Share thoughts, tactics, news...</span>
+            <span class="bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-md shadow-sm ml-1 shrink-0">Post</span>
+          </button>
+        </div>
+
+        <!-- Sorting & Filter Active Bar -->
+        <div class="flex items-center justify-between pt-1.5 border-t border-slate-700/60 flex-wrap gap-1.5 text-xs">
+          <!-- Sort Tabs -->
+          <div class="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/60 text-[11px]">
+            <button id="sortHotBtn" class="sort-tab-btn px-2.5 py-1 rounded-md font-medium bg-red-600 text-white flex items-center gap-1 transition shadow-sm">
+              <i data-lucide="flame" class="w-3 h-3"></i>
+              <span>Hot</span>
+            </button>
+            <button id="sortNewBtn" class="sort-tab-btn px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 transition">
+              <i data-lucide="clock" class="w-3 h-3"></i>
+              <span>New</span>
+            </button>
+            <button id="sortTopBtn" class="sort-tab-btn px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 transition">
+              <i data-lucide="award" class="w-3 h-3"></i>
+              <span>Top</span>
+            </button>
+          </div>
+
+          <!-- Active Tag Badge / Reset -->
+          <div id="activeTagIndicator" class="hidden text-[10px] text-slate-400 items-center gap-1 bg-slate-700/50 px-2 py-0.5 rounded-md">
+            <span>Filter:</span>
+            <span id="activeTagName" class="text-red-400 font-semibold truncate max-w-[80px]">Match</span>
+            <button id="clearTagFilterBtn" class="text-slate-400 hover:text-white font-bold ml-0.5">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feed Container: Compact Post List (Fitted to Viewport) -->
+      <div id="postsList" class="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+        <!-- Posts will be injected here dynamically -->
+        <div class="text-center py-8 text-slate-500 my-auto">
+          <div class="animate-spin w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+          <p class="text-xs">Loading discussions...</p>
+        </div>
+      </div>
+
+      <!-- Pagination Controls (Zero-Scroll Browsing) -->
+      <div id="postsPagination" class="flex items-center justify-between px-3 py-1.5 bg-slate-800/90 rounded-xl border border-slate-700/60 text-xs shrink-0 mt-auto">
+        <button id="prevPageBtn" class="px-2.5 py-1 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-1 text-[11px]">
+          <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          <span>Prev</span>
+        </button>
+        <span id="pageIndicator" class="text-[11px] text-slate-400 font-medium">Page 1 / 1</span>
+        <button id="nextPageBtn" class="px-2.5 py-1 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-1 text-[11px]">
+          <span>Next</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- ================= COLUMN 3: RIGHT FULL-HEIGHT REAL-TIME CHAT (ZERO-SCROLL) ================= -->
+    <aside id="rightSidebar" class="col-span-1 lg:col-span-5 h-full min-h-0 flex flex-col overflow-hidden">
+      <div class="bg-slate-800/90 rounded-2xl border border-slate-700/80 shadow-xl flex flex-col h-full min-h-0 overflow-hidden">
+        
+        <!-- Chat Top Header -->
+        <div class="p-2.5 border-b border-slate-700/70 flex items-center justify-between bg-slate-850/80 shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+            <div>
+              <h3 class="font-bold text-xs sm:text-sm text-slate-100">Live Fan Chat</h3>
+              <p class="text-[10px] text-slate-400 hidden sm:block">Match reactions & instant football talk</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 text-xs">
+            <span class="text-[11px] text-emerald-400 font-semibold bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-800/50 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>
+              Live
+            </span>
+          </div>
+        </div>
+
+        <!-- Message Stream (Fitted to container, oldest roll off top, newest at bottom) -->
+        <div id="chatMessages" class="flex-1 min-h-0 p-3 flex flex-col justify-end space-y-2 text-xs overflow-hidden">
+          <!-- Chat messages stream here -->
+        </div>
+
+        <!-- Quick Reaction Bar -->
+        <div class="px-3 py-1.5 bg-slate-900/60 border-t border-slate-700/50 flex items-center gap-2 text-xs overflow-hidden shrink-0">
+          <span class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider shrink-0">Quick:</span>
+          <button class="chat-quick-emoji hover:scale-125 transition" data-emoji="🔴⚪">🔴⚪</button>
+          <button class="chat-quick-emoji hover:scale-125 transition" data-emoji="🔥">🔥</button>
+          <button class="chat-quick-emoji hover:scale-125 transition" data-emoji="⚽">⚽</button>
+          <button class="chat-quick-emoji hover:scale-125 transition" data-emoji="👏">👏</button>
+          <button class="chat-quick-emoji hover:scale-125 transition" data-emoji="🍻">🍻</button>
+          <button class="chat-quick-emoji hover:scale-125 transition" data-emoji="⚡">⚡</button>
+        </div>
+
+        <!-- Chat Input Form (Fixed at bottom) -->
+        <form id="chatForm" class="p-2.5 border-t border-slate-700/70 bg-slate-900/90 rounded-b-2xl flex items-center gap-2 shrink-0">
+          <input 
+            type="text" 
+            id="chatInput" 
+            placeholder="Send a live message to the fans..." 
+            class="flex-1 bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500"
+            maxlength="300"
+            required
+            autocomplete="off"
+          />
+          <button 
+            type="submit" 
+            class="bg-red-600 hover:bg-red-500 text-white p-2 rounded-xl transition flex items-center justify-center font-bold shadow-md shadow-red-600/20 shrink-0"
+            title="Send Message"
+          >
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          </button>
+        </form>
+
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ================= MODALS / DIALOGS (Accessible & Modern) ================= -->
+
+  <!-- 1. CREATE POST MODAL -->
+  <dialog id="createPostModal" closedby="any" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+      <h3 class="text-base font-bold flex items-center gap-2">
+        <span>✍️</span> Create Discussion Thread
+      </h3>
+      <button id="closeCreatePostModalBtn" class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+    </div>
+
+    <form id="createPostForm" class="space-y-4 pt-4 text-xs">
+      <div>
+        <label class="block text-slate-300 font-semibold mb-1">Topic Category</label>
+        <select id="postTagInput" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500">
+          <option value="Match Thread">🔴 Match Thread (Derby & In-game)</option>
+          <option value="Meetups">📍 Fan Meetups & Community</option>
+          <option value="Tactics">📋 Tactical Analysis & Formations</option>
+          <option value="Transfers">✈️ Transfer Rumors & Scouting</option>
+          <option value="Memes">😂 Memes & Fan Banter</option>
+          <option value="Discussion">💬 General Football Discussion</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-slate-300 font-semibold mb-1">Title</label>
+        <input 
+          type="text" 
+          id="postTitleInput" 
+          placeholder="e.g. Tactical thoughts on Saturday's match against Chelsea" 
+          class="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500"
+          required
+          minlength="5"
+          maxlength="180"
+        />
+      </div>
+
+      <div>
+        <label class="block text-slate-300 font-semibold mb-1">Content / Body</label>
+        <textarea 
+          id="postContentInput" 
+          rows="4" 
+          placeholder="Share your detailed analysis, questions, or fan thoughts..." 
+          class="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500"
+          required
+          minlength="10"
+        ></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" id="cancelPostBtn" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition">
+          Cancel
+        </button>
+        <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-5 py-2 rounded-xl transition shadow-md shadow-red-600/30">
+          Publish Post
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 2. POST DETAIL & COMMENTS MODAL -->
+  <dialog id="postDetailModal" closedby="any" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-2xl max-h-[85vh]">
+    <div class="flex flex-col max-h-[calc(85vh-3rem)]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+        <div id="modalPostHeaderFlairs" class="flex items-center gap-2">
+          <!-- Flairs & Author -->
+        </div>
+        <button id="closeDetailModalBtn" class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+      </div>
+
+      <!-- Post Detail & Comments Area (Modal internal container) -->
+      <div class="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+        <!-- Full Post Body -->
+        <div id="modalPostContent" class="space-y-2">
+          <!-- Injected dynamically -->
+        </div>
+
+        <!-- Comments Header -->
+        <div class="pt-4 border-t border-slate-800">
+          <h4 class="font-bold text-sm text-slate-200 mb-3 flex items-center gap-2">
+            <i data-lucide="message-square" class="w-4 h-4 text-red-400"></i>
+            <span>Comments (<span id="modalCommentCount">0</span>)</span>
+          </h4>
+
+          <!-- Add Comment Input Box -->
+          <form id="addCommentForm" class="mb-4 space-y-2">
+            <textarea 
+              id="commentTextInput" 
+              rows="2" 
+              placeholder="Write a thoughtful reply or comment..." 
+              class="w-full bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500"
+              required
+            ></textarea>
+            <div class="flex justify-end">
+              <button type="submit" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition">
+                Post Comment
+              </button>
+            </div>
+          </form>
+
+          <!-- Threaded Comments Tree -->
+          <div id="modalCommentsList" class="space-y-2.5 text-xs">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 3. USER PROFILE & FAN BADGE MODAL -->
+  <dialog id="userProfileModal" closedby="any" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <h3 class="text-base font-bold flex items-center gap-2">
+        <span>👤</span> Fan Profile Settings
+      </h3>
+      <button id="closeProfileModalBtn" class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+    </div>
+
+    <form id="profileForm" class="space-y-4 pt-4 text-xs">
+      <div>
+        <label class="block text-slate-300 font-semibold mb-1">Fan Handle / Nickname</label>
+        <input 
+          type="text" 
+          id="profileHandleInput" 
+          class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500 font-medium"
+          required
+          maxlength="25"
+        />
+      </div>
+
+      <div>
+        <label class="block text-slate-300 font-semibold mb-1">Fan Club / Supporter Flair</label>
+        <select id="profileFlairInput" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500">
+          <option value="Gunner">Gunner (Arsenal FC)</option>
+          <option value="ArseFinland Member">ArseFinland Official Member</option>
+          <option value="Suomi Gooner">Suomi Gooner</option>
+          <option value="Red Army">Red Army (Liverpool)</option>
+          <option value="Cityzen">Cityzen (Man City)</option>
+          <option value="Blue Lion">Blue Lion (Chelsea)</option>
+          <option value="Helsinki Fan">Klubi (HJK Helsinki)</option>
+          <option value="Neutral Scout">Neutral Football Fan</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl transition">
+          Save Settings
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Sound Audio synthesized or chime -->
+  <audio id="chimeAudio" preload="auto"></audio>
+
+  <!-- Application Script -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
