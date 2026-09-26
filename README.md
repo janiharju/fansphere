@@ -40,3 +40,39 @@ Open **http://localhost:8000** in your browser.
 PYTHONPATH=. .venv/bin/pytest tests/test_api.py
 ```
 
+## Docker & Google Cloud Deployment
+
+### 1. Build & Run Locally with Docker
+```bash
+docker build -t fansphere:latest .
+docker run -p 8080:8080 -e PORT=8080 fansphere:latest
+```
+Open **http://localhost:8080** in your browser.
+
+### 2. Deploy to Google Cloud Run
+
+**Option A: Direct source deployment (Recommended)**
+```bash
+gcloud run deploy fansphere \
+  --source . \
+  --region europe-north1 \
+  --allow-unauthenticated
+```
+
+**Option B: Build container image with Google Cloud Build & deploy**
+```bash
+# Set your GCP project ID
+export PROJECT_ID="YOUR_GCP_PROJECT_ID"
+
+# Build image with Cloud Build
+gcloud builds submit --tag gcr.io/$PROJECT_ID/fansphere
+
+# Deploy image to Cloud Run
+gcloud run deploy fansphere \
+  --image gcr.io/$PROJECT_ID/fansphere \
+  --platform managed \
+  --region europe-north1 \
+  --allow-unauthenticated
+```
+
+
