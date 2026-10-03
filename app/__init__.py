@@ -1,2 +1,0 @@
-# Fansphere application package
-

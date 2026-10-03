@@ -1,0 +1,8 @@
+{
+  "name": "ArseFinland FanSphere",
+  "description": "Live sports fan community for Finnish Arsenal and football supporters with real-time match chatter, tactical analysis, and active debate.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
