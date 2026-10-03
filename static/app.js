@@ -226,9 +226,6 @@ function renderPosts() {
 
   if (state.posts.length === 0) {
     container.innerHTML = `
-      <div class="text-center py-12 bg-slate-850 rounded-2xl border border-slate-700/60 p-6 text-slate-400">
-        <p class="text-sm font-semibold mb-1">No posts found in this topic yet.</p>
-        <p class="text-xs text-slate-500">Be the first to start the discussion!</p>
       <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
         <p class="text-xs font-semibold mb-1">No posts found in this topic yet.</p>
         <p class="text-[10px] text-slate-500">Be the first to start the discussion!</p>
@@ -238,7 +235,6 @@ function renderPosts() {
     return;
   }
 
-  container.innerHTML = state.posts.map(post => renderPostCardHtml(post)).join('');
   const totalPages = Math.max(1, Math.ceil(state.posts.length / state.postsPerPage));
   if (state.currentPage > totalPages) state.currentPage = totalPages;
   if (state.currentPage < 1) state.currentPage = 1;
@@ -610,8 +606,7 @@ function handleIncomingNewComment(newComment) {
 
 async function loadChatHistory() {
   try {
-    const res = await fetch('/api/chat/history?room=general');
-    const res = await fetch('/api/chat/history?room=general&limit=8');
+    const res = await fetch('/api/chat/history?room=general&limit=50');
     if (!res.ok) throw new Error('Failed to load chat');
     const messages = await res.json();
     const container = document.getElementById('chatMessages');
@@ -619,35 +614,26 @@ async function loadChatHistory() {
     container.innerHTML = '';
     messages.forEach(msg => appendChatMessage(msg, false));
     scrollChatToBottom();
-    const recent = messages.slice(-7);
-    recent.forEach(msg => appendChatMessage(msg));
   } catch (err) {
     console.error(err);
   }
 }
 
 function appendChatMessage(msg, autoScroll = true) {
-function appendChatMessage(msg) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
   const isSelf = msg.author === state.user.handle;
 
   const msgDiv = document.createElement('div');
-  msgDiv.className = 'chat-msg-enter flex flex-col space-y-1';
   msgDiv.className = 'chat-msg-enter flex flex-col space-y-0.5 shrink-0';
   msgDiv.innerHTML = `
-    <div class="flex items-center gap-1.5 text-[11px]">
-      <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : ''}">${escapeHtml(msg.author)}</span>
-      <span class="bg-slate-700/40 text-slate-400 text-[9px] px-1.5 py-0.5 rounded truncate max-w-[120px]">${escapeHtml(msg.author_flair || 'Gunner')}</span>
-      <span class="text-slate-500 text-[10px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
       <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'Gunner')}</span>
       <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
-    <div class="bg-slate-900/90 text-slate-100 p-2.5 rounded-xl border border-slate-700/60 leading-relaxed break-words shadow-sm">
     <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs">
       ${escapeHtml(msg.content)}
     </div>
@@ -661,9 +647,9 @@ function scrollChatToBottom() {
   const container = document.getElementById('chatMessages');
   if (container) {
     container.scrollTop = container.scrollHeight;
-  // Keep at most 7 messages in DOM so it fits in the view without scrolling
-  while (container.children.length > 7) {
-    container.removeChild(container.firstElementChild);
+    while (container.children.length > 30) {
+      container.removeChild(container.firstElementChild);
+    }
   }
 }
 
@@ -703,11 +689,9 @@ function initEventHandlers() {
       state.currentPage = 1;
       
       document.querySelectorAll('.tag-filter-btn').forEach(b => {
-        b.className = 'tag-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-700/50 transition';
         const isWide = b.dataset.tag === 'All' || b.dataset.tag === 'Memes';
         b.className = `tag-filter-btn ${isWide ? 'col-span-2 ' : ''}flex items-center justify-between px-2 py-1.5 rounded-lg text-slate-300 hover:bg-slate-700/50 transition`;
       });
-      btn.className = 'tag-filter-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium bg-red-600/20 text-red-400 border border-red-500/30 transition';
       const isWide = tag === 'All' || tag === 'Memes';
       btn.className = `tag-filter-btn ${isWide ? 'col-span-2 ' : ''}flex items-center justify-between px-2.5 py-1.5 rounded-lg font-medium bg-red-600/20 text-red-400 border border-red-500/30 transition`;
 
@@ -743,10 +727,8 @@ function initEventHandlers() {
       sortBtns.forEach(b => {
         const btn = document.getElementById(b.id);
         if (b.sort === sort) {
-          btn.className = 'sort-tab-btn px-3 py-1.5 rounded-lg font-medium bg-red-600 text-white flex items-center gap-1.5 transition shadow-sm';
           btn.className = 'sort-tab-btn px-2.5 py-1 rounded-md font-medium bg-red-600 text-white flex items-center gap-1 transition shadow-sm';
         } else {
-          btn.className = 'sort-tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition';
           btn.className = 'sort-tab-btn px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 transition';
         }
       });

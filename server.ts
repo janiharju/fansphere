@@ -706,9 +706,20 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+const PORT = 3000;
 const HOST = '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
+  console.log(`ready - started server on 0.0.0.0:${PORT}, url: http://localhost:${PORT}`);
+  console.log(`  ➜  Local:   http://localhost:${PORT}/`);
+  console.log(`  ➜  Network: http://${HOST}:${PORT}/`);
   console.log(`FanSphere server running at http://${HOST}:${PORT}`);
 });
