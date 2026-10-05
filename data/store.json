@@ -1,0 +1,361 @@
+{
+  "posts": [
+    {
+      "id": 6,
+      "title": "Terveisiä Rovaniemeltä! Uusi ketju",
+      "content": "Pohjoisen tykkimiehet ilmoittautuvat mukaan keskusteluun.",
+      "author": "RovaniemiGooner",
+      "author_flair": "Lappi Tykki",
+      "tag": "Discussion",
+      "upvotes": 1,
+      "downvotes": 0,
+      "comment_count": 0,
+      "image_url": "",
+      "created_at": "2026-10-05T07:15:49.095Z"
+    },
+    {
+      "id": 1,
+      "title": "[Match Thread] Arsenal vs Chelsea (London Derby - Matchday 28 Live Discussion)",
+      "content": "The Gunners host Chelsea at Emirates Stadium! Arteta starts with Raya, White, Saliba, Gabriel, Timber, Partey, Rice, Odegaard, Saka, Havertz, Martinelli. Live tactical thoughts, match reactions, and celebration thread. COYG! 🔴⚪",
+      "author": "HelsinkiGunner",
+      "author_flair": "ArseFinland Member",
+      "tag": "Match Thread",
+      "upvotes": 87,
+      "downvotes": 3,
+      "comment_count": 4,
+      "image_url": "",
+      "created_at": "2026-10-05T05:14:38.813Z"
+    },
+    {
+      "id": 2,
+      "title": "ArseFinland Official Watch Party: Sports Academy Helsinki & Hook Tampere this Saturday!",
+      "content": "Moro kaikki Arsenal-fanit! ArseFinland järjestää jälleen yhteiskatsomon. Tervetuloa katsomaan peliä isolta screeniltä mahtavassa seurassa Helsingissä (Sports Academy, Kaivokatu 8) ja Tampereella (Ravintola Hook). Jäsenkortilla tutut faniedut hanatuotteista ja burgereista. Paikalle kannattaa saapua n. 45 min ennen aloituspotkua varmistaaksesi hyvät istumapaikat!",
+      "author": "ArseFinlandAdmin",
+      "author_flair": "Club Official",
+      "tag": "Meetups",
+      "upvotes": 64,
+      "downvotes": 1,
+      "comment_count": 2,
+      "image_url": "",
+      "created_at": "2026-10-05T03:14:38.813Z"
+    },
+    {
+      "id": 3,
+      "title": "Tactical breakdown: Jurrien Timber's role as inverted fullback and how it frees Odegaard",
+      "content": "Watching the past 5 matches, Arteta has dialed in our rest defense significantly. When Timber inverts alongside Rice or Partey into the half-space, it creates a box midfield that completely neutralizes counter-attacks while letting Martin Odegaard drift into the right half-space triangle with Saka and White. Thoughts on how this will hold up against Europe's best?",
+      "author": "ArtetaTactics",
+      "author_flair": "Analyst",
+      "tag": "Tactics",
+      "upvotes": 42,
+      "downvotes": 2,
+      "comment_count": 3,
+      "image_url": "",
+      "created_at": "2026-10-05T00:14:38.813Z"
+    },
+    {
+      "id": 4,
+      "title": "Summer Transfer Window: Who should be our dream striker target?",
+      "content": "With the Premier League title race reaching fever pitch, Edu and the scouting department are reportedly evaluating our #9 options for the summer window. Options being floated in the media: Benjamin Šeško, Alexander Isak, or Viktor Gyökeres. Who fits Arteta's physical press and link-up play best?",
+      "author": "GoonerJussi",
+      "author_flair": "Gunner",
+      "tag": "Transfers",
+      "upvotes": 35,
+      "downvotes": 4,
+      "comment_count": 1,
+      "image_url": "",
+      "created_at": "2026-10-04T07:14:38.813Z"
+    },
+    {
+      "id": 5,
+      "title": "When you check the league table on Sunday evening and we're top of the league",
+      "content": "Trust the process. 65 points and counting. The red and white cannon firing on all cylinders! Terveisiä kaikille ArseFinlandin jäsenille ympäri Suomea!",
+      "author": "PohjolanTykkimies",
+      "author_flair": "Suomi Gunner",
+      "tag": "Memes",
+      "upvotes": 98,
+      "downvotes": 2,
+      "comment_count": 1,
+      "image_url": "",
+      "created_at": "2026-10-03T07:14:38.813Z"
+    }
+  ],
+  "comments": [
+    {
+      "id": 1,
+      "post_id": 1,
+      "parent_id": null,
+      "author": "TurkuGunner",
+      "author_flair": "Gunner",
+      "content": "Saka's goal in the 18th minute was pure filth! Cut inside, two defenders flat-footed.",
+      "upvotes": 18,
+      "created_at": "2026-10-05T06:24:38.813Z"
+    },
+    {
+      "id": 2,
+      "post_id": 1,
+      "parent_id": 1,
+      "author": "TampereGooner",
+      "author_flair": "Gunner",
+      "content": "Agreed! And look at Havertz's pressing run to drag the center back away to create the shooting lane.",
+      "upvotes": 9,
+      "created_at": "2026-10-05T06:34:38.813Z"
+    },
+    {
+      "id": 3,
+      "post_id": 1,
+      "parent_id": null,
+      "author": "Mikko_V",
+      "author_flair": "Fan",
+      "content": "Raya's distribution from the back tonight has been world class under pressure.",
+      "upvotes": 12,
+      "created_at": "2026-10-05T06:49:38.813Z"
+    },
+    {
+      "id": 4,
+      "post_id": 1,
+      "parent_id": null,
+      "author": "OuluCannon",
+      "author_flair": "Gunner",
+      "content": "Havertz makes it 2-1!! The Emirates is electric right now!",
+      "upvotes": 24,
+      "created_at": "2026-10-05T07:04:38.813Z"
+    },
+    {
+      "id": 5,
+      "post_id": 2,
+      "parent_id": null,
+      "author": "EspooRed",
+      "author_flair": "Gunner",
+      "content": "Nähdään Sports Academyssa! Viime katsomossa oli aivan mieletön tunnelma Pohjois-Lontoon derbyssä.",
+      "upvotes": 8,
+      "created_at": "2026-10-05T04:14:38.813Z"
+    },
+    {
+      "id": 6,
+      "post_id": 2,
+      "parent_id": null,
+      "author": "Jari_Arsenal",
+      "author_flair": "Member",
+      "content": "Tampereen Hookissa myös pöytävaraus hoidettu 12 hengelle. Tervetuloa mukaan uudetkin fanit!",
+      "upvotes": 11,
+      "created_at": "2026-10-05T05:14:38.813Z"
+    },
+    {
+      "id": 7,
+      "post_id": 3,
+      "parent_id": null,
+      "author": "NordicGooner",
+      "author_flair": "Tactics",
+      "content": "Spot on analysis. Timber's recovery pace when we lose possession high up the pitch is unmatched.",
+      "upvotes": 6,
+      "created_at": "2026-10-05T02:14:38.813Z"
+    },
+    {
+      "id": 8,
+      "post_id": 3,
+      "parent_id": 7,
+      "author": "ArtetaTactics",
+      "author_flair": "Analyst",
+      "content": "Exactly, it allows Gabriel to step up aggressively knowing Timber can sweep behind.",
+      "upvotes": 4,
+      "created_at": "2026-10-05T03:14:38.813Z"
+    },
+    {
+      "id": 9,
+      "post_id": 3,
+      "parent_id": null,
+      "author": "Lauri_Gunner",
+      "author_flair": "Fan",
+      "content": "He was sorely missed last season due to the ACL injury. Having him back healthy changes everything.",
+      "upvotes": 5,
+      "created_at": "2026-10-05T04:14:38.813Z"
+    },
+    {
+      "id": 10,
+      "post_id": 4,
+      "parent_id": null,
+      "author": "StadinTykkimies",
+      "author_flair": "Gunner",
+      "content": "Gyökeres would be an absolute powerhouse in the Premier League. His hold-up play and work rate are phenomenal.",
+      "upvotes": 7,
+      "created_at": "2026-10-04T13:14:38.813Z"
+    },
+    {
+      "id": 11,
+      "post_id": 5,
+      "parent_id": null,
+      "author": "Matti_99",
+      "author_flair": "Fan",
+      "content": "Mind the gap!! 🔴⚪",
+      "upvotes": 14,
+      "created_at": "2026-10-04T07:14:38.813Z"
+    }
+  ],
+  "chatMessages": [
+    {
+      "id": 1,
+      "room": "general",
+      "author": "HelsinkiGunner",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "Welcome to ArseFinland FanSphere everyone! Tervetuloa!",
+      "created_at": "2026-10-05T06:49:38.814Z"
+    },
+    {
+      "id": 2,
+      "room": "general",
+      "author": "TurkuGunner",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "What a match so far! Saka is on fire today 🔥",
+      "created_at": "2026-10-05T06:54:38.814Z"
+    },
+    {
+      "id": 3,
+      "room": "general",
+      "author": "TampereGooner",
+      "author_flair": "Gunner",
+      "badge_color": "#10B981",
+      "content": "Watching live at Ravintola Hook with 15 other Finnish gooners 🍻",
+      "created_at": "2026-10-05T06:59:38.814Z"
+    },
+    {
+      "id": 4,
+      "room": "general",
+      "author": "CityFan_99",
+      "author_flair": "Man City",
+      "badge_color": "#06B6D4",
+      "content": "City just equalized at St James Park! Haaland ⚽",
+      "created_at": "2026-10-05T07:04:38.814Z"
+    },
+    {
+      "id": 5,
+      "room": "general",
+      "author": "Mikko_V",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "KAI HAVERTZ SCORESSSS 2-1!! GET IN THERE!! 🔴⚪",
+      "created_at": "2026-10-05T07:09:38.814Z"
+    },
+    {
+      "id": 6,
+      "room": "general",
+      "author": "ArseFinlandAdmin",
+      "author_flair": "Official",
+      "badge_color": "#F59E0B",
+      "content": "Reminder: Voting is open for today's Man of the Match in the forum!",
+      "created_at": "2026-10-05T07:12:38.814Z"
+    },
+    {
+      "id": 7,
+      "room": "general",
+      "author": "NordicGooner",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "15 minutes left to hold on to the 3 points! Let's go boys!",
+      "created_at": "2026-10-05T07:13:38.814Z"
+    },
+    {
+      "id": 8,
+      "room": "matchday",
+      "author": "HelsinkiGunner",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "MATCHDAY LIVE CHAT! Lineups are in, let's hear your score predictions!",
+      "created_at": "2026-10-05T06:29:38.814Z"
+    },
+    {
+      "id": 9,
+      "room": "matchday",
+      "author": "Mikko_V",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "3-1 Arsenal, Saka brace and Odegaard masterclass incoming!",
+      "created_at": "2026-10-05T06:39:38.814Z"
+    },
+    {
+      "id": 10,
+      "room": "matchday",
+      "author": "TurkuGunner",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "GOALLLLL SAKA 18'!! What a curler into the far corner!! 🔥⚽",
+      "created_at": "2026-10-05T06:52:38.814Z"
+    },
+    {
+      "id": 11,
+      "room": "matchday",
+      "author": "BlueFan",
+      "author_flair": "Chelsea",
+      "badge_color": "#3B82F6",
+      "content": "Palmer answers right back before half time 1-1, game on!",
+      "created_at": "2026-10-05T06:56:38.814Z"
+    },
+    {
+      "id": 12,
+      "room": "matchday",
+      "author": "TampereGooner",
+      "author_flair": "Gunner",
+      "badge_color": "#10B981",
+      "content": "HAVERTZ WITH THE HEADER 2-1!! The Emirates is rocking right now!",
+      "created_at": "2026-10-05T07:08:38.814Z"
+    },
+    {
+      "id": 13,
+      "room": "matchday",
+      "author": "ArtetaTactics",
+      "author_flair": "Analyst",
+      "badge_color": "#93C5FD",
+      "content": "Huge tactical substitution by Arteta putting in Merino to stabilize the midfield.",
+      "created_at": "2026-10-05T07:12:38.814Z"
+    },
+    {
+      "id": 14,
+      "room": "suomi-fans",
+      "author": "ArseFinlandAdmin",
+      "author_flair": "Official",
+      "badge_color": "#F59E0B",
+      "content": "Tervetuloa kaikille Suomen Arsenal-kannattajille! Täällä sovitaan kisakatsomoista.",
+      "created_at": "2026-10-05T04:14:38.814Z"
+    },
+    {
+      "id": 15,
+      "room": "suomi-fans",
+      "author": "HelsinkiGunner",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "Sports Academyyn tulossa ainakin 25 tykkimiestä lauantaina. Pöydät varattu!",
+      "created_at": "2026-10-05T05:14:38.814Z"
+    },
+    {
+      "id": 16,
+      "room": "suomi-fans",
+      "author": "TampereGooner",
+      "author_flair": "Gunner",
+      "badge_color": "#10B981",
+      "content": "Tampereen Hookissa myös hyvä porukka kasassa! Siivet & bisseä kylkeen 🍗🍺",
+      "created_at": "2026-10-05T06:14:38.814Z"
+    },
+    {
+      "id": 17,
+      "room": "suomi-fans",
+      "author": "OuluCannon",
+      "author_flair": "Gunner",
+      "badge_color": "#EF4444",
+      "content": "Onko Oulun St. Michaelissa tänään väkeä? Voisin tulla toisella puoliajalla!",
+      "created_at": "2026-10-05T06:44:38.814Z"
+    },
+    {
+      "id": 18,
+      "room": "general",
+      "author": "RovaniemiGooner",
+      "author_flair": "Lappi Tykki",
+      "badge_color": "#EF4444",
+      "content": "Testi pysyvä viesti chatissa!",
+      "created_at": "2026-10-05T07:15:49.116Z"
+    }
+  ],
+  "nextPostId": 7,
+  "nextCommentId": 12,
+  "nextChatId": 19
+}

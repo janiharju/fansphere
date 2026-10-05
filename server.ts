@@ -1,5 +1,6 @@
 import http from 'node:http';
 import path from 'node:path';
+import fs from 'node:fs';
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -257,16 +258,115 @@ function getInitialChatMessages(): ChatMessage[] {
   ];
 }
 
-// In-Memory Data Store
+// ==================== PERSISTENT FILE-BACKED DATA STORE ====================
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_FILE = path.join(DATA_DIR, 'store.json');
+
+interface StoredData {
+  posts: Post[];
+  comments: Comment[];
+  chatMessages: ChatMessage[];
+  nextPostId: number;
+  nextCommentId: number;
+  nextChatId: number;
+}
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+function saveDataSync(data: StoredData) {
+  try {
+    ensureDataDir();
+    const tempFile = `${DATA_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tempFile, DATA_FILE);
+  } catch (err) {
+    console.error('Error saving persistent store to disk:', err);
+  }
+}
+
+let saveTimer: NodeJS.Timeout | null = null;
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveDataSync({
+      posts,
+      comments,
+      chatMessages,
+      nextPostId,
+      nextCommentId,
+      nextChatId,
+    });
+    saveTimer = null;
+  }, 100);
+}
+
+function forceSaveNow() {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  saveDataSync({
+    posts,
+    comments,
+    chatMessages,
+    nextPostId,
+    nextCommentId,
+    nextChatId,
+  });
+}
+
+function loadInitialStore(): StoredData {
+  ensureDataDir();
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.posts) && Array.isArray(parsed.comments) && Array.isArray(parsed.chatMessages)) {
+        const maxPostId = parsed.posts.reduce((max: number, p: Post) => Math.max(max, p.id || 0), 0);
+        const maxCommentId = parsed.comments.reduce((max: number, c: Comment) => Math.max(max, c.id || 0), 0);
+        const maxChatId = parsed.chatMessages.reduce((max: number, m: ChatMessage) => Math.max(max, m.id || 0), 0);
+        console.log(`Loaded ${parsed.posts.length} posts, ${parsed.comments.length} comments, and ${parsed.chatMessages.length} chat messages from persistent store`);
+        return {
+          posts: parsed.posts,
+          comments: parsed.comments,
+          chatMessages: parsed.chatMessages,
+          nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
+          nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
+          nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
+        };
+      }
+    } catch (err) {
+      console.error('Could not parse existing store.json, using defaults:', err);
+    }
+  }
+
+  const initial: StoredData = {
+    posts: getInitialPosts(),
+    comments: getInitialComments(),
+    chatMessages: getInitialChatMessages(),
+    nextPostId: 6,
+    nextCommentId: 12,
+    nextChatId: 18,
+  };
+  saveDataSync(initial);
+  console.log(`Initialized persistent store with default seed at ${DATA_FILE}`);
+  return initial;
+}
+
+const storedData = loadInitialStore();
 let teams: Team[] = getInitialTeams();
 let matches: Match[] = getInitialMatches();
-let posts: Post[] = getInitialPosts();
-let comments: Comment[] = getInitialComments();
-let chatMessages: ChatMessage[] = getInitialChatMessages();
+let posts: Post[] = storedData.posts;
+let comments: Comment[] = storedData.comments;
+let chatMessages: ChatMessage[] = storedData.chatMessages;
 
-let nextPostId = 6;
-let nextCommentId = 12;
-let nextChatId = 18;
+let nextPostId = storedData.nextPostId;
+let nextCommentId = storedData.nextCommentId;
+let nextChatId = storedData.nextChatId;
 
 function getStandings() {
   const standings = teams.map((team) => {
@@ -380,6 +480,7 @@ app.post('/api/posts', (req, res) => {
   };
 
   posts.unshift(newPost);
+  forceSaveNow();
 
   broadcast({
     type: 'new_post',
@@ -482,6 +583,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
 
   comments.push(comment);
   post.comment_count += 1;
+  forceSaveNow();
 
   broadcast({
     type: 'new_comment',
@@ -501,6 +603,7 @@ app.post('/api/comments/:id/vote', (req, res) => {
   }
 
   comment.upvotes += 1;
+  scheduleSave();
 
   broadcast({
     type: 'comment_vote_update',
@@ -517,7 +620,7 @@ app.post('/api/comments/:id/vote', (req, res) => {
 // 7. Chat History
 app.get('/api/chat/history', (req, res) => {
   const room = (req.query.room as string) || 'general';
-  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
   const roomMessages = chatMessages.filter(m => m.room === room);
   // Last `limit` messages in chronological order
@@ -545,6 +648,7 @@ app.post('/api/chat/message', (req, res) => {
   };
 
   chatMessages.push(msg);
+  forceSaveNow();
 
   broadcast({
     type: 'chat_message',
@@ -683,6 +787,7 @@ wss.on('connection', (ws: WebSocket) => {
             created_at: new Date().toISOString()
           };
           chatMessages.push(newChat);
+          scheduleSave();
           broadcast({
             type: 'chat_message',
             data: newChat
@@ -702,6 +807,16 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('error', () => {
     activeSockets.delete(ws);
   });
+});
+
+process.on('SIGTERM', () => {
+  forceSaveNow();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  forceSaveNow();
+  process.exit(0);
 });
 
 process.on('uncaughtException', (err) => {

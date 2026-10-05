@@ -15,7 +15,8 @@ const state = {
   userVotes: JSON.parse(localStorage.getItem('fansphere_votes') || '{}'),
   activePostDetailId: null,
   ws: null,
-  posts: []
+  posts: [],
+  renderedChatIds: new Set()
 };
 
 // ==================== INITIALIZATION ====================
@@ -27,10 +28,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModalLightDismiss();
   initMobileTabs();
   
+  // Instant restore of cached posts and chat messages so user sees old messages immediately on reload
+  loadCachedData();
+
   // Connect WebSocket
   connectWebSocket();
 
-  // Load initial data
+  // Load latest persistent data from server
   await Promise.all([
     loadPosts(),
     loadChatHistory()
@@ -38,6 +42,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initEventHandlers();
 });
+
+function loadCachedData() {
+  try {
+    const cachedPosts = localStorage.getItem('fansphere_cached_posts');
+    if (cachedPosts) {
+      const parsed = JSON.parse(cachedPosts);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        state.posts = parsed;
+        renderPosts();
+      }
+    }
+
+    const cachedChat = localStorage.getItem('fansphere_cached_chat');
+    if (cachedChat) {
+      const parsedChat = JSON.parse(cachedChat);
+      if (Array.isArray(parsedChat) && parsedChat.length > 0) {
+        const container = document.getElementById('chatMessages');
+        if (container) {
+          container.innerHTML = '';
+          state.renderedChatIds.clear();
+          parsedChat.forEach(msg => appendChatMessage(msg, false));
+          scrollChatToBottom();
+        }
+      }
+    }
+  } catch (e) {
+    console.debug('Cache load error', e);
+  }
+}
 
 function initLucide() {
   if (window.lucide) {
@@ -202,6 +235,11 @@ async function loadPosts() {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load posts');
     state.posts = await res.json();
+    if (state.currentTag === 'All' && state.currentSort === 'hot') {
+      try {
+        localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
+      } catch {}
+    }
     const countAllEl = document.getElementById('tagCountAll');
     if (countAllEl && state.currentTag === 'All') {
       countAllEl.textContent = state.posts.length;
@@ -210,7 +248,7 @@ async function loadPosts() {
   } catch (err) {
     console.error(err);
     const container = document.getElementById('postsList');
-    if (container) {
+    if (container && (!state.posts || state.posts.length === 0)) {
       container.innerHTML = `
         <div class="text-center py-8 text-red-400 bg-slate-850 rounded-xl border border-red-900/50 p-4">
           Failed to load posts. Please refresh.
@@ -474,14 +512,18 @@ function handleIncomingNewComment(newComment) {
 
 async function loadChatHistory() {
   try {
-    const res = await fetch('/api/chat/history?room=general&limit=50');
+    const res = await fetch('/api/chat/history?room=general&limit=100');
     if (!res.ok) throw new Error('Failed to load chat');
     const messages = await res.json();
     const container = document.getElementById('chatMessages');
     if (!container) return;
     container.innerHTML = '';
+    state.renderedChatIds.clear();
     messages.forEach(msg => appendChatMessage(msg, false));
     scrollChatToBottom();
+    try {
+      localStorage.setItem('fansphere_cached_chat', JSON.stringify(messages.slice(-50)));
+    } catch {}
   } catch (err) {
     console.error(err);
   }
@@ -491,10 +533,18 @@ function appendChatMessage(msg, autoScroll = true) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
+  if (msg.id && state.renderedChatIds.has(msg.id)) {
+    return;
+  }
+  if (msg.id) {
+    state.renderedChatIds.add(msg.id);
+  }
+
   const isSelf = msg.author === state.user.handle;
 
   const msgDiv = document.createElement('div');
   msgDiv.className = 'chat-msg-enter flex flex-col space-y-0.5 shrink-0';
+  if (msg.id) msgDiv.dataset.chatId = msg.id;
   msgDiv.innerHTML = `
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
@@ -515,8 +565,12 @@ function scrollChatToBottom() {
   const container = document.getElementById('chatMessages');
   if (container) {
     container.scrollTop = container.scrollHeight;
-    while (container.children.length > 30) {
-      container.removeChild(container.firstElementChild);
+    while (container.children.length > 200) {
+      const removed = container.firstElementChild;
+      if (removed && removed.dataset && removed.dataset.chatId) {
+        state.renderedChatIds.delete(parseInt(removed.dataset.chatId, 10));
+      }
+      container.removeChild(removed);
     }
   }
 }
