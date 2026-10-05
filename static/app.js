@@ -8,7 +8,7 @@ const state = {
     badgeColor: '#EF4444'
   },
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
-  currentSort: 'hot',
+  currentSort: 'new',
   currentTag: 'All',
   currentPage: 1,
   postsPerPage: 3,
@@ -49,7 +49,7 @@ function loadCachedData() {
     if (cachedPosts) {
       const parsed = JSON.parse(cachedPosts);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        state.posts = parsed;
+        state.posts = sortPostsByLatestActivity(parsed);
         renderPosts();
       }
     }
@@ -224,18 +224,26 @@ function handleWebSocketMessage(msg) {
 
 // ==================== FORUM (REDDIT-LIKE FEED) ====================
 
+function sortPostsByLatestActivity(postsList) {
+  return postsList.sort((a, b) => {
+    const timeA = new Date(a.latest_activity_at || a.created_at).getTime();
+    const timeB = new Date(b.latest_activity_at || b.created_at).getTime();
+    return timeB - timeA;
+  });
+}
+
 async function loadPosts() {
   try {
     const url = new URL('/api/posts', window.location.origin);
-    url.searchParams.set('sort', state.currentSort);
     if (state.currentTag && state.currentTag !== 'All') {
       url.searchParams.set('tag', state.currentTag);
     }
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load posts');
-    state.posts = await res.json();
-    if (state.currentTag === 'All' && state.currentSort === 'hot') {
+    const rawPosts = await res.json();
+    state.posts = sortPostsByLatestActivity(rawPosts);
+    if (state.currentTag === 'All') {
       try {
         localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
       } catch {}
@@ -330,6 +338,7 @@ function formatRelativeTime(isoString) {
 
 function renderPostCardHtml(post) {
   const tagClass = getTagClass(post.tag);
+  const hasNewComments = post.latest_activity_at && post.comment_count > 0 && new Date(post.latest_activity_at).getTime() > new Date(post.created_at).getTime() + 1000;
 
   return `
     <article 
@@ -348,6 +357,7 @@ function renderPostCardHtml(post) {
             ${escapeHtml(post.author_flair || 'Gunner')}
           </span>
           <span class="text-slate-500">• ${formatRelativeTime(post.created_at)}</span>
+          ${hasNewComments ? `<span class="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 rounded font-medium ml-auto flex items-center gap-0.5"><i data-lucide="message-square" class="w-2.5 h-2.5"></i> Active ${formatRelativeTime(post.latest_activity_at)}</span>` : ''}
         </div>
 
         <!-- Post Title -->
@@ -406,7 +416,12 @@ function updatePostVoteInDOM(postId, upvotes, downvotes) {
 
 function handleIncomingNewPost(newPost) {
   if (state.currentTag === 'All' || state.currentTag === newPost.tag) {
+    if (!newPost.latest_activity_at) {
+      newPost.latest_activity_at = newPost.created_at;
+    }
+    state.posts = state.posts.filter(p => p.id !== newPost.id);
     state.posts.unshift(newPost);
+    sortPostsByLatestActivity(state.posts);
     renderPosts();
   }
 }
@@ -496,6 +511,20 @@ function handleIncomingNewComment(newComment) {
     if (countEl) {
       countEl.textContent = parseInt(countEl.textContent || '0') + 1;
     }
+  }
+
+  // Update post latest activity and comment count, then re-sort feed so active thread moves to top
+  const targetPost = state.posts.find(p => p.id === newComment.post_id);
+  if (targetPost) {
+    targetPost.comment_count = (targetPost.comment_count || 0) + 1;
+    targetPost.latest_activity_at = newComment.created_at || new Date().toISOString();
+    sortPostsByLatestActivity(state.posts);
+    renderPosts();
+    try {
+      localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
+    } catch {}
+  } else {
+    loadPosts();
   }
 
   const card = document.querySelector(`.post-card[data-post-id="${newComment.post_id}"]`);
@@ -636,29 +665,7 @@ function initEventHandlers() {
     document.querySelector('.tag-filter-btn[data-tag="All"]')?.click();
   });
 
-  // 2. Sorting buttons
-  const sortBtns = [
-    { id: 'sortHotBtn', sort: 'hot' },
-    { id: 'sortNewBtn', sort: 'new' },
-    { id: 'sortTopBtn', sort: 'top' }
-  ];
-  sortBtns.forEach(({ id, sort }) => {
-    document.getElementById(id)?.addEventListener('click', () => {
-      state.currentSort = sort;
-      state.currentPage = 1;
-      sortBtns.forEach(b => {
-        const btn = document.getElementById(b.id);
-        if (b.sort === sort) {
-          btn.className = 'sort-tab-btn px-2.5 py-1 rounded-md font-medium bg-red-600 text-white flex items-center gap-1 transition shadow-sm';
-        } else {
-          btn.className = 'sort-tab-btn px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 transition';
-        }
-      });
-      loadPosts();
-    });
-  });
-
-  // 3. Pagination Controls (Zero-Scroll navigation)
+  // 2. Pagination Controls (Zero-Scroll navigation)
   document.getElementById('prevPageBtn')?.addEventListener('click', () => {
     if (state.currentPage > 1) {
       state.currentPage--;

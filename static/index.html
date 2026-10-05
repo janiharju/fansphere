@@ -176,8 +176,8 @@
     <!-- ================= COLUMN 2: CENTER (REDDIT-LIKE FORUM, PAGINATED ZERO-SCROLL) ================= -->
     <section id="centerForum" class="col-span-1 lg:col-span-4 flex flex-col gap-2 h-full min-h-0 overflow-hidden">
       
-      <!-- Forum Top Bar: Create Post CTA & Sort Controls -->
-      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm space-y-2 shrink-0">
+      <!-- Forum Top Bar: Create Post CTA -->
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm shrink-0">
         <div class="flex items-center gap-2">
           <div class="w-7 h-7 rounded-lg bg-red-600/30 text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
             ✍️
@@ -186,29 +186,9 @@
             <span class="truncate">Share thoughts, tactics, news...</span>
             <span class="bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-md shadow-sm ml-1 shrink-0">Post</span>
           </button>
-        </div>
-
-        <!-- Sorting & Filter Active Bar -->
-        <div class="flex items-center justify-between pt-1.5 border-t border-slate-700/60 flex-wrap gap-1.5 text-xs">
-          <!-- Sort Tabs -->
-          <div class="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/60 text-[11px]">
-            <button id="sortHotBtn" class="sort-tab-btn px-2.5 py-1 rounded-md font-medium bg-red-600 text-white flex items-center gap-1 transition shadow-sm">
-              <i data-lucide="flame" class="w-3 h-3"></i>
-              <span>Active</span>
-            </button>
-            <button id="sortNewBtn" class="sort-tab-btn px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 transition">
-              <i data-lucide="clock" class="w-3 h-3"></i>
-              <span>Newest</span>
-            </button>
-            <button id="sortTopBtn" class="sort-tab-btn px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1 transition">
-              <i data-lucide="message-square" class="w-3 h-3"></i>
-              <span>Discussed</span>
-            </button>
-          </div>
-
-          <!-- Active Tag Badge / Reset -->
-          <div id="activeTagIndicator" class="hidden text-[10px] text-slate-400 items-center gap-1 bg-slate-700/50 px-2 py-0.5 rounded-md">
-            <span>Filter:</span>
+          <!-- Active Tag Badge / Reset (shown when filtering by category) -->
+          <div id="activeTagIndicator" class="hidden text-[10px] text-slate-400 items-center gap-1 bg-slate-700/60 px-2 py-1 rounded-lg shrink-0">
+            <span>Topic:</span>
             <span id="activeTagName" class="text-red-400 font-semibold truncate max-w-[80px]">Match</span>
             <button id="clearTagFilterBtn" class="text-slate-400 hover:text-white font-bold ml-0.5">✕</button>
           </div>

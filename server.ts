@@ -50,6 +50,7 @@ interface Post {
   comment_count: number;
   image_url: string;
   created_at: string;
+  last_activity_at?: string;
 }
 
 interface Comment {
@@ -420,11 +421,30 @@ function broadcastPresence() {
   });
 }
 
+// Helper to find latest activity timestamp for a post (considering its creation and all comments)
+function getPostLatestActivityTime(post: Post): number {
+  let latestTime = new Date(post.created_at).getTime();
+  if (post.last_activity_at) {
+    const actTime = new Date(post.last_activity_at).getTime();
+    if (!isNaN(actTime) && actTime > latestTime) {
+      latestTime = actTime;
+    }
+  }
+  for (const c of comments) {
+    if (c.post_id === post.id) {
+      const cTime = new Date(c.created_at).getTime();
+      if (!isNaN(cTime) && cTime > latestTime) {
+        latestTime = cTime;
+      }
+    }
+  }
+  return latestTime;
+}
+
 // ==================== REST APIS ====================
 
-// 1. Posts List
+// 1. Posts List (Always sorted by latest changes including comments)
 app.get('/api/posts', (req, res) => {
-  const sort = (req.query.sort as string) || 'hot';
   const tag = req.query.tag as string | undefined;
 
   let filtered = [...posts];
@@ -432,26 +452,19 @@ app.get('/api/posts', (req, res) => {
     filtered = filtered.filter(p => p.tag.toLowerCase() === tag.toLowerCase());
   }
 
-  const now = Date.now();
-  const scoredPosts = filtered.map(p => {
-    const createdTime = new Date(p.created_at).getTime();
-    const hoursAge = Math.max((now - createdTime) / 3600000, 0.1);
-    const hot_score = (p.comment_count * 3 + 1) / Math.pow(hoursAge + 1, 1.2);
+  // Always sort forum feed by latest changes, taking comments into account
+  const mapped = filtered.map(p => {
+    const latestActivityTime = getPostLatestActivityTime(p);
     return {
       ...p,
-      hot_score
+      latest_activity_at: new Date(latestActivityTime).toISOString(),
+      latest_activity_time: latestActivityTime
     };
   });
 
-  if (sort === 'hot') {
-    scoredPosts.sort((a, b) => b.hot_score - a.hot_score);
-  } else if (sort === 'new') {
-    scoredPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  } else if (sort === 'top') {
-    scoredPosts.sort((a, b) => b.comment_count - a.comment_count);
-  }
+  mapped.sort((a, b) => b.latest_activity_time - a.latest_activity_time);
 
-  res.json(scoredPosts);
+  res.json(mapped);
 });
 
 // 2. Create Post
@@ -465,6 +478,7 @@ app.post('/api/posts', (req, res) => {
     return res.status(400).json({ detail: 'Content must be at least 5 characters' });
   }
 
+  const nowIso = new Date().toISOString();
   const newPost: Post = {
     id: nextPostId++,
     title: title.trim(),
@@ -476,7 +490,8 @@ app.post('/api/posts', (req, res) => {
     downvotes: 0,
     comment_count: 0,
     image_url: image_url ? String(image_url).trim() : '',
-    created_at: new Date().toISOString()
+    created_at: nowIso,
+    last_activity_at: nowIso
   };
 
   posts.unshift(newPost);
@@ -486,12 +501,14 @@ app.post('/api/posts', (req, res) => {
     type: 'new_post',
     data: {
       ...newPost,
+      latest_activity_at: nowIso,
       score: 1
     }
   });
 
   res.status(201).json({
     ...newPost,
+    latest_activity_at: nowIso,
     score: 1
   });
 });
@@ -583,11 +600,16 @@ app.post('/api/posts/:id/comments', (req, res) => {
 
   comments.push(comment);
   post.comment_count += 1;
+  const nowIso = comment.created_at;
+  post.last_activity_at = nowIso;
   forceSaveNow();
 
   broadcast({
     type: 'new_comment',
-    data: comment
+    data: comment,
+    post_id: postId,
+    comment_count: post.comment_count,
+    latest_activity_at: nowIso
   });
 
   res.status(201).json(comment);
