@@ -334,13 +334,11 @@ app.get('/api/posts', (req, res) => {
 
   const now = Date.now();
   const scoredPosts = filtered.map(p => {
-    const score = p.upvotes - p.downvotes;
     const createdTime = new Date(p.created_at).getTime();
     const hoursAge = Math.max((now - createdTime) / 3600000, 0.1);
-    const hot_score = (score + 5) / Math.pow(hoursAge + 2, 1.5);
+    const hot_score = (p.comment_count * 3 + 1) / Math.pow(hoursAge + 1, 1.2);
     return {
       ...p,
-      score,
       hot_score
     };
   });
@@ -350,7 +348,7 @@ app.get('/api/posts', (req, res) => {
   } else if (sort === 'new') {
     scoredPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   } else if (sort === 'top') {
-    scoredPosts.sort((a, b) => b.score - a.score);
+    scoredPosts.sort((a, b) => b.comment_count - a.comment_count);
   }
 
   res.json(scoredPosts);

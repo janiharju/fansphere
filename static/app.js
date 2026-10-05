@@ -291,93 +291,45 @@ function formatRelativeTime(isoString) {
 }
 
 function renderPostCardHtml(post) {
-  const userVote = state.userVotes[post.id] || null;
-  const isUpvoted = userVote === 'up';
-  const isDownvoted = userVote === 'down';
-  const score = post.upvotes - post.downvotes;
   const tagClass = getTagClass(post.tag);
 
   return `
     <article 
-      class="post-card bg-slate-800/90 hover:bg-slate-800 rounded-2xl p-4 border border-slate-700/70 transition flex gap-3 shadow-sm group"
-      class="post-card bg-slate-800/90 hover:bg-slate-800 rounded-xl p-2.5 border border-slate-700/70 transition flex gap-2.5 shadow-sm group shrink-0"
+      class="post-card bg-slate-800/90 hover:bg-slate-800 rounded-xl p-3 border border-slate-700/70 transition flex flex-col gap-1.5 shadow-sm group shrink-0"
       data-post-id="${post.id}"
     >
-      <!-- Reddit-style Upvote/Downvote Column -->
-      <div class="flex flex-col items-center bg-slate-900/80 rounded-xl p-1.5 border border-slate-700/60 self-start text-xs select-none">
-      <div class="flex flex-col items-center justify-center bg-slate-900/80 rounded-lg p-1 border border-slate-700/60 self-center text-xs select-none shrink-0 w-8">
-        <button 
-          class="vote-btn-up p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition ${isUpvoted ? 'active text-red-500' : ''}" 
-          class="vote-btn-up p-0.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition ${isUpvoted ? 'active text-red-500' : ''}" 
-          title="Upvote"
-          data-post-id="${post.id}"
-          data-direction="up"
-        >
-          <i data-lucide="arrow-big-up" class="w-4 h-4"></i>
-          <i data-lucide="arrow-big-up" class="w-3.5 h-3.5"></i>
-        </button>
-        
-        <span class="post-score font-bold py-0.5 text-xs ${isUpvoted ? 'text-red-500' : isDownvoted ? 'text-blue-400' : 'text-slate-200'}">
-        <span class="post-score font-bold text-[11px] py-0.5 ${isUpvoted ? 'text-red-500' : isDownvoted ? 'text-blue-400' : 'text-slate-200'}">
-          ${score}
-        </span>
-
-        <button 
-          class="vote-btn-down p-1 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition ${isDownvoted ? 'active text-blue-400' : ''}" 
-          class="vote-btn-down p-0.5 rounded text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition ${isDownvoted ? 'active text-blue-400' : ''}" 
-          title="Downvote"
-          data-post-id="${post.id}"
-          data-direction="down"
-        >
-          <i data-lucide="arrow-big-down" class="w-4 h-4"></i>
-          <i data-lucide="arrow-big-down" class="w-3.5 h-3.5"></i>
-        </button>
-      </div>
-
       <!-- Main Post Content -->
       <div class="flex-1 min-w-0">
         <!-- Post Header / Flairs -->
-        <div class="flex items-center gap-1.5 flex-wrap text-xs mb-1.5">
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${tagClass}">
         <div class="flex items-center gap-1.5 flex-wrap text-[10px] mb-1">
           <span class="px-1.5 py-0.2 rounded-full font-semibold ${tagClass}">
             ${post.tag}
           </span>
-          <span class="text-slate-400 font-medium text-[11px]">${escapeHtml(post.author)}</span>
-          <span class="bg-slate-700/50 text-slate-300 text-[9px] px-1.5 py-0.5 rounded-full border border-slate-600/40">
-          <span class="text-slate-400 font-medium truncate max-w-[85px]">${escapeHtml(post.author)}</span>
-          <span class="bg-slate-700/50 text-slate-300 text-[8px] px-1 py-0.2 rounded border border-slate-600/40 truncate max-w-[90px]">
+          <span class="text-slate-400 font-medium truncate max-w-[90px]">${escapeHtml(post.author)}</span>
+          <span class="bg-slate-700/50 text-slate-300 text-[8px] px-1 py-0.2 rounded border border-slate-600/40 truncate max-w-[100px]">
             ${escapeHtml(post.author_flair || 'Gunner')}
           </span>
-          <span class="text-slate-500 text-[10px]">• ${formatRelativeTime(post.created_at)}</span>
           <span class="text-slate-500">• ${formatRelativeTime(post.created_at)}</span>
         </div>
 
         <!-- Post Title -->
-        <h2 class="post-title-link font-bold text-slate-100 text-sm leading-snug hover:text-red-400 transition cursor-pointer mb-1.5" data-post-id="${post.id}">
         <h2 class="post-title-link font-bold text-slate-100 text-xs leading-snug hover:text-red-400 transition cursor-pointer truncate mb-0.5" data-post-id="${post.id}">
           ${escapeHtml(post.title)}
         </h2>
 
         <!-- Post Body Snippet -->
-        <p class="post-title-link text-xs text-slate-300 leading-relaxed line-clamp-2 mb-2.5 cursor-pointer" data-post-id="${post.id}">
         <p class="post-title-link text-[11px] text-slate-300 leading-snug line-clamp-1 mb-1.5 cursor-pointer" data-post-id="${post.id}">
           ${escapeHtml(post.content)}
         </p>
 
         <!-- Post Actions Footer -->
-        <div class="flex items-center gap-3 text-xs text-slate-400 pt-1 border-t border-slate-700/40">
-          <button class="open-comments-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5 text-[11px]" data-post-id="${post.id}">
-            <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-        <div class="flex items-center gap-3 text-[10px] text-slate-400 pt-0.5 border-t border-slate-700/40">
+        <div class="flex items-center gap-3 text-[10px] text-slate-400 pt-1 border-t border-slate-700/40">
           <button class="open-comments-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5" data-post-id="${post.id}">
-            <i data-lucide="message-circle" class="w-3 h-3"></i>
+            <i data-lucide="message-circle" class="w-3 h-3 text-red-400"></i>
             <span>${post.comment_count} Comments</span>
           </button>
           
-          <button class="share-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5 text-[11px]" data-post-id="${post.id}">
-            <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
-          <button class="share-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5" data-post-id="${post.id}">
+          <button class="share-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5 ml-auto" data-post-id="${post.id}">
             <i data-lucide="share-2" class="w-3 h-3"></i>
             <span>Share</span>
           </button>
@@ -388,15 +340,6 @@ function renderPostCardHtml(post) {
 }
 
 function attachPostCardListeners() {
-  document.querySelectorAll('.vote-btn-up, .vote-btn-down').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const postId = parseInt(btn.dataset.postId);
-      const direction = btn.dataset.direction;
-      await handleVote(postId, direction);
-    });
-  });
-
   document.querySelectorAll('.post-title-link, .open-comments-btn').forEach(el => {
     el.addEventListener('click', () => {
       const postId = parseInt(el.dataset.postId);
@@ -409,7 +352,7 @@ function attachPostCardListeners() {
       e.stopPropagation();
       navigator.clipboard?.writeText(window.location.href);
       const originalText = btn.innerHTML;
-      btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">Copied!</span>`;
+      btn.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-400"></i><span class="text-emerald-400">Copied!</span>`;
       initLucide();
       setTimeout(() => {
         btn.innerHTML = originalText;
@@ -419,61 +362,8 @@ function attachPostCardListeners() {
   });
 }
 
-// Voting Logic
-async function handleVote(postId, direction) {
-  const currentVote = state.userVotes[postId] || null;
-  let targetDirection = direction;
-
-  if (currentVote === direction) {
-    targetDirection = direction === 'up' ? 'clear_up' : 'clear_down';
-    delete state.userVotes[postId];
-  } else {
-    state.userVotes[postId] = direction;
-  }
-  localStorage.setItem('fansphere_votes', JSON.stringify(state.userVotes));
-
-  // Optimistic UI update
-  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
-  if (card) {
-    const upBtn = card.querySelector('.vote-btn-up');
-    const downBtn = card.querySelector('.vote-btn-down');
-    const scoreEl = card.querySelector('.post-score');
-
-    upBtn?.classList.toggle('active', state.userVotes[postId] === 'up');
-    downBtn?.classList.toggle('active', state.userVotes[postId] === 'down');
-
-    let currentScore = parseInt(scoreEl.textContent) || 0;
-    if (targetDirection === 'up') currentScore += (currentVote === 'down' ? 2 : 1);
-    else if (targetDirection === 'down') currentScore -= (currentVote === 'up' ? 2 : 1);
-    else if (targetDirection === 'clear_up') currentScore -= 1;
-    else if (targetDirection === 'clear_down') currentScore += 1;
-    scoreEl.textContent = currentScore;
-  }
-
-  playChime(440, 0.06);
-
-  try {
-    const res = await fetch(`/api/posts/${postId}/vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ direction: targetDirection })
-    });
-    if (!res.ok) throw new Error('Vote failed');
-    const data = await res.json();
-    updatePostVoteInDOM(postId, data.upvotes, data.downvotes);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
 function updatePostVoteInDOM(postId, upvotes, downvotes) {
-  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
-  if (card) {
-    const scoreEl = card.querySelector('.post-score');
-    if (scoreEl) {
-      scoreEl.textContent = upvotes - downvotes;
-    }
-  }
+  // Upvote/downvote display removed from forum section
 }
 
 function handleIncomingNewPost(newPost) {
@@ -540,40 +430,18 @@ function renderCommentHtml(comment) {
           <span class="bg-slate-700/40 text-slate-300 text-[10px] px-1.5 py-0.5 rounded">${escapeHtml(comment.author_flair || 'Gunner')}</span>
           <span class="text-slate-500 text-[11px]">• ${formatRelativeTime(comment.created_at)}</span>
         </div>
-        <button class="comment-upvote-btn flex items-center gap-1 text-slate-400 hover:text-red-400 transition" data-comment-id="${comment.id}">
-          <i data-lucide="arrow-big-up" class="w-4 h-4"></i>
-          <span class="comment-score font-semibold text-[11px]">${comment.upvotes}</span>
-        </button>
       </div>
-      <p class="text-slate-300 leading-relaxed">${escapeHtml(comment.content)}</p>
+      <p class="text-slate-300 leading-relaxed text-xs">${escapeHtml(comment.content)}</p>
     </div>
   `;
 }
 
 function attachCommentListeners() {
-  document.querySelectorAll('.comment-upvote-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const commentId = parseInt(btn.dataset.commentId);
-      try {
-        const res = await fetch(`/api/comments/${commentId}/vote`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ direction: 'up' })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          updateCommentVoteInDOM(commentId, data.upvotes);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    });
-  });
+  // Comment voting removed
 }
 
 function updateCommentVoteInDOM(commentId, upvotes) {
-  const el = document.querySelector(`[data-comment-id="${commentId}"] .comment-score`);
-  if (el) el.textContent = upvotes;
+  // Comment voting removed
 }
 
 function handleIncomingNewComment(newComment) {
