@@ -261,8 +261,14 @@ function getInitialChatMessages(): ChatMessage[] {
 }
 
 // ==================== SESSION & PERSISTENT FILE-BACKED DATA STORE ====================
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-const DATA_FILE = path.join(DATA_DIR, 'store.json');
+// Configurable data path: allows persistent volumes (e.g. /app/data, /mnt/data, or custom volume mounts)
+const DATA_DIR = process.env.DATA_DIR 
+  ? path.resolve(process.env.DATA_DIR) 
+  : path.resolve(process.cwd(), 'data');
+const DATA_FILE = process.env.STORE_FILE_PATH 
+  ? path.resolve(process.env.STORE_FILE_PATH) 
+  : path.join(DATA_DIR, 'store.json');
+const BACKUP_FILE = path.join(DATA_DIR, 'store.backup.json');
 
 export interface Session {
   id: string;
@@ -342,6 +348,13 @@ function saveDataSync(data: StoredData) {
     const tempFile = `${DATA_FILE}.tmp`;
     fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
     fs.renameSync(tempFile, DATA_FILE);
+
+    // Keep secondary backup file to safeguard against image redeployments or container resets
+    try {
+      fs.copyFileSync(DATA_FILE, BACKUP_FILE);
+    } catch {
+      // non-blocking
+    }
   } catch (err) {
     console.error('Error saving persistent store to disk:', err);
   }
@@ -380,32 +393,57 @@ function forceSaveNow() {
   });
 }
 
+function parseStoreFile(filePath: string): StoredData | null {
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed.posts) && Array.isArray(parsed.comments) && Array.isArray(parsed.chatMessages)) {
+      const maxPostId = parsed.posts.reduce((max: number, p: Post) => Math.max(max, p.id || 0), 0);
+      const maxCommentId = parsed.comments.reduce((max: number, c: Comment) => Math.max(max, c.id || 0), 0);
+      const maxChatId = parsed.chatMessages.reduce((max: number, m: ChatMessage) => Math.max(max, m.id || 0), 0);
+      return {
+        posts: parsed.posts,
+        comments: parsed.comments,
+        chatMessages: parsed.chatMessages,
+        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : getInitialSessions(),
+        nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
+        nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
+        nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
+      };
+    }
+  } catch (err) {
+    console.error(`Could not parse ${filePath}:`, err);
+  }
+  return null;
+}
+
 function loadInitialStore(): StoredData {
   ensureDataDir();
-  if (fs.existsSync(DATA_FILE)) {
+
+  // 1. Try loading primary DATA_FILE
+  let primary = parseStoreFile(DATA_FILE);
+
+  // 2. Try loading secondary BACKUP_FILE
+  const backup = parseStoreFile(BACKUP_FILE);
+
+  // If backup has more content than primary (e.g. fresh container deploy), prioritize backup
+  if (backup && (!primary || (backup.posts.length > primary.posts.length))) {
+    console.log(`Preserving data from backup (${backup.posts.length} posts vs ${primary?.posts.length ?? 0} in primary store)`);
+    primary = backup;
     try {
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.posts) && Array.isArray(parsed.comments) && Array.isArray(parsed.chatMessages)) {
-        const maxPostId = parsed.posts.reduce((max: number, p: Post) => Math.max(max, p.id || 0), 0);
-        const maxCommentId = parsed.comments.reduce((max: number, c: Comment) => Math.max(max, c.id || 0), 0);
-        const maxChatId = parsed.chatMessages.reduce((max: number, m: ChatMessage) => Math.max(max, m.id || 0), 0);
-        console.log(`Loaded ${parsed.posts.length} posts, ${parsed.comments.length} comments, and ${parsed.chatMessages.length} chat messages from persistent store`);
-        return {
-          posts: parsed.posts,
-          comments: parsed.comments,
-          chatMessages: parsed.chatMessages,
-          sessions: Array.isArray(parsed.sessions) ? parsed.sessions : getInitialSessions(),
-          nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
-          nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
-          nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
-        };
-      }
-    } catch (err) {
-      console.error('Could not parse existing store.json, using defaults:', err);
+      fs.copyFileSync(BACKUP_FILE, DATA_FILE);
+    } catch {
+      // non-blocking
     }
   }
 
+  if (primary) {
+    console.log(`Loaded ${primary.posts.length} posts, ${primary.comments.length} comments, and ${primary.chatMessages.length} chat messages from persistent store at ${DATA_FILE}`);
+    return primary;
+  }
+
+  // 3. Fallback to initial seed only if no store or backup exists
   const initial: StoredData = {
     posts: getInitialPosts(),
     comments: getInitialComments(),
@@ -560,6 +598,57 @@ function getPostLatestActivityTime(post: Post): number {
 }
 
 // ==================== REST APIS ====================
+
+// -1. Persistent Store Backup & Export API (Used by Cloud Build & Publishing pipeline)
+app.get('/api/backup', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Content-Type', 'application/json');
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      const content = fs.readFileSync(DATA_FILE, 'utf-8');
+      return res.send(content);
+    } catch {
+      // fallback to memory
+    }
+  }
+  res.json({
+    posts,
+    comments,
+    chatMessages,
+    sessions: Array.from(sessions.values()),
+    nextPostId,
+    nextCommentId,
+    nextChatId
+  });
+});
+
+app.get('/api/admin/store-backup', (_req, res) => {
+  res.redirect('/api/backup');
+});
+
+app.post('/api/admin/store-restore', (req, res) => {
+  const payload = req.body as StoredData;
+  if (!payload || !Array.isArray(payload.posts)) {
+    return res.status(400).json({ error: 'Invalid store payload' });
+  }
+
+  posts = payload.posts;
+  comments = Array.isArray(payload.comments) ? payload.comments : [];
+  chatMessages = Array.isArray(payload.chatMessages) ? payload.chatMessages : [];
+  if (Array.isArray(payload.sessions)) {
+    sessions.clear();
+    for (const s of payload.sessions) {
+      sessions.set(s.id, s);
+    }
+  }
+  nextPostId = payload.nextPostId || Math.max(0, ...posts.map(p => p.id)) + 1;
+  nextCommentId = payload.nextCommentId || Math.max(0, ...comments.map(c => c.id)) + 1;
+  nextChatId = payload.nextChatId || Math.max(0, ...chatMessages.map(m => m.id)) + 1;
+
+  forceSaveNow();
+  broadcastPresence();
+  res.json({ success: true, message: 'Store restored successfully', postCount: posts.length });
+});
 
 // 0. Session & Authentication Endpoints
 
@@ -1216,6 +1305,77 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+// Asynchronous startup sync: If running on Cloud Run or configured via environment,
+// pull and merge any newer posts, comments, or sessions from the published platform so data is preserved.
+async function syncLatestDataFromLive() {
+  const syncUrl = process.env.LIVE_SYNC_URL || 
+    (process.env.K_SERVICE && process.env.K_SERVICE.startsWith('ais-dev')
+      ? 'https://ais-pre-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup'
+      : (process.env.K_SERVICE ? 'https://ais-dev-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup' : null));
+
+  if (!syncUrl) return;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(syncUrl, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return;
+
+    const data = await res.json() as StoredData;
+    if (!data || !Array.isArray(data.posts) || data.posts.length === 0) return;
+
+    let updated = false;
+    const existingPostIds = new Set(posts.map(p => p.id));
+    for (const post of data.posts) {
+      if (!existingPostIds.has(post.id)) {
+        posts.push(post);
+        updated = true;
+      }
+    }
+
+    const existingCommentIds = new Set(comments.map(c => c.id));
+    if (Array.isArray(data.comments)) {
+      for (const comment of data.comments) {
+        if (!existingCommentIds.has(comment.id)) {
+          comments.push(comment);
+          updated = true;
+        }
+      }
+    }
+
+    const existingChatIds = new Set(chatMessages.map(m => m.id));
+    if (Array.isArray(data.chatMessages)) {
+      for (const chat of data.chatMessages) {
+        if (!existingChatIds.has(chat.id)) {
+          chatMessages.push(chat);
+          updated = true;
+        }
+      }
+    }
+
+    if (Array.isArray(data.sessions)) {
+      for (const s of data.sessions) {
+        if (!sessions.has(s.id)) {
+          sessions.set(s.id, s);
+          updated = true;
+        }
+      }
+    }
+
+    if (updated) {
+      nextPostId = Math.max(nextPostId, ...posts.map(p => p.id)) + 1;
+      nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id)) + 1;
+      nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id)) + 1;
+      forceSaveNow();
+      console.log(`Synced and preserved live community data on startup: ${posts.length} posts, ${comments.length} comments, ${sessions.size} sessions`);
+    }
+  } catch (err) {
+    // Non-blocking fallback; normal startup continues
+    console.debug('Startup live sync skipped:', err);
+  }
+}
+
 const PORT = 3000;
 const HOST = '0.0.0.0';
 
@@ -1224,4 +1384,5 @@ server.listen(PORT, HOST, () => {
   console.log(`  ➜  Local:   http://localhost:${PORT}/`);
   console.log(`  ➜  Network: http://${HOST}:${PORT}/`);
   console.log(`FanSphere server running at http://${HOST}:${PORT}`);
+  syncLatestDataFromLive().catch(() => {});
 });

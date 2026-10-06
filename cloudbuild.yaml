@@ -1,5 +1,24 @@
 steps:
-  # Build container image using Dockerfile
+  # 1. Preserve live store.json from currently published platform before docker build
+  - name: 'gcr.io/cloud-builders/curl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        mkdir -p data
+        echo "Checking for live store.json from currently published platform..."
+        curl -f -s -m 10 "https://ais-pre-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup" -o /workspace/live_store.json || \
+        curl -f -s -m 10 "https://ais-dev-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup" -o /workspace/live_store.json || true
+        
+        if [ -s /workspace/live_store.json ] && grep -q '"posts"' /workspace/live_store.json; then
+          echo "Preserving live store.json with active community threads and sessions for publishing."
+          cp /workspace/live_store.json data/store.json
+          cp /workspace/live_store.json data/store.backup.json
+        else
+          echo "No external live store reached; retaining current workspace data/store.json."
+        fi
+
+  # 2. Build container image using Dockerfile
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -9,7 +28,7 @@ steps:
       - 'gcr.io/$PROJECT_ID/fansphere:latest'
       - '.'
 
-  # Push image to registry
+  # 3. Push image to registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
