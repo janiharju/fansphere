@@ -119,13 +119,8 @@ input:focus, select:focus, textarea:focus {
   animation: goalFlash 1.5s ease-out;
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.15); }
-}
-
 .live-dot {
-  animation: pulseGlow 1.8s infinite ease-in-out;
+  display: inline-block;
 }
 
 /* Upvote / Downvote active states */

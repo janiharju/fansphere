@@ -826,13 +826,70 @@ app.get('/api/presence', (_req, res) => {
   });
 });
 
-// 1. Posts List (Always sorted by latest changes including comments)
+// Helper to determine if an author's club tag/flair matches a selected Realm
+export function matchClubRealm(authorFlair: string | undefined, selectedRealm: string | undefined): boolean {
+  if (!selectedRealm || selectedRealm.toLowerCase() === 'all') return true;
+  if (!authorFlair) return false;
+
+  const a = authorFlair.trim().toLowerCase();
+  const b = selectedRealm.trim().toLowerCase();
+  if (a === b) return true;
+
+  // ArseFinland official club realm
+  const arseFinlandVariants = ['arsefinland member', 'arsefinland official member', 'arsenal finland', 'arsefinland', 'club official', 'official'];
+  if (arseFinlandVariants.some(v => b.includes(v) || v.includes(b))) {
+    return arseFinlandVariants.some(v => a.includes(v) || v.includes(a));
+  }
+
+  // Gunner (Arsenal FC) realm
+  if (b.includes('gunner') && !b.includes('suomi')) {
+    return a.includes('gunner') && !a.includes('suomi');
+  }
+
+  // Suomi Gooner realm
+  if (b.includes('suomi') || b.includes('lappi') || b.includes('tactics')) {
+    return a.includes('suomi') || a.includes('lappi') || a.includes('tactics') || a.includes('analyst');
+  }
+
+  // Blue Lion (Chelsea) realm
+  if (b.includes('blue lion') || b.includes('chelsea')) {
+    return a.includes('blue lion') || a.includes('chelsea');
+  }
+
+  // Red Army (Liverpool) realm
+  if (b.includes('red army') || b.includes('liverpool')) {
+    return a.includes('red army') || a.includes('liverpool');
+  }
+
+  // Cityzen (Man City) realm
+  if (b.includes('cityzen') || b.includes('man city')) {
+    return a.includes('cityzen') || a.includes('man city') || a.includes('manchester city');
+  }
+
+  // Klubi / Helsinki Fan realm
+  if (b.includes('helsinki fan') || b.includes('klubi') || b.includes('hjk')) {
+    return a.includes('helsinki fan') || a.includes('klubi') || a.includes('hjk');
+  }
+
+  // Neutral Football Fan realm
+  if (b.includes('neutral')) {
+    return a.includes('neutral');
+  }
+
+  return a.includes(b) || b.includes(a);
+}
+
+// 1. Posts List (Always sorted by latest changes including comments, filterable by tag and club realm)
 app.get('/api/posts', (req, res) => {
   const tag = req.query.tag as string | undefined;
+  const realm = req.query.realm as string | undefined;
 
   let filtered = [...posts];
   if (tag && tag.toLowerCase() !== 'all') {
     filtered = filtered.filter(p => p.tag.toLowerCase() === tag.toLowerCase());
+  }
+  if (realm && realm.toLowerCase() !== 'all') {
+    filtered = filtered.filter(p => matchClubRealm(p.author_flair, realm));
   }
 
   // Always sort forum feed by latest changes, taking comments into account
@@ -1032,12 +1089,16 @@ app.post('/api/comments/:id/vote', (req, res) => {
   });
 });
 
-// 7. Chat History
+// 7. Chat History (Filterable by room and club realm)
 app.get('/api/chat/history', (req, res) => {
   const room = (req.query.room as string) || 'general';
+  const realm = req.query.realm as string | undefined;
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
-  const roomMessages = chatMessages.filter(m => m.room === room);
+  let roomMessages = chatMessages.filter(m => m.room === room);
+  if (realm && realm.toLowerCase() !== 'all') {
+    roomMessages = roomMessages.filter(m => matchClubRealm(m.author_flair, realm));
+  }
   // Last `limit` messages in chronological order
   const slice = roomMessages.slice(-limit);
 

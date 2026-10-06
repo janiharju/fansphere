@@ -7,21 +7,122 @@ const state = {
   user: {
     handle: localStorage.getItem('fansphere_handle') || '',
     email: localStorage.getItem('fansphere_email') || '',
-    flair: localStorage.getItem('fansphere_flair') || 'Gunner',
+    flair: localStorage.getItem('fansphere_flair') || 'ArseFinland Member',
     badgeColor: '#EF4444'
   },
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
   currentTag: 'All',
+  selectedRealm: localStorage.getItem('fansphere_realm') || 'user_club',
   currentPage: 1,
   postsPerPage: 3,
   userVotes: JSON.parse(localStorage.getItem('fansphere_votes') || '{}'),
   activePostDetailId: null,
   ws: null,
+  lastWsAuthSessionId: null,
+  wsPingInterval: null,
   posts: [],
+  allChatMessages: [],
   renderedChatIds: new Set(),
   activeNicknames: []
 };
+
+// ==================== REALM & CLUB TAG FILTERING HELPERS ====================
+
+function getEffectiveRealm() {
+  if (state.selectedRealm === 'user_club') {
+    return state.user.flair || 'ArseFinland Member';
+  }
+  return state.selectedRealm;
+}
+
+function getRealmDisplayName(realm) {
+  if (!realm || realm === 'All' || realm === 'all') return 'All Realms (Cross-Club)';
+  if (realm === 'user_club') {
+    return `My Club (${getRealmDisplayName(state.user.flair || 'ArseFinland Member')})`;
+  }
+  if (realm === 'ArseFinland Member' || realm === 'Arsenal Finland' || realm === 'ArseFinland Official Member') return 'ArseFinland Official';
+  if (realm === 'Gunner') return 'Gunner (Arsenal FC)';
+  if (realm === 'Suomi Gooner') return 'Suomi Gooner';
+  if (realm === 'Blue Lion') return 'Blue Lion (Chelsea)';
+  if (realm === 'Red Army') return 'Red Army (Liverpool)';
+  if (realm === 'Cityzen') return 'Cityzen (Man City)';
+  if (realm === 'Helsinki Fan') return 'Klubi (HJK)';
+  if (realm === 'Neutral Scout') return 'Neutral Fan';
+  return realm;
+}
+
+function matchClubRealm(authorFlair, targetRealm) {
+  if (!targetRealm || targetRealm === 'All' || targetRealm === 'all') return true;
+  if (!authorFlair) return false;
+
+  const a = authorFlair.trim().toLowerCase();
+  const effective = (targetRealm === 'user_club' ? (state.user.flair || 'ArseFinland Member') : targetRealm).trim().toLowerCase();
+  if (a === effective) return true;
+
+  // ArseFinland official club realm
+  const arseFinlandVariants = ['arsefinland member', 'arsefinland official member', 'arsenal finland', 'arsefinland', 'club official', 'official'];
+  if (arseFinlandVariants.some(v => effective.includes(v) || v.includes(effective))) {
+    return arseFinlandVariants.some(v => a.includes(v) || v.includes(a));
+  }
+
+  // Gunner (Arsenal FC) realm
+  if (effective.includes('gunner') && !effective.includes('suomi')) {
+    return a.includes('gunner') && !a.includes('suomi');
+  }
+
+  // Suomi Gooner realm
+  if (effective.includes('suomi') || effective.includes('lappi') || effective.includes('tactics')) {
+    return a.includes('suomi') || a.includes('lappi') || a.includes('tactics') || a.includes('analyst');
+  }
+
+  // Blue Lion (Chelsea) realm
+  if (effective.includes('blue lion') || effective.includes('chelsea')) {
+    return a.includes('blue lion') || a.includes('chelsea');
+  }
+
+  // Red Army (Liverpool) realm
+  if (effective.includes('red army') || effective.includes('liverpool')) {
+    return a.includes('red army') || a.includes('liverpool');
+  }
+
+  // Cityzen (Man City) realm
+  if (effective.includes('cityzen') || effective.includes('man city')) {
+    return a.includes('cityzen') || a.includes('man city') || a.includes('manchester city');
+  }
+
+  // Klubi / Helsinki Fan realm
+  if (effective.includes('helsinki fan') || effective.includes('klubi') || effective.includes('hjk')) {
+    return a.includes('helsinki fan') || a.includes('klubi') || a.includes('hjk');
+  }
+
+  // Neutral Football Fan realm
+  if (effective.includes('neutral')) {
+    return a.includes('neutral');
+  }
+
+  return a.includes(effective) || effective.includes(a);
+}
+
+function updateRealmIndicators() {
+  const flairInput = document.getElementById('profileFlairInput');
+  if (flairInput) {
+    flairInput.value = (state.selectedRealm === 'All') ? 'All' : (state.user.flair || 'ArseFinland Member');
+  }
+}
+
+function setRealmFilter(realm) {
+  state.selectedRealm = realm;
+  if (realm !== 'All') {
+    state.user.flair = realm;
+    localStorage.setItem('fansphere_flair', realm);
+  }
+  localStorage.setItem('fansphere_realm', realm);
+  updateRealmIndicators();
+  state.currentPage = 1;
+  renderPosts();
+  renderChatStream();
+}
 
 // ==================== INITIALIZATION ====================
 
@@ -66,13 +167,8 @@ function loadCachedData() {
     if (cachedChat) {
       const parsedChat = JSON.parse(cachedChat);
       if (Array.isArray(parsedChat) && parsedChat.length > 0) {
-        const container = document.getElementById('chatMessages');
-        if (container) {
-          container.innerHTML = '';
-          state.renderedChatIds.clear();
-          parsedChat.forEach(msg => appendChatMessage(msg, false));
-          scrollChatToBottom();
-        }
+        state.allChatMessages = parsedChat;
+        renderChatStream();
       }
     }
   } catch (e) {
@@ -165,18 +261,37 @@ function initUserProfile(force = false) {
   const currentNickname = state.user.handle || 'Guest Fan';
   if (handleEl) handleEl.textContent = currentNickname;
 
-  // CRITICAL: Never overwrite inputs if the modal is currently open, unless explicitly forced (e.g. initial modal open)
+  // Ensure current user flair exists in inputFlair dropdown
+  if (inputFlair && state.user.flair) {
+    let exists = false;
+    for (let i = 0; i < inputFlair.options.length; i++) {
+      if (inputFlair.options[i].value === state.user.flair) {
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = state.user.flair;
+      opt.textContent = `${state.user.flair} (Custom)`;
+      inputFlair.appendChild(opt);
+    }
+  }
+
+  // CRITICAL: NEVER overwrite inputs if the modal is currently open, unless explicitly forced on opening
   const isModalOpen = profileModal && profileModal.open;
   if (!isModalOpen || force) {
     if (inputHandle) inputHandle.value = state.user.handle || '';
     if (inputEmail) inputEmail.value = state.user.email || '';
-    if (inputFlair) inputFlair.value = state.user.flair || 'Gunner';
+    if (inputFlair) inputFlair.value = state.user.flair || 'ArseFinland Member';
   }
 
   if (sessionIdDisplay) {
     sessionIdDisplay.textContent = state.sessionId ? `${state.sessionId.slice(0, 10)}...` : 'Inactive';
     sessionIdDisplay.title = state.sessionId || '';
   }
+
+  updateRealmIndicators();
 }
 
 // ==================== SESSION MANAGEMENT ====================
@@ -213,29 +328,48 @@ async function checkSession() {
   }
 }
 
-function applySession(session) {
+function applySession(session, skipWsAuth = false) {
+  if (!session) return;
+
+  const prevSessionId = state.sessionId;
+  const prevHandle = state.user.handle;
+  const prevEmail = state.user.email;
+  const prevFlair = state.user.flair;
+
   state.session = session;
   state.sessionId = session.id;
   state.user.handle = session.nickname;
   state.user.email = session.email;
-  state.user.flair = session.flair || 'Gunner';
+  state.user.flair = session.flair || 'ArseFinland Member';
 
   localStorage.setItem('fansphere_session_id', session.id);
   localStorage.setItem('fansphere_handle', session.nickname);
   localStorage.setItem('fansphere_email', session.email);
-  localStorage.setItem('fansphere_flair', session.flair || 'Gunner');
+  localStorage.setItem('fansphere_flair', session.flair || 'ArseFinland Member');
 
   initUserProfile();
 
-  // If websocket is open, authenticate socket connection
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify({ type: 'auth', sessionId: session.id }));
+  // If websocket is open and not skipping WS auth, authenticate socket connection only once per session ID
+  if (!skipWsAuth && state.ws && state.ws.readyState === WebSocket.OPEN) {
+    if (state.lastWsAuthSessionId !== session.id) {
+      state.lastWsAuthSessionId = session.id;
+      state.ws.send(JSON.stringify({ type: 'auth', sessionId: session.id }));
+    }
   }
 
   // Close welcome / session prompt modal if open
   const modal = document.getElementById('sessionPromptModal');
   if (modal && modal.open) {
     modal.close();
+  }
+
+  // Re-render feed and chat only if session ID, flair or handle actually changed
+  const hasChanged = prevSessionId !== session.id ||
+                     prevFlair !== state.user.flair ||
+                     prevHandle !== state.user.handle;
+  if (hasChanged) {
+    renderPosts();
+    renderChatStream();
   }
 }
 
@@ -367,11 +501,13 @@ function connectWebSocket() {
   state.ws.onopen = () => {
     console.log('FanSphere WebSocket connected');
     // Authenticate socket with active session if available
-    if (state.sessionId) {
+    if (state.sessionId && state.lastWsAuthSessionId !== state.sessionId) {
+      state.lastWsAuthSessionId = state.sessionId;
       state.ws.send(JSON.stringify({ type: 'auth', sessionId: state.sessionId }));
     }
     // Keep-alive heartbeat ping every 25s
-    setInterval(() => {
+    if (state.wsPingInterval) clearInterval(state.wsPingInterval);
+    state.wsPingInterval = setInterval(() => {
       if (state.ws && state.ws.readyState === WebSocket.OPEN) {
         state.ws.send(JSON.stringify({ type: 'ping' }));
       }
@@ -400,7 +536,10 @@ function handleWebSocketMessage(msg) {
       break;
 
     case 'auth_success':
-      if (msg.session) applySession(msg.session);
+      if (msg.session) {
+        state.lastWsAuthSessionId = msg.session.id;
+        applySession(msg.session, true);
+      }
       break;
 
     case 'error':
@@ -410,8 +549,7 @@ function handleWebSocketMessage(msg) {
       break;
 
     case 'chat_message':
-      appendChatMessage(msg.data);
-      playChime(523.25, 0.1);
+      handleIncomingChatMessage(msg.data);
       break;
 
     case 'vote_update':
@@ -479,27 +617,49 @@ async function loadPosts() {
   }
 }
 
+function getFilteredPosts() {
+  let list = state.posts || [];
+  if (state.currentTag && state.currentTag !== 'All') {
+    list = list.filter(p => p.tag && p.tag.toLowerCase() === state.currentTag.toLowerCase());
+  }
+  const effective = getEffectiveRealm();
+  if (state.selectedRealm !== 'All') {
+    list = list.filter(p => matchClubRealm(p.author_flair, effective));
+  }
+  return list;
+}
+
 function renderPosts() {
   const container = document.getElementById('postsList');
   if (!container) return;
 
-  if (state.posts.length === 0) {
+  const visiblePosts = getFilteredPosts();
+
+  if (visiblePosts.length === 0) {
+    const effective = getEffectiveRealm();
+    const realmName = getRealmDisplayName(effective);
     container.innerHTML = `
       <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
-        <p class="text-xs font-semibold mb-1">No posts found in this topic yet.</p>
-        <p class="text-[10px] text-slate-500">Be the first to start the discussion!</p>
+        <p class="text-xs font-semibold mb-1">No posts found in the <span class="text-red-400">${escapeHtml(realmName)}</span> realm.</p>
+        <p class="text-[10px] text-slate-500 mb-2.5">Be the first to share thoughts in this club realm, or switch realm in your profile!</p>
+        <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
+          👤 Change Realm in Profile
+        </button>
       </div>
     `;
+    document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
+      document.getElementById('openProfileModalBtn')?.click();
+    });
     updatePaginationControls(1, 1);
     return;
   }
 
-  const totalPages = Math.max(1, Math.ceil(state.posts.length / state.postsPerPage));
+  const totalPages = Math.max(1, Math.ceil(visiblePosts.length / state.postsPerPage));
   if (state.currentPage > totalPages) state.currentPage = totalPages;
   if (state.currentPage < 1) state.currentPage = 1;
 
   const startIndex = (state.currentPage - 1) * state.postsPerPage;
-  const pagePosts = state.posts.slice(startIndex, startIndex + state.postsPerPage);
+  const pagePosts = visiblePosts.slice(startIndex, startIndex + state.postsPerPage);
 
   container.innerHTML = pagePosts.map(post => renderPostCardHtml(post)).join('');
   updatePaginationControls(totalPages, state.currentPage);
@@ -752,17 +912,60 @@ function handleIncomingNewComment(newComment) {
 
 // ==================== REAL-TIME CHAT ====================
 
+function renderChatStream() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+
+  const effective = getEffectiveRealm();
+  const filtered = state.selectedRealm === 'All'
+    ? state.allChatMessages
+    : state.allChatMessages.filter(msg => matchClubRealm(msg.author_flair, effective));
+
+  // If already rendered with exactly the same message IDs, avoid wiping and re-rendering
+  const currentRenderedIds = Array.from(state.renderedChatIds);
+  const targetIds = filtered.map(m => m.id).filter(Boolean);
+  if (currentRenderedIds.length > 0 && currentRenderedIds.length === targetIds.length) {
+    let same = true;
+    for (let i = 0; i < currentRenderedIds.length; i++) {
+      if (currentRenderedIds[i] !== targetIds[i]) {
+        same = false;
+        break;
+      }
+    }
+    if (same) return;
+  }
+
+  container.innerHTML = '';
+  state.renderedChatIds.clear();
+
+  if (filtered.length === 0) {
+    const realmName = getRealmDisplayName(effective);
+    container.innerHTML = `
+      <div class="text-center py-6 text-slate-500 my-auto">
+        <p class="text-xs font-semibold mb-1">No chat messages in <span class="text-red-400">${escapeHtml(realmName)}</span> realm yet.</p>
+        <p class="text-[10px] text-slate-500 mb-2">Say hello to your fellow club supporters below, or switch realm in your profile!</p>
+        <button id="chatEmptyProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">
+          👤 Change Realm in Profile
+        </button>
+      </div>
+    `;
+    document.getElementById('chatEmptyProfileBtn')?.addEventListener('click', () => {
+      document.getElementById('openProfileModalBtn')?.click();
+    });
+    return;
+  }
+
+  filtered.forEach(msg => appendChatMessage(msg, false, false));
+  scrollChatToBottom();
+}
+
 async function loadChatHistory() {
   try {
     const res = await fetch('/api/chat/history?room=general&limit=100');
     if (!res.ok) throw new Error('Failed to load chat');
     const messages = await res.json();
-    const container = document.getElementById('chatMessages');
-    if (!container) return;
-    container.innerHTML = '';
-    state.renderedChatIds.clear();
-    messages.forEach(msg => appendChatMessage(msg, false));
-    scrollChatToBottom();
+    state.allChatMessages = Array.isArray(messages) ? messages : [];
+    renderChatStream();
     try {
       localStorage.setItem('fansphere_cached_chat', JSON.stringify(messages.slice(-50)));
     } catch {}
@@ -771,7 +974,19 @@ async function loadChatHistory() {
   }
 }
 
-function appendChatMessage(msg, autoScroll = true) {
+function handleIncomingChatMessage(chatData) {
+  if (!chatData) return;
+  if (!state.allChatMessages.some(m => m.id === chatData.id)) {
+    state.allChatMessages.push(chatData);
+  }
+  const effective = getEffectiveRealm();
+  if (state.selectedRealm === 'All' || matchClubRealm(chatData.author_flair, effective)) {
+    appendChatMessage(chatData, true, true);
+    playChime(523.25, 0.1);
+  }
+}
+
+function appendChatMessage(msg, autoScroll = true, isNew = false) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
@@ -785,13 +1000,13 @@ function appendChatMessage(msg, autoScroll = true) {
   const isSelf = msg.author === state.user.handle;
 
   const msgDiv = document.createElement('div');
-  msgDiv.className = 'chat-msg-enter flex flex-col space-y-0.5 shrink-0';
+  msgDiv.className = `${isNew ? 'chat-msg-enter ' : ''}flex flex-col space-y-0.5 shrink-0`;
   if (msg.id) msgDiv.dataset.chatId = msg.id;
   msgDiv.innerHTML = `
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : ''}">${escapeHtml(msg.author)}</span>
-      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'Gunner')}</span>
+      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'ArseFinland Member')}</span>
       <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
     <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs">
@@ -1043,13 +1258,25 @@ function initEventHandlers() {
     }
   });
 
-  // Clear feedback banners when user types in inputs
-  document.getElementById('profileHandleInput')?.addEventListener('input', () => {
+  // Clear feedback banners & sync local user state immediately when user types in inputs
+  document.getElementById('profileHandleInput')?.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (val.length >= 2 && val.length <= 30) {
+      state.user.handle = val;
+      localStorage.setItem('fansphere_handle', val);
+      const navUser = document.getElementById('navUsername');
+      if (navUser) navUser.textContent = val;
+    }
     document.getElementById('profileError')?.classList.add('hidden');
     document.getElementById('profileSuccess')?.classList.add('hidden');
   });
 
-  document.getElementById('profileEmailInput')?.addEventListener('input', () => {
+  document.getElementById('profileEmailInput')?.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (val.includes('@')) {
+      state.user.email = val;
+      localStorage.setItem('fansphere_email', val);
+    }
     document.getElementById('profileError')?.classList.add('hidden');
     document.getElementById('profileSuccess')?.classList.add('hidden');
   });
@@ -1074,20 +1301,50 @@ function initEventHandlers() {
     if (!handleInput || !emailInput) return false;
     const newHandle = handleInput.value.trim();
     const newEmail = emailInput.value.trim();
-    const newFlair = flairInput ? flairInput.value : 'Gunner';
+    const newFlair = flairInput ? flairInput.value : (state.user.flair || 'ArseFinland Member');
 
-    // If blur auto-save, only save if there are changes and fields are valid
-    const hasChanges = (newHandle !== state.user.handle) || (newEmail !== state.user.email) || (newFlair !== state.user.flair);
-    if (!hasChanges && !options.closeOnSuccess) {
+    // Immediate local state update so user changes are NEVER undone by blur or loss of focus
+    if (newHandle.length >= 2 && newHandle.length <= 30) {
+      state.user.handle = newHandle;
+      localStorage.setItem('fansphere_handle', newHandle);
+      const navUser = document.getElementById('navUsername');
+      if (navUser) navUser.textContent = newHandle;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailRegex.test(newEmail)) {
+      state.user.email = newEmail;
+      localStorage.setItem('fansphere_email', newEmail);
+    }
+
+    if (newFlair) {
+      const prevFlair = state.user.flair;
+      state.user.flair = newFlair;
+      localStorage.setItem('fansphere_flair', newFlair);
+      if (prevFlair !== newFlair && state.selectedRealm === 'user_club') {
+        renderPosts();
+        renderChatStream();
+      }
+    }
+
+    // Build the payload with whatever changed fields are valid
+    const payload = {};
+    if (newHandle.length >= 2 && newHandle.length <= 30 && (!state.session || newHandle !== state.session.nickname)) {
+      payload.nickname = newHandle;
+    }
+    if (emailRegex.test(newEmail) && (!state.session || newEmail !== state.session.email)) {
+      payload.email = newEmail;
+    }
+    if (newFlair && (!state.session || newFlair !== state.session.flair)) {
+      payload.flair = newFlair;
+    }
+
+    // If nothing changed to update on server, exit cleanly
+    if (Object.keys(payload).length === 0 && !options.closeOnSuccess) {
       return true;
     }
 
-    if (options.isBlur) {
-      // Don't pop aggressive errors while user is partially typing, but if valid, persist immediately
-      if (newHandle.length < 2 || newHandle.length > 30) return false;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(newEmail)) return false;
-    } else {
+    if (!options.isBlur) {
       // Explicit submission validation
       if (errEl) errEl.classList.add('hidden');
       if (successEl) successEl.classList.add('hidden');
@@ -1101,7 +1358,6 @@ function initEventHandlers() {
         return false;
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(newEmail)) {
         if (errEl) {
           errEl.textContent = 'Please enter a valid email address';
@@ -1110,12 +1366,17 @@ function initEventHandlers() {
         emailInput.focus();
         return false;
       }
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
     }
 
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-    }
+    // Ensure all required fields exist for new session creation if needed
+    if (!payload.nickname) payload.nickname = newHandle || state.user.handle || 'GuestFan';
+    if (!payload.email) payload.email = emailRegex.test(newEmail) ? newEmail : (state.user.email || 'fan@arsefinland.fi');
+    if (!payload.flair) payload.flair = newFlair;
 
     try {
       let res;
@@ -1126,36 +1387,24 @@ function initEventHandlers() {
             'Content-Type': 'application/json',
             'x-session-id': state.sessionId
           },
-          body: JSON.stringify({
-            nickname: newHandle,
-            email: newEmail,
-            flair: newFlair
-          })
+          body: JSON.stringify(payload)
         });
       } else {
         res = await fetch('/api/auth/session', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            nickname: newHandle,
-            email: newEmail,
-            flair: newFlair
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
       }
 
-      // If session was expired on server, seamlessly re-create session with user's new nickname & email
+      // If session was expired on server, seamlessly re-create session
       if (!res.ok && res.status === 401) {
         res = await fetch('/api/auth/session', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            nickname: newHandle,
-            email: newEmail,
+            nickname: newHandle || 'GuestFan',
+            email: emailRegex.test(newEmail) ? newEmail : 'fan@arsefinland.fi',
             flair: newFlair
           })
         });
@@ -1176,23 +1425,22 @@ function initEventHandlers() {
       }
 
       if (successEl) {
-        successEl.textContent = `✅ Saved! Active session updated (${data.session.nickname}).`;
+        successEl.textContent = `✅ Saved to session (${data.session.nickname})`;
         successEl.classList.remove('hidden');
       }
 
-      playChime(659.25, 0.08);
-
       if (options.closeOnSuccess) {
+        playChime(659.25, 0.08);
         setTimeout(() => {
           if (profileModal && profileModal.open) {
             profileModal.close();
           }
           if (successEl) successEl.classList.add('hidden');
-        }, 700);
+        }, 600);
       } else {
         setTimeout(() => {
           if (successEl) successEl.classList.add('hidden');
-        }, 3000);
+        }, 2500);
       }
       return true;
 
@@ -1204,7 +1452,7 @@ function initEventHandlers() {
       }
       return false;
     } finally {
-      if (saveBtn) {
+      if (!options.isBlur && saveBtn) {
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 Save Changes';
       }
@@ -1220,7 +1468,8 @@ function initEventHandlers() {
     persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
   });
 
-  document.getElementById('profileFlairInput')?.addEventListener('change', () => {
+  document.getElementById('profileFlairInput')?.addEventListener('change', (e) => {
+    setRealmFilter(e.target.value);
     persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
   });
 
