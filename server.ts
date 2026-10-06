@@ -1,6 +1,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -259,14 +260,71 @@ function getInitialChatMessages(): ChatMessage[] {
   ];
 }
 
-// ==================== PERSISTENT FILE-BACKED DATA STORE ====================
+// ==================== SESSION & PERSISTENT FILE-BACKED DATA STORE ====================
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
+
+export interface Session {
+  id: string;
+  nickname: string;
+  email: string;
+  flair: string;
+  created_at: string;
+  last_active_at: string;
+  expires_at: string;
+}
+
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours of inactivity before expiration
+const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes of recent activity for online presence
+
+function getInitialSessions(): Session[] {
+  const now = Date.now();
+  const twoHours = SESSION_TTL_MS;
+  return [
+    {
+      id: 'sess-helsinki-gunner',
+      nickname: 'HelsinkiGunner',
+      email: 'helsinki.gunner@arsefinland.fi',
+      flair: 'ArseFinland Member',
+      created_at: new Date(now - 3600000).toISOString(),
+      last_active_at: new Date(now - 60000).toISOString(),
+      expires_at: new Date(now + twoHours).toISOString()
+    },
+    {
+      id: 'sess-tampere-gooner',
+      nickname: 'TampereGooner',
+      email: 'tampere.gooner@arsefinland.fi',
+      flair: 'Gunner',
+      created_at: new Date(now - 7200000).toISOString(),
+      last_active_at: new Date(now - 120000).toISOString(),
+      expires_at: new Date(now + twoHours).toISOString()
+    },
+    {
+      id: 'sess-arsefin-admin',
+      nickname: 'ArseFinlandAdmin',
+      email: 'admin@arsefinland.fi',
+      flair: 'Club Official',
+      created_at: new Date(now - 10000000).toISOString(),
+      last_active_at: new Date(now - 30000).toISOString(),
+      expires_at: new Date(now + twoHours).toISOString()
+    },
+    {
+      id: 'sess-turku-gunner',
+      nickname: 'TurkuGunner',
+      email: 'turku.gunner@arsefinland.fi',
+      flair: 'Gunner',
+      created_at: new Date(now - 4000000).toISOString(),
+      last_active_at: new Date(now - 180000).toISOString(),
+      expires_at: new Date(now + twoHours).toISOString()
+    }
+  ];
+}
 
 interface StoredData {
   posts: Post[];
   comments: Comment[];
   chatMessages: ChatMessage[];
+  sessions?: Session[];
   nextPostId: number;
   nextCommentId: number;
   nextChatId: number;
@@ -297,6 +355,7 @@ function scheduleSave() {
       posts,
       comments,
       chatMessages,
+      sessions: Array.from(sessions.values()),
       nextPostId,
       nextCommentId,
       nextChatId,
@@ -314,6 +373,7 @@ function forceSaveNow() {
     posts,
     comments,
     chatMessages,
+    sessions: Array.from(sessions.values()),
     nextPostId,
     nextCommentId,
     nextChatId,
@@ -335,6 +395,7 @@ function loadInitialStore(): StoredData {
           posts: parsed.posts,
           comments: parsed.comments,
           chatMessages: parsed.chatMessages,
+          sessions: Array.isArray(parsed.sessions) ? parsed.sessions : getInitialSessions(),
           nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
           nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
           nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
@@ -349,6 +410,7 @@ function loadInitialStore(): StoredData {
     posts: getInitialPosts(),
     comments: getInitialComments(),
     chatMessages: getInitialChatMessages(),
+    sessions: getInitialSessions(),
     nextPostId: 6,
     nextCommentId: 12,
     nextChatId: 18,
@@ -364,6 +426,11 @@ let matches: Match[] = getInitialMatches();
 let posts: Post[] = storedData.posts;
 let comments: Comment[] = storedData.comments;
 let chatMessages: ChatMessage[] = storedData.chatMessages;
+
+const sessions = new Map<string, Session>();
+for (const s of (storedData.sessions || getInitialSessions())) {
+  sessions.set(s.id, s);
+}
 
 let nextPostId = storedData.nextPostId;
 let nextCommentId = storedData.nextCommentId;
@@ -398,8 +465,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Broadcast manager
+// Broadcast manager & Session sockets
 const activeSockets = new Set<WebSocket>();
+const socketSessions = new Map<WebSocket, string>();
 
 function broadcast(payload: Record<string, unknown>) {
   const message = JSON.stringify(payload);
@@ -414,11 +482,61 @@ function broadcast(payload: Record<string, unknown>) {
   }
 }
 
+function getActiveSessions(): Session[] {
+  const now = Date.now();
+  const active: Session[] = [];
+  const liveSessionIds = new Set(socketSessions.values());
+
+  for (const session of sessions.values()) {
+    const isExpired = new Date(session.expires_at).getTime() <= now;
+    if (isExpired) continue;
+
+    const lastActiveTime = new Date(session.last_active_at).getTime();
+    const isRecentlyActive = (now - lastActiveTime) <= ACTIVE_WINDOW_MS;
+    const hasLiveSocket = liveSessionIds.has(session.id);
+
+    if (isRecentlyActive || hasLiveSocket) {
+      active.push(session);
+    }
+  }
+  return active;
+}
+
 function broadcastPresence() {
+  const active = getActiveSessions();
   broadcast({
     type: 'presence',
-    online_count: Math.max(activeSockets.size, 1) + 14
+    online_count: active.length,
+    active_nicknames: active.map(s => s.nickname)
   });
+}
+
+function getSessionFromReq(req: express.Request): Session | null {
+  const authHeader = req.headers['authorization'];
+  let sessionId = req.headers['x-session-id'] as string | undefined;
+  if (!sessionId && authHeader && authHeader.startsWith('Bearer ')) {
+    sessionId = authHeader.slice(7).trim();
+  }
+  if (!sessionId && req.body && typeof req.body === 'object' && req.body.session_id) {
+    sessionId = String(req.body.session_id).trim();
+  }
+
+  if (!sessionId) return null;
+
+  const session = sessions.get(sessionId);
+  if (!session) return null;
+
+  const now = Date.now();
+  if (new Date(session.expires_at).getTime() <= now) {
+    return null;
+  }
+
+  // Automatic session refresh on use
+  session.last_active_at = new Date(now).toISOString();
+  session.expires_at = new Date(now + SESSION_TTL_MS).toISOString();
+  scheduleSave();
+
+  return session;
 }
 
 // Helper to find latest activity timestamp for a post (considering its creation and all comments)
@@ -442,6 +560,182 @@ function getPostLatestActivityTime(post: Post): number {
 }
 
 // ==================== REST APIS ====================
+
+// 0. Session & Authentication Endpoints
+
+// 0a. Create Session (Nickname + Email)
+app.post('/api/auth/session', (req, res) => {
+  const { nickname, email, flair } = req.body;
+
+  if (!nickname || typeof nickname !== 'string' || nickname.trim().length < 2 || nickname.trim().length > 30) {
+    return res.status(400).json({ detail: 'Nickname must be between 2 and 30 characters' });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || typeof email !== 'string' || !emailRegex.test(email.trim())) {
+    return res.status(400).json({ detail: 'Please enter a valid email address' });
+  }
+
+  const cleanNickname = nickname.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanFlair = flair && typeof flair === 'string' && flair.trim().length > 0 ? flair.trim() : 'Gunner';
+
+  const now = Date.now();
+  const sessionId = crypto.randomUUID();
+  const session: Session = {
+    id: sessionId,
+    nickname: cleanNickname,
+    email: cleanEmail,
+    flair: cleanFlair,
+    created_at: new Date(now).toISOString(),
+    last_active_at: new Date(now).toISOString(),
+    expires_at: new Date(now + SESSION_TTL_MS).toISOString()
+  };
+
+  sessions.set(sessionId, session);
+  forceSaveNow();
+  broadcastPresence();
+
+  const active = getActiveSessions();
+
+  res.status(201).json({
+    session,
+    valid: true,
+    online_count: active.length,
+    active_nicknames: active.map(s => s.nickname)
+  });
+});
+
+// 0b. Get / Verify / Reuse Session
+app.get('/api/auth/session', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  let sessionId = req.headers['x-session-id'] as string | undefined;
+  if (!sessionId && authHeader && authHeader.startsWith('Bearer ')) {
+    sessionId = authHeader.slice(7).trim();
+  }
+
+  if (!sessionId) {
+    return res.status(401).json({ detail: 'No session ID provided', valid: false });
+  }
+
+  const session = sessions.get(sessionId);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session not found', valid: false });
+  }
+
+  const now = Date.now();
+  if (new Date(session.expires_at).getTime() <= now) {
+    return res.status(401).json({ detail: 'Session expired', expired: true, valid: false });
+  }
+
+  // Automatic session refresh on reuse
+  session.last_active_at = new Date(now).toISOString();
+  session.expires_at = new Date(now + SESSION_TTL_MS).toISOString();
+  scheduleSave();
+  broadcastPresence();
+
+  const active = getActiveSessions();
+
+  res.json({
+    session,
+    valid: true,
+    online_count: active.length,
+    active_nicknames: active.map(s => s.nickname)
+  });
+});
+
+// 0c. Update Session (Change Nickname, Email & Flair)
+const handleSessionUpdate = (req: express.Request, res: express.Response) => {
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session expired or not found', expired: true, valid: false });
+  }
+
+  const { nickname, email, flair } = req.body;
+
+  if (nickname !== undefined) {
+    if (typeof nickname !== 'string' || nickname.trim().length < 2 || nickname.trim().length > 30) {
+      return res.status(400).json({ detail: 'Nickname must be between 2 and 30 characters' });
+    }
+    session.nickname = nickname.trim();
+  }
+
+  if (email !== undefined) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (typeof email !== 'string' || !emailRegex.test(email.trim())) {
+      return res.status(400).json({ detail: 'Please enter a valid email address' });
+    }
+    session.email = email.trim().toLowerCase();
+  }
+
+  if (flair !== undefined && typeof flair === 'string' && flair.trim().length > 0) {
+    session.flair = flair.trim();
+  }
+
+  session.last_active_at = new Date().toISOString();
+  session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+  forceSaveNow();
+  broadcastPresence();
+
+  const active = getActiveSessions();
+
+  res.json({
+    session,
+    valid: true,
+    online_count: active.length,
+    active_nicknames: active.map(s => s.nickname)
+  });
+};
+
+app.patch('/api/auth/session', handleSessionUpdate);
+app.put('/api/auth/session', handleSessionUpdate);
+
+// 0d. Heartbeat / Auto-Refresh Session
+app.post('/api/auth/session/refresh', (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session expired or not found', expired: true, valid: false });
+  }
+
+  broadcastPresence();
+  const active = getActiveSessions();
+
+  res.json({
+    session,
+    valid: true,
+    online_count: active.length,
+    active_nicknames: active.map(s => s.nickname)
+  });
+});
+
+// 0d. Logout / End Session
+app.post('/api/auth/session/logout', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  let sessionId = req.headers['x-session-id'] as string | undefined;
+  if (!sessionId && authHeader && authHeader.startsWith('Bearer ')) {
+    sessionId = authHeader.slice(7).trim();
+  }
+  if (!sessionId && req.body && req.body.session_id) {
+    sessionId = req.body.session_id;
+  }
+
+  if (sessionId && sessions.has(sessionId)) {
+    sessions.delete(sessionId);
+    forceSaveNow();
+    broadcastPresence();
+  }
+
+  res.json({ success: true });
+});
+
+// 0e. Live Presence
+app.get('/api/presence', (_req, res) => {
+  const active = getActiveSessions();
+  res.json({
+    online_count: active.length,
+    active_nicknames: active.map(s => s.nickname)
+  });
+});
 
 // 1. Posts List (Always sorted by latest changes including comments)
 app.get('/api/posts', (req, res) => {
@@ -469,7 +763,12 @@ app.get('/api/posts', (req, res) => {
 
 // 2. Create Post
 app.post('/api/posts', (req, res) => {
-  const { title, content, author, author_flair, tag, image_url } = req.body;
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session required. Please enter your nickname and email to post.', session_required: true });
+  }
+
+  const { title, content, tag, image_url } = req.body;
 
   if (!title || typeof title !== 'string' || title.trim().length < 3) {
     return res.status(400).json({ detail: 'Title must be at least 3 characters' });
@@ -483,8 +782,8 @@ app.post('/api/posts', (req, res) => {
     id: nextPostId++,
     title: title.trim(),
     content: content.trim(),
-    author: author ? String(author).trim() : 'Gunner',
-    author_flair: author_flair ? String(author_flair).trim() : 'Fan',
+    author: session.nickname,
+    author_flair: session.flair || 'Gunner',
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
@@ -575,6 +874,11 @@ app.post('/api/posts/:id/vote', (req, res) => {
 
 // 5. Add Comment
 app.post('/api/posts/:id/comments', (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session required. Please enter your nickname and email to comment.', session_required: true });
+  }
+
   const postId = parseInt(req.params.id, 10);
   const post = posts.find(p => p.id === postId);
 
@@ -582,7 +886,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     return res.status(404).json({ detail: 'Post not found' });
   }
 
-  const { content, author, author_flair, parent_id } = req.body;
+  const { content, parent_id } = req.body;
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     return res.status(400).json({ detail: 'Comment content cannot be empty' });
   }
@@ -591,8 +895,8 @@ app.post('/api/posts/:id/comments', (req, res) => {
     id: nextCommentId++,
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
-    author: author ? String(author).trim() : 'Gunner',
-    author_flair: author_flair ? String(author_flair).trim() : 'Fan',
+    author: session.nickname,
+    author_flair: session.flair || 'Gunner',
     content: content.trim(),
     upvotes: 1,
     created_at: new Date().toISOString()
@@ -653,7 +957,12 @@ app.get('/api/chat/history', (req, res) => {
 
 // 8. Post Chat Message
 app.post('/api/chat/message', (req, res) => {
-  const { content, author, author_flair, badge_color, room } = req.body;
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session required. Please enter your nickname and email to chat.', session_required: true });
+  }
+
+  const { content, badge_color, room } = req.body;
 
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     return res.status(400).json({ detail: 'Chat content cannot be empty' });
@@ -662,8 +971,8 @@ app.post('/api/chat/message', (req, res) => {
   const msg: ChatMessage = {
     id: nextChatId++,
     room: room ? String(room).trim() : 'general',
-    author: author ? String(author).trim() : 'Anonymous Gunner',
-    author_flair: author_flair ? String(author_flair).trim() : 'Gunner',
+    author: session.nickname,
+    author_flair: session.flair || 'Gunner',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: content.trim(),
     created_at: new Date().toISOString()
@@ -768,9 +1077,21 @@ app.post('/api/league/reset', (_req, res) => {
 
 // Static Files & SPA Fallback
 const staticDir = path.resolve(process.cwd(), 'static');
-app.use('/static', express.static(staticDir));
+
+app.use('/static', express.static(staticDir, {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+}));
 
 app.get('/', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(staticDir, 'index.html'));
 });
 
@@ -779,6 +1100,9 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/ws')) {
     return next();
   }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(staticDir, 'index.html'));
 });
 
@@ -793,17 +1117,58 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', (data: Buffer | string) => {
     try {
       const msg = JSON.parse(data.toString());
-      if (msg.type === 'ping') {
+
+      if (msg.type === 'auth') {
+        const sessionId = msg.sessionId || msg.session_id;
+        if (sessionId && sessions.has(sessionId)) {
+          const session = sessions.get(sessionId)!;
+          if (new Date(session.expires_at).getTime() > Date.now()) {
+            socketSessions.set(ws, sessionId);
+            session.last_active_at = new Date().toISOString();
+            session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+            scheduleSave();
+            broadcastPresence();
+            ws.send(JSON.stringify({ type: 'auth_success', session }));
+          }
+        }
+      } else if (msg.type === 'ping') {
+        const sessionId = socketSessions.get(ws);
+        if (sessionId && sessions.has(sessionId)) {
+          const s = sessions.get(sessionId)!;
+          s.last_active_at = new Date().toISOString();
+          s.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+        }
         ws.send(JSON.stringify({ type: 'pong' }));
       } else if (msg.type === 'chat') {
+        // Resolve authenticated session
+        let session: Session | undefined;
+        const sessionId = socketSessions.get(ws) || msg.sessionId || msg.payload?.sessionId;
+        if (sessionId && sessions.has(sessionId)) {
+          const candidate = sessions.get(sessionId)!;
+          if (new Date(candidate.expires_at).getTime() > Date.now()) {
+            session = candidate;
+            socketSessions.set(ws, sessionId);
+          }
+        }
+
+        if (!session) {
+          ws.send(JSON.stringify({ type: 'error', detail: 'Session required or expired. Please sign in.', session_required: true }));
+          return;
+        }
+
+        // Auto-refresh session on chat activity
+        session.last_active_at = new Date().toISOString();
+        session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+        scheduleSave();
+
         const payload = msg.payload || {};
         const content = (payload.content || '').trim();
         if (content) {
           const newChat: ChatMessage = {
             id: nextChatId++,
             room: payload.room || 'general',
-            author: payload.author || 'Fan',
-            author_flair: payload.author_flair || 'Gunner',
+            author: session.nickname,
+            author_flair: session.flair || 'Gunner',
             badge_color: payload.badge_color || '#EF4444',
             content,
             created_at: new Date().toISOString()
@@ -823,11 +1188,13 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     activeSockets.delete(ws);
+    socketSessions.delete(ws);
     broadcastPresence();
   });
 
   ws.on('error', () => {
     activeSockets.delete(ws);
+    socketSessions.delete(ws);
   });
 });
 

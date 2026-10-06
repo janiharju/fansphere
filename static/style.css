@@ -12,11 +12,12 @@
   --accent-gold: #F59E0B;
 }
 
-/* Base resets & layout stability */
+/* Base resets & zero-scroll layout */
 html {
   scrollbar-gutter: stable;
   scroll-behavior: smooth;
-/* Base resets & zero-scroll layout */
+}
+
 html, body {
   height: 100%;
   height: 100dvh;
@@ -36,28 +37,19 @@ body {
   padding: 0;
 }
 
-/* Containment & scrollbar styling */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #475569 #1E293B;
-  overscroll-behavior: contain;
 /* Zero-scroll: hide all scrollbars completely */
 * {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
 *::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #1E293B;
+/* Line clamps */
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -66,16 +58,6 @@ body {
   overflow: hidden;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748B;
-}
-
-/* Post text truncation */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -92,25 +74,38 @@ body {
   overflow: clip;
 }
 
-/* Dialog & Backdrop (Modern Web Guidance) */
+/* Dialog & Backdrop styling */
 dialog:not([open]) {
   display: none !important;
 }
 
 dialog {
-  border: none;
-  border-radius: 1rem;
-  padding: 0;
-  background: transparent;
-  max-width: 90vw;
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  border-radius: 1.5rem !important;
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  max-width: 95vw;
   max-height: 90vh;
-  overflow: visible;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
 }
 
 dialog::backdrop {
-  background-color: rgba(3, 7, 18, 0.75);
+  background-color: rgba(3, 7, 18, 0.8);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+}
+
+/* Ensure form inputs and interactive elements are always fully clickable, focusable, and editable */
+input, textarea, select, button {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
 }
 
 /* Goal pulse & highlight animations */

@@ -2,9 +2,12 @@
 
 // State
 const state = {
+  sessionId: localStorage.getItem('fansphere_session_id') || null,
+  session: null,
   user: {
-    handle: localStorage.getItem('fansphere_handle') || 'GunnerFIN',
-    flair: localStorage.getItem('fansphere_flair') || 'ArseFinland Member',
+    handle: localStorage.getItem('fansphere_handle') || '',
+    email: localStorage.getItem('fansphere_email') || '',
+    flair: localStorage.getItem('fansphere_flair') || 'Gunner',
     badgeColor: '#EF4444'
   },
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
@@ -16,7 +19,8 @@ const state = {
   activePostDetailId: null,
   ws: null,
   posts: [],
-  renderedChatIds: new Set()
+  renderedChatIds: new Set(),
+  activeNicknames: []
 };
 
 // ==================== INITIALIZATION ====================
@@ -27,12 +31,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   initAudio();
   initModalLightDismiss();
   initMobileTabs();
-  
+  initSessionAutoRefresh();
+
   // Instant restore of cached posts and chat messages so user sees old messages immediately on reload
   loadCachedData();
 
   // Connect WebSocket
   connectWebSocket();
+
+  // Check or initialize fan session (reuses if valid, prompts if new or expired)
+  await checkSession();
 
   // Load latest persistent data from server
   await Promise.all([
@@ -145,15 +153,208 @@ function initModalLightDismiss() {
   });
 }
 
-// User Profile
+// User Profile & Session UI
 function initUserProfile() {
   const handleEl = document.getElementById('navUsername');
   const inputHandle = document.getElementById('profileHandleInput');
+  const inputEmail = document.getElementById('profileEmailInput');
   const inputFlair = document.getElementById('profileFlairInput');
+  const sessionIdDisplay = document.getElementById('profileSessionIdDisplay');
 
-  if (handleEl) handleEl.textContent = state.user.handle;
-  if (inputHandle) inputHandle.value = state.user.handle;
-  if (inputFlair) inputFlair.value = state.user.flair;
+  const currentNickname = state.user.handle || 'Guest Fan';
+  if (handleEl) handleEl.textContent = currentNickname;
+
+  // Do not overwrite input fields if the user is currently focused/typing in them
+  if (inputHandle && document.activeElement !== inputHandle) {
+    inputHandle.value = state.user.handle || '';
+  }
+  if (inputEmail && document.activeElement !== inputEmail) {
+    inputEmail.value = state.user.email || '';
+  }
+  if (inputFlair && document.activeElement !== inputFlair) {
+    inputFlair.value = state.user.flair || 'Gunner';
+  }
+  if (sessionIdDisplay) {
+    sessionIdDisplay.textContent = state.sessionId ? `${state.sessionId.slice(0, 10)}...` : 'Inactive';
+    sessionIdDisplay.title = state.sessionId || '';
+  }
+}
+
+// ==================== SESSION MANAGEMENT ====================
+
+async function checkSession() {
+  if (state.sessionId) {
+    try {
+      const res = await fetch('/api/auth/session', {
+        headers: { 'x-session-id': state.sessionId }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        applySession(data.session);
+        updateOnlinePresence(data.online_count, data.active_nicknames);
+        return true;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.warn('Session verification error:', err);
+        state.sessionId = null;
+        state.session = null;
+        localStorage.removeItem('fansphere_session_id');
+        openSessionPromptModal(err.expired ? 'expired' : 'new');
+        return false;
+      }
+    } catch (e) {
+      console.error('Session network check error', e);
+      return false;
+    }
+  } else {
+    // No existing session, prompt user for Nickname & Email
+    openSessionPromptModal('new');
+    return false;
+  }
+}
+
+function applySession(session) {
+  state.session = session;
+  state.sessionId = session.id;
+  state.user.handle = session.nickname;
+  state.user.email = session.email;
+  state.user.flair = session.flair || 'Gunner';
+
+  localStorage.setItem('fansphere_session_id', session.id);
+  localStorage.setItem('fansphere_handle', session.nickname);
+  localStorage.setItem('fansphere_email', session.email);
+  localStorage.setItem('fansphere_flair', session.flair || 'Gunner');
+
+  initUserProfile();
+
+  // If websocket is open, authenticate socket connection
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify({ type: 'auth', sessionId: session.id }));
+  }
+
+  // Close welcome / session prompt modal if open
+  const modal = document.getElementById('sessionPromptModal');
+  if (modal && modal.open) {
+    modal.close();
+  }
+}
+
+function openSessionPromptModal(reason = 'new') {
+  const modal = document.getElementById('sessionPromptModal');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('sessionPromptTitle');
+  const noticeEl = document.getElementById('sessionPromptNotice');
+  const errEl = document.getElementById('sessionPromptError');
+  const nickInput = document.getElementById('sessionNicknameInput');
+  const emailInput = document.getElementById('sessionEmailInput');
+  const flairInput = document.getElementById('sessionFlairInput');
+
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.classList.add('hidden');
+  }
+
+  // Pre-fill previous values from local storage
+  if (nickInput && !nickInput.value) nickInput.value = localStorage.getItem('fansphere_handle') || '';
+  if (emailInput && !emailInput.value) emailInput.value = localStorage.getItem('fansphere_email') || '';
+  if (flairInput && localStorage.getItem('fansphere_flair')) flairInput.value = localStorage.getItem('fansphere_flair');
+
+  if (reason === 'expired') {
+    if (titleEl) titleEl.textContent = 'Session Expired';
+    if (noticeEl) {
+      noticeEl.innerHTML = `Your previous fan session has <strong>expired</strong>. Please confirm your <strong>Nickname</strong> and <strong>Email address</strong> to reactivate your session.`;
+      noticeEl.className = 'mt-3.5 p-3 rounded-xl bg-amber-950/70 border border-amber-800/70 text-xs text-amber-200 leading-relaxed';
+    }
+  } else {
+    if (titleEl) titleEl.textContent = 'Welcome to FanSphere';
+    if (noticeEl) {
+      noticeEl.innerHTML = `Please enter your <strong>Nickname</strong> and <strong>Email address</strong> to join the live discussions. Your session refreshes automatically while you are active.`;
+      noticeEl.className = 'mt-3.5 p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300 leading-relaxed';
+    }
+  }
+
+  try {
+    modal.showModal();
+  } catch (e) {
+    console.debug('showModal error', e);
+  }
+}
+
+function updateOnlinePresence(count, nicknames = []) {
+  const countEl = document.getElementById('onlineCountBadge');
+  const tooltipCount = document.getElementById('tooltipActiveCount');
+  const listEl = document.getElementById('onlineFansList');
+
+  const fansCount = count !== undefined ? count : (state.activeNicknames?.length || 1);
+  if (countEl) countEl.textContent = `${fansCount} ${fansCount === 1 ? 'Fan' : 'Fans'} Online`;
+  if (tooltipCount) tooltipCount.textContent = fansCount;
+
+  if (Array.isArray(nicknames) && nicknames.length > 0) {
+    state.activeNicknames = nicknames;
+  }
+
+  if (listEl) {
+    const list = (state.activeNicknames && state.activeNicknames.length > 0)
+      ? state.activeNicknames
+      : [state.user.handle || 'You'];
+
+    listEl.innerHTML = list.map(name => {
+      const isYou = name === state.user.handle;
+      return `
+        <li class="flex items-center gap-1.5 py-0.5">
+          <span class="w-1.5 h-1.5 rounded-full ${isYou ? 'bg-red-400' : 'bg-emerald-400'}"></span>
+          <span class="truncate ${isYou ? 'text-red-400 font-bold' : 'text-slate-200'}">${escapeHtml(name)}</span>
+          ${isYou ? '<span class="text-[9px] text-slate-400 ml-auto font-medium">(You)</span>' : ''}
+        </li>
+      `;
+    }).join('');
+  }
+}
+
+// Automatic session refresh on web service use
+function initSessionAutoRefresh() {
+  // 1. Regular 60-second heartbeat while active
+  setInterval(async () => {
+    if (state.sessionId && document.visibilityState !== 'hidden') {
+      try {
+        const res = await fetch('/api/auth/session/refresh', {
+          method: 'POST',
+          headers: { 'x-session-id': state.sessionId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          updateOnlinePresence(data.online_count, data.active_nicknames);
+        } else if (res.status === 401) {
+          state.sessionId = null;
+          state.session = null;
+          localStorage.removeItem('fansphere_session_id');
+          openSessionPromptModal('expired');
+        }
+      } catch (err) {
+        console.debug('Heartbeat skip', err);
+      }
+    }
+  }, 60000);
+
+  // 2. User activity touch (debounced every 2 minutes of active engagement)
+  let lastTouch = Date.now();
+  const touchActivity = () => {
+    const now = Date.now();
+    if (now - lastTouch > 2 * 60 * 1000) {
+      lastTouch = now;
+      if (state.sessionId) {
+        fetch('/api/auth/session/refresh', {
+          method: 'POST',
+          headers: { 'x-session-id': state.sessionId }
+        }).catch(() => {});
+      }
+    }
+  };
+
+  window.addEventListener('click', touchActivity, { passive: true });
+  window.addEventListener('keydown', touchActivity, { passive: true });
 }
 
 // ==================== WEBSOCKET HANDLING ====================
@@ -166,6 +367,10 @@ function connectWebSocket() {
 
   state.ws.onopen = () => {
     console.log('FanSphere WebSocket connected');
+    // Authenticate socket with active session if available
+    if (state.sessionId) {
+      state.ws.send(JSON.stringify({ type: 'auth', sessionId: state.sessionId }));
+    }
     // Keep-alive heartbeat ping every 25s
     setInterval(() => {
       if (state.ws && state.ws.readyState === WebSocket.OPEN) {
@@ -192,8 +397,17 @@ function connectWebSocket() {
 function handleWebSocketMessage(msg) {
   switch (msg.type) {
     case 'presence':
-      const countEl = document.getElementById('onlineCountBadge');
-      if (countEl) countEl.textContent = `${msg.online_count} Fans Online`;
+      updateOnlinePresence(msg.online_count, msg.active_nicknames);
+      break;
+
+    case 'auth_success':
+      if (msg.session) applySession(msg.session);
+      break;
+
+    case 'error':
+      if (msg.session_required) {
+        openSessionPromptModal('expired');
+      }
       break;
 
     case 'chat_message':
@@ -607,8 +821,14 @@ function scrollChatToBottom() {
 function sendChatMessage(text) {
   if (!text || !text.trim()) return;
 
+  if (!state.sessionId) {
+    openSessionPromptModal('new');
+    return;
+  }
+
   const payload = {
     room: 'general',
+    sessionId: state.sessionId,
     author: state.user.handle,
     author_flair: state.user.flair,
     badge_color: state.user.badgeColor,
@@ -618,13 +838,21 @@ function sendChatMessage(text) {
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({
       type: 'chat',
+      sessionId: state.sessionId,
       payload: payload
     }));
   } else {
     fetch('/api/chat/message', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-session-id': state.sessionId
+      },
       body: JSON.stringify(payload)
+    }).then(async (res) => {
+      if (res.status === 401) {
+        openSessionPromptModal('expired');
+      }
     });
   }
 }
@@ -684,6 +912,10 @@ function initEventHandlers() {
   // 3. Create Post Modal
   const createPostModal = document.getElementById('createPostModal');
   document.getElementById('openCreatePostBtn')?.addEventListener('click', () => {
+    if (!state.sessionId) {
+      openSessionPromptModal('new');
+      return;
+    }
     createPostModal.showModal();
   });
   document.getElementById('closeCreatePostModalBtn')?.addEventListener('click', () => {
@@ -695,6 +927,11 @@ function initEventHandlers() {
 
   document.getElementById('createPostForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!state.sessionId) {
+      openSessionPromptModal('new');
+      return;
+    }
+
     const title = document.getElementById('postTitleInput').value.trim();
     const tag = document.getElementById('postTagInput').value;
     const content = document.getElementById('postContentInput').value.trim();
@@ -704,13 +941,15 @@ function initEventHandlers() {
     try {
       const res = await fetch('/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': state.sessionId
+        },
         body: JSON.stringify({
           title,
           content,
           tag,
-          author: state.user.handle,
-          author_flair: state.user.flair
+          session_id: state.sessionId
         })
       });
 
@@ -719,6 +958,8 @@ function initEventHandlers() {
         createPostModal.close();
         await loadPosts();
         playChime(659.25, 0.15);
+      } else if (res.status === 401) {
+        openSessionPromptModal('expired');
       }
     } catch (err) {
       console.error('Failed to create post', err);
@@ -734,6 +975,11 @@ function initEventHandlers() {
 
   document.getElementById('addCommentForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!state.sessionId) {
+      openSessionPromptModal('new');
+      return;
+    }
+
     const input = document.getElementById('commentTextInput');
     const content = input.value.trim();
     if (!content || !state.activePostDetailId) return;
@@ -741,42 +987,273 @@ function initEventHandlers() {
     try {
       const res = await fetch(`/api/posts/${state.activePostDetailId}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': state.sessionId
+        },
         body: JSON.stringify({
           content,
-          author: state.user.handle,
-          author_flair: state.user.flair
+          session_id: state.sessionId
         })
       });
 
       if (res.ok) {
         input.value = '';
         playChime(587.33, 0.08);
+      } else if (res.status === 401) {
+        openSessionPromptModal('expired');
       }
     } catch (err) {
       console.error(err);
     }
   });
 
-  // 5. User Profile Modal
+  // 5. User Profile Modal & Session Form
   const profileModal = document.getElementById('userProfileModal');
   document.getElementById('openProfileModalBtn')?.addEventListener('click', () => {
+    if (!state.sessionId && !state.user.handle) {
+      openSessionPromptModal('new');
+      return;
+    }
+    initUserProfile();
     profileModal.showModal();
+    // Auto-focus the nickname input so the user can start editing immediately
+    setTimeout(() => {
+      const input = document.getElementById('profileHandleInput');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 50);
   });
+
+  // Explicit Edit buttons for Nickname and Email
+  document.getElementById('editHandleBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('profileHandleInput');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  });
+
+  document.getElementById('editEmailBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('profileEmailInput');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  });
+
+  // Clear feedback banners when user types in inputs
+  document.getElementById('profileHandleInput')?.addEventListener('input', () => {
+    document.getElementById('profileError')?.classList.add('hidden');
+    document.getElementById('profileSuccess')?.classList.add('hidden');
+  });
+
+  document.getElementById('profileEmailInput')?.addEventListener('input', () => {
+    document.getElementById('profileError')?.classList.add('hidden');
+    document.getElementById('profileSuccess')?.classList.add('hidden');
+  });
+
   document.getElementById('closeProfileModalBtn')?.addEventListener('click', () => {
     profileModal.close();
   });
-  document.getElementById('profileForm')?.addEventListener('submit', (e) => {
+  document.getElementById('switchSessionBtn')?.addEventListener('click', () => {
+    profileModal.close();
+    openSessionPromptModal('new');
+  });
+  document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const newHandle = document.getElementById('profileHandleInput').value.trim();
-    const newFlair = document.getElementById('profileFlairInput').value;
-    if (newHandle) {
-      state.user.handle = newHandle;
-      state.user.flair = newFlair;
-      localStorage.setItem('fansphere_handle', newHandle);
-      localStorage.setItem('fansphere_flair', newFlair);
-      initUserProfile();
-      profileModal.close();
+    const handleInput = document.getElementById('profileHandleInput');
+    const emailInput = document.getElementById('profileEmailInput');
+    const flairInput = document.getElementById('profileFlairInput');
+    const errEl = document.getElementById('profileError');
+    const successEl = document.getElementById('profileSuccess');
+    const saveBtn = document.getElementById('saveProfileBtn');
+
+    if (!handleInput || !emailInput) return;
+    const newHandle = handleInput.value.trim();
+    const newEmail = emailInput.value.trim();
+    const newFlair = flairInput ? flairInput.value : 'Gunner';
+
+    if (errEl) errEl.classList.add('hidden');
+    if (successEl) successEl.classList.add('hidden');
+
+    if (newHandle.length < 2 || newHandle.length > 30) {
+      if (errEl) {
+        errEl.textContent = 'Nickname must be between 2 and 30 characters';
+        errEl.classList.remove('hidden');
+      }
+      handleInput.focus();
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      if (errEl) {
+        errEl.textContent = 'Please enter a valid email address';
+        errEl.classList.remove('hidden');
+      }
+      emailInput.focus();
+      return;
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    try {
+      let res;
+      if (state.sessionId) {
+        res = await fetch('/api/auth/session', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-id': state.sessionId
+          },
+          body: JSON.stringify({
+            nickname: newHandle,
+            email: newEmail,
+            flair: newFlair
+          })
+        });
+      } else {
+        res = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            nickname: newHandle,
+            email: newEmail,
+            flair: newFlair
+          })
+        });
+      }
+
+      // If session was expired on server, seamlessly re-create session with user's new nickname & email
+      if (!res.ok && res.status === 401) {
+        res = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            nickname: newHandle,
+            email: newEmail,
+            flair: newFlair
+          })
+        });
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Failed to update session info');
+      }
+
+      const data = await res.json();
+      applySession(data.session);
+      updateOnlinePresence(data.online_count, data.active_nicknames);
+
+      // Re-authenticate WebSocket if open
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: 'auth', sessionId: data.session.id }));
+      }
+
+      if (successEl) {
+        successEl.textContent = `Saved! Active nickname set to "${data.session.nickname}".`;
+        successEl.classList.remove('hidden');
+      }
+
+      playChime(659.25, 0.1);
+
+      setTimeout(() => {
+        if (profileModal && profileModal.open) {
+          profileModal.close();
+        }
+        if (successEl) successEl.classList.add('hidden');
+      }, 900);
+
+    } catch (err) {
+      console.error('Profile update error', err);
+      if (errEl) {
+        errEl.textContent = err.message || 'Error updating session info';
+        errEl.classList.remove('hidden');
+      }
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Save Changes';
+      }
+    }
+  });
+
+  // 6. Welcome / Session Prompt Form Submission
+  document.getElementById('sessionPromptForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nickInput = document.getElementById('sessionNicknameInput');
+    const emailInput = document.getElementById('sessionEmailInput');
+    const flairInput = document.getElementById('sessionFlairInput');
+    const errEl = document.getElementById('sessionPromptError');
+    const submitBtn = document.getElementById('submitSessionBtn');
+
+    if (!nickInput || !emailInput) return;
+
+    const nickname = nickInput.value.trim();
+    const email = emailInput.value.trim();
+    const flair = flairInput ? flairInput.value : 'Gunner';
+
+    if (nickname.length < 2) {
+      if (errEl) {
+        errEl.textContent = 'Nickname must be at least 2 characters';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+      if (errEl) {
+        errEl.textContent = 'Please enter a valid email address';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Connecting...</span>';
+    }
+
+    try {
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, email, flair })
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Failed to create session');
+      }
+
+      const data = await res.json();
+      applySession(data.session);
+      updateOnlinePresence(data.online_count, data.active_nicknames);
+
+      if (errEl) errEl.classList.add('hidden');
+      playChime(659.25, 0.1);
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || 'Error creating session';
+        errEl.classList.remove('hidden');
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Enter FanSphere</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        initLucide();
+      }
     }
   });
 

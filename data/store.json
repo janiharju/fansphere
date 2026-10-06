@@ -1,6 +1,34 @@
 {
   "posts": [
     {
+      "id": 8,
+      "title": "Taktinen analyysi viikonlopun derbyyn",
+      "content": "Odegaardin sijoittuminen taskuun avaa tiloja Sakalle.",
+      "author": "OdegaardVision",
+      "author_flair": "Tactics Guru",
+      "tag": "Tactics",
+      "upvotes": 1,
+      "downvotes": 0,
+      "comment_count": 0,
+      "image_url": "",
+      "created_at": "2026-10-06T07:57:43.049Z",
+      "last_activity_at": "2026-10-06T07:57:43.049Z"
+    },
+    {
+      "id": 7,
+      "title": "Terveiset Espoosta! Loistava kausi",
+      "content": "Espoon kannattajat myös mukana menossa täysillä!",
+      "author": "EspooCannon",
+      "author_flair": "Suomi Gooner",
+      "tag": "Discussion",
+      "upvotes": 1,
+      "downvotes": 0,
+      "comment_count": 2,
+      "image_url": "",
+      "created_at": "2026-10-06T07:49:02.221Z",
+      "last_activity_at": "2026-10-06T07:53:54.295Z"
+    },
+    {
       "id": 6,
       "title": "Terveisiä Rovaniemeltä! Uusi ketju",
       "content": "Pohjoisen tykkimiehet ilmoittautuvat mukaan keskusteluun.",
@@ -200,6 +228,26 @@
       "content": "Nähdään lauantaina Sports Academyssa!",
       "upvotes": 1,
       "created_at": "2026-10-05T09:29:08.627Z"
+    },
+    {
+      "id": 13,
+      "post_id": 7,
+      "parent_id": null,
+      "author": "EspooCannon",
+      "author_flair": "Suomi Gooner",
+      "content": "Ensimmäinen kommentti ketjuun!",
+      "upvotes": 1,
+      "created_at": "2026-10-06T07:49:06.369Z"
+    },
+    {
+      "id": 14,
+      "post_id": 7,
+      "parent_id": null,
+      "author": "EspooStriker",
+      "author_flair": "ArseFinland Member",
+      "content": "Uusi kommentti uudella nimimerkillä!",
+      "upvotes": 1,
+      "created_at": "2026-10-06T07:53:54.295Z"
     }
   ],
   "chatMessages": [
@@ -364,9 +412,92 @@
       "badge_color": "#EF4444",
       "content": "Testi pysyvä viesti chatissa!",
       "created_at": "2026-10-05T07:15:49.116Z"
+    },
+    {
+      "id": 19,
+      "room": "general",
+      "author": "EspooCannon",
+      "author_flair": "Suomi Gooner",
+      "badge_color": "#EF4444",
+      "content": "Terveisiä chattiin Espoosta! COYG!",
+      "created_at": "2026-10-06T07:49:10.835Z"
+    },
+    {
+      "id": 20,
+      "room": "general",
+      "author": "EspooStriker",
+      "author_flair": "ArseFinland Member",
+      "badge_color": "#EF4444",
+      "content": "Nimimerkki vaihdettu onnistuneesti!",
+      "created_at": "2026-10-06T07:53:58.194Z"
+    },
+    {
+      "id": 21,
+      "room": "general",
+      "author": "OdegaardVision",
+      "author_flair": "Tactics Guru",
+      "badge_color": "#EF4444",
+      "content": "Taktinen keskustelu avattu!",
+      "created_at": "2026-10-06T07:57:48.277Z"
     }
   ],
-  "nextPostId": 7,
-  "nextCommentId": 13,
-  "nextChatId": 19
+  "sessions": [
+    {
+      "id": "sess-helsinki-gunner",
+      "nickname": "HelsinkiGunner",
+      "email": "helsinki.gunner@arsefinland.fi",
+      "flair": "ArseFinland Member",
+      "created_at": "2026-10-06T06:44:54.385Z",
+      "last_active_at": "2026-10-06T07:43:54.385Z",
+      "expires_at": "2026-10-06T09:44:54.385Z"
+    },
+    {
+      "id": "sess-tampere-gooner",
+      "nickname": "TampereGooner",
+      "email": "tampere.gooner@arsefinland.fi",
+      "flair": "Gunner",
+      "created_at": "2026-10-06T05:44:54.385Z",
+      "last_active_at": "2026-10-06T07:42:54.385Z",
+      "expires_at": "2026-10-06T09:44:54.385Z"
+    },
+    {
+      "id": "sess-arsefin-admin",
+      "nickname": "ArseFinlandAdmin",
+      "email": "admin@arsefinland.fi",
+      "flair": "Club Official",
+      "created_at": "2026-10-06T04:58:14.385Z",
+      "last_active_at": "2026-10-06T07:44:24.385Z",
+      "expires_at": "2026-10-06T09:44:54.385Z"
+    },
+    {
+      "id": "sess-turku-gunner",
+      "nickname": "TurkuGunner",
+      "email": "turku.gunner@arsefinland.fi",
+      "flair": "Gunner",
+      "created_at": "2026-10-06T06:38:14.385Z",
+      "last_active_at": "2026-10-06T07:41:54.385Z",
+      "expires_at": "2026-10-06T09:44:54.385Z"
+    },
+    {
+      "id": "15cf9889-fcf4-4662-975c-444bc1df3598",
+      "nickname": "OdegaardVision",
+      "email": "martin.odegaard@arsefinland.fi",
+      "flair": "Tactics Guru",
+      "created_at": "2026-10-06T07:48:53.702Z",
+      "last_active_at": "2026-10-06T07:57:48.277Z",
+      "expires_at": "2026-10-06T09:57:48.277Z"
+    },
+    {
+      "id": "582a779f-292e-4acb-a19f-59956f09676f",
+      "nickname": "GunnerFIN",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Member",
+      "created_at": "2026-10-06T07:50:20.469Z",
+      "last_active_at": "2026-10-06T08:31:16.289Z",
+      "expires_at": "2026-10-06T10:31:16.289Z"
+    }
+  ],
+  "nextPostId": 9,
+  "nextCommentId": 15,
+  "nextChatId": 22
 }

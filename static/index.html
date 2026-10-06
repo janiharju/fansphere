@@ -29,7 +29,7 @@
   </script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=20261006_06">
 </head>
 <body class="bg-[#0B1120] text-slate-100 h-screen h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden selection:bg-red-600 selection:text-white">
 
@@ -56,10 +56,22 @@
 
       <!-- Right Controls: Profile & Live Status -->
       <div class="flex items-center gap-2.5">
-        <!-- Live Fans Pill -->
-        <div class="flex items-center gap-1.5 bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 text-xs font-medium px-2.5 py-1 rounded-full">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
-          <span id="onlineCountBadge">24 Fans Online</span>
+        <!-- Live Fans Pill with Active Sessions Dropdown / Tooltip -->
+        <div class="relative group">
+          <div id="onlineFansPill" class="flex items-center gap-1.5 bg-emerald-950/70 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/60 text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition select-none shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+            <span id="onlineCountBadge">4 Fans Online</span>
+          </div>
+          <!-- Tooltip showing active fan nicknames -->
+          <div id="onlineFansTooltip" class="absolute right-0 top-full mt-2 hidden group-hover:flex flex-col z-50 bg-slate-900/95 border border-slate-700/80 p-2.5 rounded-xl shadow-2xl min-w-[200px] text-xs backdrop-blur-md">
+            <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 text-[11px] text-slate-400 font-semibold">
+              <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Active Sessions</span>
+              <span id="tooltipActiveCount" class="text-emerald-400 font-bold">4</span>
+            </div>
+            <ul id="onlineFansList" class="mt-1.5 space-y-1 max-h-40 overflow-y-auto text-[11px] text-slate-300">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
         </div>
 
         <!-- Sound Toggle -->
@@ -285,7 +297,7 @@
   <!-- ================= MODALS / DIALOGS (Accessible & Modern) ================= -->
 
   <!-- 1. CREATE POST MODAL -->
-  <dialog id="createPostModal" closedby="any" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg">
+  <dialog id="createPostModal" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg">
     <div class="flex items-center justify-between pb-4 border-b border-slate-800">
       <h3 class="text-base font-bold flex items-center gap-2">
         <span>✍️</span> Create Discussion Thread
@@ -343,7 +355,7 @@
   </dialog>
 
   <!-- 2. POST DETAIL & COMMENTS MODAL -->
-  <dialog id="postDetailModal" closedby="any" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-2xl max-h-[85vh]">
+  <dialog id="postDetailModal" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-2xl max-h-[85vh]">
     <div class="flex flex-col max-h-[calc(85vh-3rem)]">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
         <div id="modalPostHeaderFlairs" class="flex items-center gap-2">
@@ -391,30 +403,191 @@
     </div>
   </dialog>
 
-  <!-- 3. USER PROFILE & FAN BADGE MODAL -->
-  <dialog id="userProfileModal" closedby="any" class="bg-slate-900 text-slate-100 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm">
-    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-      <h3 class="text-base font-bold flex items-center gap-2">
-        <span>👤</span> Fan Profile Settings
-      </h3>
-      <button id="closeProfileModalBtn" class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+  <!-- 3. USER PROFILE & ACTIVE SESSION MODAL -->
+  <dialog id="userProfileModal" class="bg-slate-900 text-slate-100 p-0 rounded-3xl border border-slate-700/80 shadow-2xl w-full max-w-sm backdrop:bg-slate-950/70 backdrop:backdrop-blur-sm">
+    <div class="p-6">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-bold flex items-center gap-2">
+            <span>👤</span> Fan Session & Profile
+          </h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">Edit your nickname, email, and fan flair below</p>
+        </div>
+        <button id="closeProfileModalBtn" type="button" class="text-slate-400 hover:text-white text-lg font-bold p-1 transition" title="Close">✕</button>
+      </div>
+
+      <form id="profileForm" class="space-y-4 pt-4 text-xs" autocomplete="on">
+        <!-- Feedback messages -->
+        <div id="profileError" class="hidden p-2.5 rounded-xl bg-red-950/70 border border-red-800/80 text-xs text-red-300"></div>
+        <div id="profileSuccess" class="hidden p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-800/80 text-xs text-emerald-300"></div>
+
+        <!-- Session Status Banner -->
+        <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/70 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Session Status</span>
+            <span class="inline-flex items-center gap-1 text-emerald-400 font-semibold text-[11px]">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400">Session Token</span>
+            <span id="profileSessionIdDisplay" class="text-slate-400 font-mono text-[10px] truncate max-w-[150px]">-</span>
+          </div>
+          <p class="text-[10px] text-slate-400 pt-0.5">Changes saved here update your session and fan identity immediately.</p>
+        </div>
+
+        <!-- Field 1: Nickname / Fan Handle -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <label for="profileHandleInput" class="text-slate-200 font-semibold flex items-center gap-1">
+              <span>Nickname / Fan Handle</span>
+              <span class="text-red-400">*</span>
+            </label>
+            <button 
+              type="button" 
+              id="editHandleBtn" 
+              class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 bg-red-950/40 hover:bg-red-900/40 border border-red-800/40 px-2 py-0.5 rounded-md transition cursor-pointer"
+              title="Click to edit nickname"
+            >
+              <span>✏️ Edit</span>
+            </button>
+          </div>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs select-none">@</span>
+            <input 
+              type="text" 
+              id="profileHandleInput" 
+              class="w-full bg-slate-950 border-2 border-slate-600 hover:border-slate-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white rounded-xl pl-7 pr-3 py-2.5 font-medium text-xs shadow-inner cursor-text transition focus:outline-none"
+              placeholder="e.g. HelsinkiGunner"
+              required
+              minlength="2"
+              maxlength="30"
+              autocomplete="nickname"
+              spellcheck="false"
+            />
+          </div>
+          <p class="text-[10px] text-slate-400">Attached to all your forum posts and live chat messages.</p>
+        </div>
+
+        <!-- Field 2: Email Address -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <label for="profileEmailInput" class="text-slate-200 font-semibold flex items-center gap-1">
+              <span>Email Address</span>
+              <span class="text-red-400">*</span>
+            </label>
+            <button 
+              type="button" 
+              id="editEmailBtn" 
+              class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 bg-red-950/40 hover:bg-red-900/40 border border-red-800/40 px-2 py-0.5 rounded-md transition cursor-pointer"
+              title="Click to edit email address"
+            >
+              <span>✏️ Edit</span>
+            </button>
+          </div>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs select-none">✉</span>
+            <input 
+              type="email" 
+              id="profileEmailInput" 
+              class="w-full bg-slate-950 border-2 border-slate-600 hover:border-slate-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white rounded-xl pl-7 pr-3 py-2.5 font-medium text-xs shadow-inner cursor-text transition focus:outline-none"
+              placeholder="e.g. gunner@example.com"
+              required
+              autocomplete="email"
+              spellcheck="false"
+            />
+          </div>
+          <p class="text-[10px] text-slate-400">Your registered contact email for this session.</p>
+        </div>
+
+        <!-- Field 3: Supporter Flair -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <label for="profileFlairInput" class="text-slate-200 font-semibold">
+              Supporter Flair
+            </label>
+            <span class="text-[10px] text-slate-400">Club tag</span>
+          </div>
+          <select id="profileFlairInput" class="w-full bg-slate-950 border-2 border-slate-600 hover:border-slate-500 text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 font-medium cursor-pointer">
+            <option value="Gunner">Gunner (Arsenal FC)</option>
+            <option value="ArseFinland Member">ArseFinland Official Member</option>
+            <option value="Suomi Gooner">Suomi Gooner</option>
+            <option value="Red Army">Red Army (Liverpool)</option>
+            <option value="Cityzen">Cityzen (Man City)</option>
+            <option value="Blue Lion">Blue Lion (Chelsea)</option>
+            <option value="Helsinki Fan">Klubi (HJK Helsinki)</option>
+            <option value="Neutral Scout">Neutral Football Fan</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button type="button" id="switchSessionBtn" class="text-xs text-red-400 hover:text-red-300 underline font-medium cursor-pointer">
+            New Session
+          </button>
+          <button type="submit" id="saveProfileBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-red-600/30 flex items-center gap-1.5 cursor-pointer">
+            <span>💾 Save Changes</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 4. WELCOME & SESSION PROMPT MODAL (Prompts for Nickname & Email on first visit or expired session) -->
+  <dialog id="sessionPromptModal" class="bg-slate-900 text-slate-100 p-6 rounded-3xl border border-slate-700 shadow-2xl w-full max-w-md backdrop:bg-slate-950/85 backdrop:backdrop-blur-md">
+    <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+      <div class="w-10 h-10 rounded-2xl bg-red-600/20 text-red-400 border border-red-500/30 flex items-center justify-center font-bold text-xl shrink-0">
+        ⚽
+      </div>
+      <div>
+        <h3 id="sessionPromptTitle" class="text-base font-bold text-slate-100">Welcome to FanSphere</h3>
+        <p class="text-[11px] text-slate-400">ArseFinland Official Supporters Community</p>
+      </div>
     </div>
 
-    <form id="profileForm" class="space-y-4 pt-4 text-xs">
+    <div id="sessionPromptNotice" class="mt-3.5 p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300 leading-relaxed">
+      Please enter your <strong>Nickname</strong> and <strong>Email address</strong> to join the live discussions. Your session refreshes automatically while you are active and can be resumed later.
+    </div>
+
+    <div id="sessionPromptError" class="hidden mt-2 p-2.5 rounded-xl bg-red-950/60 border border-red-800/60 text-xs text-red-300"></div>
+
+    <form id="sessionPromptForm" class="space-y-3.5 pt-3.5 text-xs">
       <div>
-        <label class="block text-slate-300 font-semibold mb-1">Fan Handle / Nickname</label>
+        <label for="sessionNicknameInput" class="block text-slate-200 font-semibold mb-1">
+          Nickname / Fan Handle <span class="text-red-400">*</span>
+        </label>
         <input 
           type="text" 
-          id="profileHandleInput" 
-          class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500 font-medium"
+          id="sessionNicknameInput" 
+          class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 font-medium text-xs placeholder:text-slate-500"
+          placeholder="e.g. HelsinkiGunner"
           required
-          maxlength="25"
+          minlength="2"
+          maxlength="30"
+          autocomplete="nickname"
         />
+        <p class="text-[10px] text-slate-500 mt-1">This nickname will be attached to all your forum posts and live chat messages.</p>
       </div>
 
       <div>
-        <label class="block text-slate-300 font-semibold mb-1">Fan Club / Supporter Flair</label>
-        <select id="profileFlairInput" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500">
+        <label for="sessionEmailInput" class="block text-slate-200 font-semibold mb-1">
+          Email Address <span class="text-red-400">*</span>
+        </label>
+        <input 
+          type="email" 
+          id="sessionEmailInput" 
+          class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 font-medium text-xs placeholder:text-slate-500"
+          placeholder="e.g. gunner@example.com"
+          required
+          autocomplete="email"
+        />
+        <p class="text-[10px] text-slate-500 mt-1">Used to establish your fan session and save your community profile.</p>
+      </div>
+
+      <div>
+        <label for="sessionFlairInput" class="block text-slate-200 font-semibold mb-1">
+          Supporter Flair
+        </label>
+        <select id="sessionFlairInput" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 text-xs">
           <option value="Gunner">Gunner (Arsenal FC)</option>
           <option value="ArseFinland Member">ArseFinland Official Member</option>
           <option value="Suomi Gooner">Suomi Gooner</option>
@@ -426,9 +599,10 @@
         </select>
       </div>
 
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl transition">
-          Save Settings
+      <div class="pt-2">
+        <button type="submit" id="submitSessionBtn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+          <span>Enter FanSphere</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
       </div>
     </form>
@@ -438,7 +612,7 @@
   <audio id="chimeAudio" preload="auto"></audio>
 
   <!-- Application Script -->
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20261006_06"></script>
 </body>
 </html>
 
