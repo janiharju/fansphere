@@ -154,26 +154,25 @@ function initModalLightDismiss() {
 }
 
 // User Profile & Session UI
-function initUserProfile() {
+function initUserProfile(force = false) {
   const handleEl = document.getElementById('navUsername');
   const inputHandle = document.getElementById('profileHandleInput');
   const inputEmail = document.getElementById('profileEmailInput');
   const inputFlair = document.getElementById('profileFlairInput');
   const sessionIdDisplay = document.getElementById('profileSessionIdDisplay');
+  const profileModal = document.getElementById('userProfileModal');
 
   const currentNickname = state.user.handle || 'Guest Fan';
   if (handleEl) handleEl.textContent = currentNickname;
 
-  // Do not overwrite input fields if the user is currently focused/typing in them
-  if (inputHandle && document.activeElement !== inputHandle) {
-    inputHandle.value = state.user.handle || '';
+  // CRITICAL: Never overwrite inputs if the modal is currently open, unless explicitly forced (e.g. initial modal open)
+  const isModalOpen = profileModal && profileModal.open;
+  if (!isModalOpen || force) {
+    if (inputHandle) inputHandle.value = state.user.handle || '';
+    if (inputEmail) inputEmail.value = state.user.email || '';
+    if (inputFlair) inputFlair.value = state.user.flair || 'Gunner';
   }
-  if (inputEmail && document.activeElement !== inputEmail) {
-    inputEmail.value = state.user.email || '';
-  }
-  if (inputFlair && document.activeElement !== inputFlair) {
-    inputFlair.value = state.user.flair || 'Gunner';
-  }
+
   if (sessionIdDisplay) {
     sessionIdDisplay.textContent = state.sessionId ? `${state.sessionId.slice(0, 10)}...` : 'Inactive';
     sessionIdDisplay.title = state.sessionId || '';
@@ -1015,7 +1014,7 @@ function initEventHandlers() {
       openSessionPromptModal('new');
       return;
     }
-    initUserProfile();
+    initUserProfile(true); // Explicitly load current session values on modal open
     profileModal.showModal();
     // Auto-focus the nickname input so the user can start editing immediately
     setTimeout(() => {
@@ -1062,8 +1061,9 @@ function initEventHandlers() {
     profileModal.close();
     openSessionPromptModal('new');
   });
-  document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+
+  // Unified session persistence function for both blur auto-save and explicit form submit
+  async function persistProfileSessionChanges(options = { closeOnSuccess: false, isBlur: false }) {
     const handleInput = document.getElementById('profileHandleInput');
     const emailInput = document.getElementById('profileEmailInput');
     const flairInput = document.getElementById('profileFlairInput');
@@ -1071,31 +1071,45 @@ function initEventHandlers() {
     const successEl = document.getElementById('profileSuccess');
     const saveBtn = document.getElementById('saveProfileBtn');
 
-    if (!handleInput || !emailInput) return;
+    if (!handleInput || !emailInput) return false;
     const newHandle = handleInput.value.trim();
     const newEmail = emailInput.value.trim();
     const newFlair = flairInput ? flairInput.value : 'Gunner';
 
-    if (errEl) errEl.classList.add('hidden');
-    if (successEl) successEl.classList.add('hidden');
-
-    if (newHandle.length < 2 || newHandle.length > 30) {
-      if (errEl) {
-        errEl.textContent = 'Nickname must be between 2 and 30 characters';
-        errEl.classList.remove('hidden');
-      }
-      handleInput.focus();
-      return;
+    // If blur auto-save, only save if there are changes and fields are valid
+    const hasChanges = (newHandle !== state.user.handle) || (newEmail !== state.user.email) || (newFlair !== state.user.flair);
+    if (!hasChanges && !options.closeOnSuccess) {
+      return true;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      if (errEl) {
-        errEl.textContent = 'Please enter a valid email address';
-        errEl.classList.remove('hidden');
+    if (options.isBlur) {
+      // Don't pop aggressive errors while user is partially typing, but if valid, persist immediately
+      if (newHandle.length < 2 || newHandle.length > 30) return false;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail)) return false;
+    } else {
+      // Explicit submission validation
+      if (errEl) errEl.classList.add('hidden');
+      if (successEl) successEl.classList.add('hidden');
+
+      if (newHandle.length < 2 || newHandle.length > 30) {
+        if (errEl) {
+          errEl.textContent = 'Nickname must be between 2 and 30 characters';
+          errEl.classList.remove('hidden');
+        }
+        handleInput.focus();
+        return false;
       }
-      emailInput.focus();
-      return;
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail)) {
+        if (errEl) {
+          errEl.textContent = 'Please enter a valid email address';
+          errEl.classList.remove('hidden');
+        }
+        emailInput.focus();
+        return false;
+      }
     }
 
     if (saveBtn) {
@@ -1162,31 +1176,58 @@ function initEventHandlers() {
       }
 
       if (successEl) {
-        successEl.textContent = `Saved! Active nickname set to "${data.session.nickname}".`;
+        successEl.textContent = `✅ Saved! Active session updated (${data.session.nickname}).`;
         successEl.classList.remove('hidden');
       }
 
-      playChime(659.25, 0.1);
+      playChime(659.25, 0.08);
 
-      setTimeout(() => {
-        if (profileModal && profileModal.open) {
-          profileModal.close();
-        }
-        if (successEl) successEl.classList.add('hidden');
-      }, 900);
+      if (options.closeOnSuccess) {
+        setTimeout(() => {
+          if (profileModal && profileModal.open) {
+            profileModal.close();
+          }
+          if (successEl) successEl.classList.add('hidden');
+        }, 700);
+      } else {
+        setTimeout(() => {
+          if (successEl) successEl.classList.add('hidden');
+        }, 3000);
+      }
+      return true;
 
     } catch (err) {
       console.error('Profile update error', err);
-      if (errEl) {
+      if (!options.isBlur && errEl) {
         errEl.textContent = err.message || 'Error updating session info';
         errEl.classList.remove('hidden');
       }
+      return false;
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 Save Changes';
       }
     }
+  }
+
+  // Auto-save immediately when focus is lost (blur) or dropdown changed
+  document.getElementById('profileHandleInput')?.addEventListener('blur', () => {
+    persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
+  });
+
+  document.getElementById('profileEmailInput')?.addEventListener('blur', () => {
+    persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
+  });
+
+  document.getElementById('profileFlairInput')?.addEventListener('change', () => {
+    persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
+  });
+
+  // Explicit Form Submission
+  document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await persistProfileSessionChanges({ closeOnSuccess: true, isBlur: false });
   });
 
   // 6. Welcome / Session Prompt Form Submission
