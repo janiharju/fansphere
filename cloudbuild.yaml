@@ -57,6 +57,7 @@ if stores:
     comments_map = {}
     chat_map = {}
     sessions_map = {}
+    realms_map = {}
     max_post_id = 1
     max_comment_id = 1
     max_chat_id = 1
@@ -80,13 +81,17 @@ if stores:
         for sess in s.get('sessions', []):
             if sess and 'id' in sess:
                 sessions_map[sess['id']] = sess
+        for r in s.get('realms', []):
+            if r and 'id' in r:
+                realms_map[r['id']] = r
 
     merged = {
         'posts': sorted(posts_map.values(), key=lambda x: x.get('id', 0), reverse=True),
         'comments': sorted(comments_map.values(), key=lambda x: x.get('id', 0)),
         'chatMessages': sorted(chat_map.values(), key=lambda x: x.get('id', 0)),
         'sessions': list(sessions_map.values()),
-        'nextPostId': max(max_post_id, 6),
+        'realms': list(realms_map.values()),
+        'nextPostId': max(max_post_id, 11),
         'nextCommentId': max(max_comment_id, 12),
         'nextChatId': max(max_chat_id, 18)
     }

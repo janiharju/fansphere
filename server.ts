@@ -203,13 +203,82 @@ function getInitialPosts(): Post[] {
       title: "When you check the league table on Sunday evening and we're top of the league",
       content: 'Trust the process. 65 points and counting. The red and white cannon firing on all cylinders! Terveisiä kaikille ArseFinlandin jäsenille ympäri Suomea!',
       author: 'PohjolanTykkimies',
-      author_flair: 'Suomi Gunner',
+      author_flair: 'ArseFinland Official Member',
       tag: 'Memes',
       upvotes: 98,
       downvotes: 2,
       comment_count: 1,
       image_url: '',
       created_at: new Date(now - 48 * 3600 * 1000).toISOString()
+    },
+    {
+      id: 6,
+      title: 'Terveisiä Rovaniemeltä! Uusi ketju',
+      content: 'Pohjoisen tykkimiehet ilmoittautuvat mukaan keskusteluun.',
+      author: 'RovaniemiGooner',
+      author_flair: 'ArseFinland Official Member',
+      tag: 'Discussion',
+      upvotes: 1,
+      downvotes: 0,
+      comment_count: 0,
+      image_url: '',
+      created_at: new Date(now - 40 * 3600 * 1000).toISOString()
+    },
+    {
+      id: 7,
+      title: 'Terveiset Espoosta! Loistava kausi',
+      content: 'Espoon kannattajat myös mukana menossa täysillä!',
+      author: 'EspooCannon',
+      author_flair: 'ArseFinland Official Member',
+      tag: 'Discussion',
+      upvotes: 1,
+      downvotes: 0,
+      comment_count: 2,
+      image_url: '',
+      created_at: new Date(now - 28 * 3600 * 1000).toISOString(),
+      last_activity_at: new Date(now - 27 * 3600 * 1000).toISOString()
+    },
+    {
+      id: 8,
+      title: 'Taktinen analyysi viikonlopun derbyyn',
+      content: 'Odegaardin sijoittuminen taskuun avaa tiloja Sakalle.',
+      author: 'OdegaardVision',
+      author_flair: 'Neutral Football Fan',
+      tag: 'Tactics',
+      upvotes: 1,
+      downvotes: 0,
+      comment_count: 0,
+      image_url: '',
+      created_at: new Date(now - 20 * 3600 * 1000).toISOString(),
+      last_activity_at: new Date(now - 20 * 3600 * 1000).toISOString()
+    },
+    {
+      id: 9,
+      title: 'Permanent Post Test',
+      content: 'Will this post survive a restart?',
+      author: 'TestUser99',
+      author_flair: 'Testers',
+      tag: 'Discussion',
+      upvotes: 1,
+      downvotes: 0,
+      comment_count: 0,
+      image_url: '',
+      created_at: new Date(now - 2 * 3600 * 1000).toISOString(),
+      last_activity_at: new Date(now - 2 * 3600 * 1000).toISOString()
+    },
+    {
+      id: 10,
+      title: 'Matchday Prediction: Arsenal vs Chelsea',
+      content: 'What is everyone score prediction for the weekend clash?',
+      author: 'TestUser99',
+      author_flair: 'Testers',
+      tag: 'Match Thread',
+      upvotes: 1,
+      downvotes: 0,
+      comment_count: 0,
+      image_url: '',
+      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
+      last_activity_at: new Date(now - 30 * 60 * 1000).toISOString()
     }
   ];
 }
@@ -291,6 +360,10 @@ export function normalizeFlair(flair: string | undefined): string {
   if (str.includes('arsefinland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
     return 'ArseFinland Official Member';
   }
+  if (typeof realms !== 'undefined' && Array.isArray(realms)) {
+    const matched = realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
+    if (matched) return matched.name;
+  }
   return 'ArseFinland Official Member';
 }
 
@@ -337,11 +410,63 @@ function getInitialSessions(): Session[] {
   ];
 }
 
+export interface ClubRealm {
+  id: string;
+  name: string;
+  badge_color: string;
+  icon: string;
+  description?: string;
+  is_default?: boolean;
+  created_at: string;
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function getInitialRealms(): ClubRealm[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      id: 'arsefinland-official',
+      name: 'ArseFinland Official Member',
+      badge_color: '#EF4444',
+      icon: '🔴',
+      description: 'Official verified ArseFinland community members and supporters',
+      is_default: true,
+      created_at: now
+    },
+    {
+      id: 'neutral-football-fan',
+      name: 'Neutral Football Fan',
+      badge_color: '#94A3B8',
+      icon: '⚪',
+      description: 'Neutral fans, tacticians, and general football supporters',
+      is_default: false,
+      created_at: now
+    },
+    {
+      id: 'testers',
+      name: 'Testers',
+      badge_color: '#A855F7',
+      icon: '🧪',
+      description: 'Test realm for quality assurance and feature verification',
+      is_default: false,
+      created_at: now
+    }
+  ];
+}
+
 interface StoredData {
   posts: Post[];
   comments: Comment[];
   chatMessages: ChatMessage[];
   sessions?: Session[];
+  realms?: ClubRealm[];
   nextPostId: number;
   nextCommentId: number;
   nextChatId: number;
@@ -406,6 +531,7 @@ function scheduleSave() {
       comments,
       chatMessages,
       sessions: Array.from(sessions.values()),
+      realms,
       nextPostId,
       nextCommentId,
       nextChatId,
@@ -424,6 +550,7 @@ function forceSaveNow() {
     comments,
     chatMessages,
     sessions: Array.from(sessions.values()),
+    realms,
     nextPostId,
     nextCommentId,
     nextChatId,
@@ -444,6 +571,7 @@ function parseStoreFile(filePath: string): StoredData | null {
         comments: parsed.comments,
         chatMessages: parsed.chatMessages,
         sessions: Array.isArray(parsed.sessions) ? parsed.sessions : getInitialSessions(),
+        realms: Array.isArray(parsed.realms) ? parsed.realms : getInitialRealms(),
         nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
         nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
         nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
@@ -460,6 +588,7 @@ function mergeStores(stores: StoredData[]): StoredData {
   const mergedCommentsMap = new Map<number, Comment>();
   const mergedChatMap = new Map<number, ChatMessage>();
   const mergedSessionsMap = new Map<string, Session>();
+  const mergedRealmsMap = new Map<string, ClubRealm>();
   let maxPostId = 1;
   let maxCommentId = 1;
   let maxChatId = 1;
@@ -496,6 +625,15 @@ function mergeStores(stores: StoredData[]): StoredData {
         mergedSessionsMap.set(sess.id, sess);
       }
     }
+    if (Array.isArray(s.realms)) {
+      for (const r of s.realms) {
+        if (!r || !r.name) continue;
+        const key = r.id || slugify(r.name);
+        if (!mergedRealmsMap.has(key)) {
+          mergedRealmsMap.set(key, { ...r, id: key });
+        }
+      }
+    }
     maxPostId = Math.max(maxPostId, s.nextPostId || 1);
     maxCommentId = Math.max(maxCommentId, s.nextCommentId || 1);
     maxChatId = Math.max(maxChatId, s.nextChatId || 1);
@@ -513,17 +651,22 @@ function mergeStores(stores: StoredData[]): StoredData {
   if (mergedSessionsMap.size === 0) {
     for (const s of getInitialSessions()) mergedSessionsMap.set(s.id, s);
   }
+  if (mergedRealmsMap.size === 0) {
+    for (const r of getInitialRealms()) mergedRealmsMap.set(r.id, r);
+  }
 
   const postsList = Array.from(mergedPostsMap.values()).sort((a, b) => b.id - a.id);
   const commentsList = Array.from(mergedCommentsMap.values()).sort((a, b) => a.id - b.id);
   const chatList = Array.from(mergedChatMap.values()).sort((a, b) => a.id - b.id);
   const sessionList = Array.from(mergedSessionsMap.values());
+  const realmList = Array.from(mergedRealmsMap.values());
 
   return {
     posts: postsList,
     comments: commentsList,
     chatMessages: chatList,
     sessions: sessionList,
+    realms: realmList,
     nextPostId: Math.max(maxPostId, ...postsList.map(p => p.id + 1)),
     nextCommentId: Math.max(maxCommentId, ...commentsList.map(c => c.id + 1)),
     nextChatId: Math.max(maxChatId, ...chatList.map(m => m.id + 1))
@@ -552,6 +695,7 @@ function loadInitialStore(): StoredData {
     comments: getInitialComments(),
     chatMessages: getInitialChatMessages(),
     sessions: getInitialSessions(),
+    realms: getInitialRealms(),
     nextPostId: 6,
     nextCommentId: 12,
     nextChatId: 18,
@@ -567,6 +711,7 @@ let matches: Match[] = getInitialMatches();
 let posts: Post[] = storedData.posts;
 let comments: Comment[] = storedData.comments;
 let chatMessages: ChatMessage[] = storedData.chatMessages;
+let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : getInitialRealms();
 
 const sessions = new Map<string, Session>();
 for (const s of (storedData.sessions || getInitialSessions())) {
@@ -954,6 +1099,14 @@ export function matchClubRealm(authorFlair: string | undefined, selectedRealm: s
     return arseFinlandVariants.some(v => a.includes(v));
   }
 
+  // Dynamic registered realms matching
+  const dynamicRealm = realms.find(r => r.name.toLowerCase() === b || r.id.toLowerCase() === b);
+  if (dynamicRealm) {
+    const dynName = dynamicRealm.name.toLowerCase();
+    const dynId = dynamicRealm.id.toLowerCase();
+    return a === dynName || a === dynId || slugify(a) === dynId || a.includes(dynName) || dynName.includes(a);
+  }
+
   return a.includes(b) || b.includes(a);
 }
 
@@ -1296,6 +1449,139 @@ app.post('/api/league/reset', (_req, res) => {
   res.json({ status: 'reset', standings });
 });
 
+// ==================== ADMIN & CLUB REALMS MANAGEMENT ====================
+const ADMIN_PASSWORD = 'sala666sana';
+const activeAdminTokens = new Set<string>();
+
+function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const tokenHeader = req.headers['x-admin-token'] as string | undefined;
+  const authHeader = req.headers['authorization'];
+  const passHeader = req.headers['x-admin-password'] as string | undefined;
+
+  let token = tokenHeader;
+  if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7).trim();
+  }
+
+  if (passHeader && passHeader === ADMIN_PASSWORD) {
+    return next();
+  }
+
+  if (token && activeAdminTokens.has(token)) {
+    return next();
+  }
+
+  return res.status(401).json({ detail: 'Admin login required. Please enter the administrator password.' });
+}
+
+// Admin: Login
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+  if (!password || typeof password !== 'string') {
+    return res.status(400).json({ detail: 'Password is required' });
+  }
+
+  if (password.trim() === ADMIN_PASSWORD) {
+    const token = `admin_tok_${crypto.randomUUID()}`;
+    activeAdminTokens.add(token);
+    return res.json({ success: true, token });
+  }
+
+  return res.status(401).json({ detail: 'Incorrect administrator password' });
+});
+
+// Admin: Check Session
+app.get('/api/admin/check', requireAdminAuth, (_req, res) => {
+  res.json({ authenticated: true });
+});
+
+// Admin: Logout
+app.post('/api/admin/logout', (req, res) => {
+  const tokenHeader = req.headers['x-admin-token'] as string | undefined;
+  const authHeader = req.headers['authorization'];
+  let token = tokenHeader;
+  if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7).trim();
+  }
+  if (token) {
+    activeAdminTokens.delete(token);
+  }
+  res.json({ success: true });
+});
+
+// Public: Get All Club Realms
+app.get('/api/realms', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.json({ realms });
+});
+
+// Admin: Add New Club Realm
+app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
+  const { name, badge_color, icon, description } = req.body || {};
+  if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50) {
+    return res.status(400).json({ detail: 'Realm name must be between 2 and 50 characters' });
+  }
+
+  const cleanName = name.trim();
+  const id = slugify(cleanName) || `realm-${Date.now()}`;
+
+  if (realms.some(r => r.id === id || r.name.toLowerCase() === cleanName.toLowerCase())) {
+    return res.status(400).json({ detail: `A club realm with the name "${cleanName}" already exists` });
+  }
+
+  const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+  const cleanColor = badge_color && typeof badge_color === 'string' && hexRegex.test(badge_color.trim())
+    ? badge_color.trim()
+    : '#EF4444';
+
+  const cleanIcon = icon && typeof icon === 'string' && icon.trim().length > 0
+    ? icon.trim().slice(0, 8)
+    : '🛡️';
+
+  const newRealm: ClubRealm = {
+    id,
+    name: cleanName,
+    badge_color: cleanColor,
+    icon: cleanIcon,
+    description: description && typeof description === 'string' ? description.trim() : '',
+    is_default: false,
+    created_at: new Date().toISOString()
+  };
+
+  realms.push(newRealm);
+  forceSaveNow();
+
+  broadcast({
+    type: 'realms_updated',
+    realms
+  });
+
+  res.status(201).json({ success: true, realm: newRealm, realms });
+});
+
+// Admin: Remove Club Realm
+app.delete('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
+  const targetParam = req.params.id;
+  const targetId = Array.isArray(targetParam) ? targetParam[0] : targetParam;
+  const targetIdStr = String(targetId || '').trim().toLowerCase();
+  const index = realms.findIndex(r => r.id.toLowerCase() === targetIdStr || r.name.toLowerCase() === targetIdStr);
+
+  if (index === -1) {
+    return res.status(404).json({ detail: 'Club realm not found' });
+  }
+
+  const removed = realms.splice(index, 1)[0];
+  forceSaveNow();
+
+  broadcast({
+    type: 'realms_updated',
+    realms,
+    deleted_id: removed.id
+  });
+
+  res.json({ success: true, deleted: removed, realms });
+});
+
 // 13. Full Persistent Data Backup (For deployment migration, restart sync, and automated backup)
 app.get('/api/backup', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -1306,6 +1592,7 @@ app.get('/api/backup', (_req, res) => {
     comments,
     chatMessages,
     sessions: Array.from(sessions.values()),
+    realms,
     nextPostId,
     nextCommentId,
     nextChatId,
@@ -1340,6 +1627,21 @@ app.use('/static', express.static(staticDir, {
   }
 }));
 
+// Admin Page Route
+app.get('/admin', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(staticDir, 'admin.html'));
+});
+
+app.get('/admin/*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(staticDir, 'admin.html'));
+});
+
 app.get('/', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -1351,6 +1653,12 @@ app.get('/', (_req, res) => {
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/ws')) {
     return next();
+  }
+  if (req.path === '/admin' || req.path.startsWith('/admin/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.sendFile(path.join(staticDir, 'admin.html'));
   }
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -1524,6 +1832,15 @@ async function syncLatestDataFromLive() {
         for (const s of data.sessions) {
           if (!sessions.has(s.id)) {
             sessions.set(s.id, s);
+            updated = true;
+          }
+        }
+      }
+
+      if (Array.isArray(data.realms)) {
+        for (const r of data.realms) {
+          if (r && r.name && !realms.some(existing => existing.id === r.id || existing.name.toLowerCase() === r.name.toLowerCase())) {
+            realms.push(r);
             updated = true;
           }
         }

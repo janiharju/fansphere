@@ -79,6 +79,12 @@
           <i data-lucide="volume-2" class="w-4 h-4"></i>
         </button>
 
+        <!-- Admin Link -->
+        <a href="/admin" id="navAdminBtn" title="Admin Console (Manage Club Realms)" class="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 px-2.5 py-1 rounded-lg text-xs transition">
+          <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="hidden sm:inline font-medium">Admin</span>
+        </a>
+
         <!-- User Profile Pill / Switcher -->
         <button id="openProfileModalBtn" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded-lg text-xs transition">
           <span id="navUserBadge" class="w-2 h-2 rounded-full bg-red-500"></span>
@@ -204,6 +210,11 @@
             <span id="activeTagName" class="text-red-400 font-semibold truncate max-w-[80px]">Match</span>
             <button id="clearTagFilterBtn" class="text-slate-400 hover:text-white font-bold ml-0.5">✕</button>
           </div>
+        </div>
+
+        <!-- Realm Filter Tabs / Pills -->
+        <div id="forumRealmPillsContainer" class="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-2 text-[11px] scrollbar-none border-t border-slate-700/50 mt-2">
+          <!-- Dynamically populated realm filter pills -->
         </div>
       </div>
 

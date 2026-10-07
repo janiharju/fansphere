@@ -8,6 +8,10 @@ function normalizeFlair(flair) {
   if (str.includes('arsefinland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
     return 'ArseFinland Official Member';
   }
+  if (state && Array.isArray(state.realms)) {
+    const matched = state.realms.find(r => r.name.toLowerCase() === str || r.id === str);
+    if (matched) return matched.name;
+  }
   return 'ArseFinland Official Member';
 }
 
@@ -15,6 +19,11 @@ function getFlairBadgeColor(flair) {
   const norm = normalizeFlair(flair);
   if (norm === 'Testers') return '#A855F7';
   if (norm === 'Neutral Football Fan') return '#94A3B8';
+  if (norm === 'ArseFinland Official Member') return '#EF4444';
+  if (state && Array.isArray(state.realms)) {
+    const matched = state.realms.find(r => r.name === norm || r.id === norm);
+    if (matched && matched.badge_color) return matched.badge_color;
+  }
   return '#EF4444';
 }
 
@@ -31,7 +40,7 @@ const state = {
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
   currentTag: 'All',
-  selectedRealm: localStorage.getItem('fansphere_realm') || 'user_club',
+  selectedRealm: localStorage.getItem('fansphere_realm') || 'All',
   currentPage: 1,
   postsPerPage: 3,
   userVotes: JSON.parse(localStorage.getItem('fansphere_votes') || '{}'),
@@ -40,6 +49,7 @@ const state = {
   lastWsAuthSessionId: null,
   wsPingInterval: null,
   posts: [],
+  realms: [],
   allChatMessages: [],
   renderedChatIds: new Set(),
   activeNicknames: []
@@ -90,6 +100,16 @@ function matchClubRealm(authorFlair, targetRealm) {
     return arseFinlandVariants.some(v => a.includes(v));
   }
 
+  // Dynamic registered realms matching
+  if (Array.isArray(state.realms)) {
+    const dynamicRealm = state.realms.find(r => r.name.toLowerCase() === effective || r.id.toLowerCase() === effective);
+    if (dynamicRealm) {
+      const dynName = dynamicRealm.name.toLowerCase();
+      const dynId = dynamicRealm.id.toLowerCase();
+      return a === dynName || a === dynId || a.includes(dynName) || dynName.includes(a);
+    }
+  }
+
   return a.includes(effective) || effective.includes(a);
 }
 
@@ -98,6 +118,7 @@ function updateRealmIndicators() {
   if (flairInput) {
     flairInput.value = (state.selectedRealm === 'All') ? 'All' : normalizeFlair(state.user.flair);
   }
+  renderForumRealmPills();
 }
 
 function setRealmFilter(realm) {
@@ -111,6 +132,98 @@ function setRealmFilter(realm) {
   state.currentPage = 1;
   renderPosts();
   renderChatStream();
+}
+
+async function loadRealms() {
+  try {
+    const res = await fetch('/api/realms');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.realms) && data.realms.length > 0) {
+      state.realms = data.realms;
+      updateRealmSelectDropdowns();
+      renderForumRealmPills();
+    }
+  } catch (err) {
+    console.debug('Error loading club realms', err);
+  }
+}
+
+function updateRealmSelectDropdowns() {
+  if (!Array.isArray(state.realms) || state.realms.length === 0) return;
+
+  const profileSelect = document.getElementById('profileFlairInput');
+  if (profileSelect) {
+    const currentVal = profileSelect.value || state.selectedRealm;
+    profileSelect.innerHTML = `
+      <option value="All">🌐 All Realms (View All Clubs)</option>
+      ${state.realms.map(r => `
+        <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
+      `).join('')}
+    `;
+    profileSelect.value = (state.selectedRealm === 'All') ? 'All' : normalizeFlair(state.user.flair);
+  }
+
+  const sessionSelect = document.getElementById('sessionFlairInput');
+  if (sessionSelect) {
+    const currentSessionVal = sessionSelect.value || normalizeFlair(state.user.flair);
+    sessionSelect.innerHTML = state.realms.map(r => `
+      <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
+    `).join('');
+    if (currentSessionVal) sessionSelect.value = currentSessionVal;
+  }
+}
+
+function renderForumRealmPills() {
+  const container = document.getElementById('forumRealmPillsContainer');
+  if (!container) return;
+
+  const allCount = state.posts ? state.posts.length : 0;
+  const activeRealm = state.selectedRealm;
+
+  const pills = [
+    { id: 'All', name: 'All Realms', icon: '🌐', count: allCount }
+  ];
+
+  if (Array.isArray(state.realms)) {
+    state.realms.forEach(r => {
+      const realmPostsCount = (state.posts || []).filter(p => matchClubRealm(p.author_flair, r.name)).length;
+      pills.push({
+        id: r.name,
+        name: r.name.replace(' Official Member', '').replace(' Football Fan', ''),
+        fullName: r.name,
+        icon: r.icon || '🛡️',
+        count: realmPostsCount,
+        color: r.badge_color || '#EF4444'
+      });
+    });
+  }
+
+  container.innerHTML = pills.map(p => {
+    const isSelected = (p.id === activeRealm) || (p.fullName && p.fullName === activeRealm);
+    const activeClasses = isSelected
+      ? 'bg-red-600 text-white font-bold shadow-sm border-red-500'
+      : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 font-medium';
+
+    return `
+      <button 
+        type="button" 
+        class="realm-filter-pill px-2.5 py-1 rounded-lg border text-xs shrink-0 transition flex items-center gap-1.5 cursor-pointer ${activeClasses}"
+        data-realm="${escapeHtml(p.fullName || p.id)}"
+      >
+        <span>${escapeHtml(p.icon)}</span>
+        <span class="truncate">${escapeHtml(p.name)}</span>
+        <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-400'} font-mono">${p.count}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.realm-filter-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetRealm = btn.getAttribute('data-realm');
+      setRealmFilter(targetRealm);
+    });
+  });
 }
 
 // ==================== INITIALIZATION ====================
@@ -134,6 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load latest persistent data from server
   await Promise.all([
+    loadRealms(),
     loadPosts(),
     loadChatHistory()
   ]);
@@ -546,6 +660,16 @@ function handleWebSocketMessage(msg) {
       handleIncomingNewComment(msg.data);
       break;
 
+    case 'realms_updated':
+      if (Array.isArray(msg.realms)) {
+        state.realms = msg.realms;
+        updateRealmSelectDropdowns();
+        renderForumRealmPills();
+        renderPosts();
+        renderChatStream();
+      }
+      break;
+
     default:
       break;
   }
@@ -598,15 +722,15 @@ async function loadPosts() {
     } catch {}
 
     state.posts = sortPostsByLatestActivity(merged);
-    if (state.currentTag === 'All') {
-      try {
-        localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
-      } catch {}
-    }
+    try {
+      localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
+    } catch {}
+
     const countAllEl = document.getElementById('tagCountAll');
     if (countAllEl && state.currentTag === 'All') {
       countAllEl.textContent = state.posts.length;
     }
+    renderForumRealmPills();
     renderPosts();
   } catch (err) {
     console.error(err);
@@ -646,11 +770,19 @@ function renderPosts() {
       <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
         <p class="text-xs font-semibold mb-1">No posts found in the <span class="text-red-400">${escapeHtml(realmName)}</span> realm.</p>
         <p class="text-[10px] text-slate-500 mb-2.5">Be the first to share thoughts in this club realm, or switch realm in your profile!</p>
-        <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
-          👤 Change Realm in Profile
-        </button>
+        <div class="flex items-center justify-center gap-2">
+          <button id="emptyStateResetRealmBtn" class="text-[10px] bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
+            🌐 Show All Posts
+          </button>
+          <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
+            👤 Profile Realm
+          </button>
+        </div>
       </div>
     `;
+    document.getElementById('emptyStateResetRealmBtn')?.addEventListener('click', () => {
+      setRealmFilter('All');
+    });
     document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
       document.getElementById('openProfileModalBtn')?.click();
     });
@@ -1172,6 +1304,20 @@ function initEventHandlers() {
       });
 
       if (res.ok) {
+        const createdPost = await res.json().catch(() => null);
+        if (createdPost && createdPost.id) {
+          state.posts = state.posts.filter(p => p.id !== createdPost.id);
+          state.posts.unshift(createdPost);
+          try {
+            localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
+          } catch {}
+          if (state.selectedRealm !== 'All' && !matchClubRealm(createdPost.author_flair, getEffectiveRealm())) {
+            setRealmFilter('All');
+          } else {
+            renderForumRealmPills();
+            renderPosts();
+          }
+        }
         document.getElementById('createPostForm').reset();
         createPostModal.close();
         await loadPosts();

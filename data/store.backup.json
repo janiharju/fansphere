@@ -584,8 +584,37 @@
       "email": "janiharju@gmail.com",
       "flair": "ArseFinland Official Member",
       "created_at": "2026-10-07T12:00:04.724Z",
-      "last_active_at": "2026-10-07T12:06:13.685Z",
-      "expires_at": "2026-10-07T14:06:13.685Z"
+      "last_active_at": "2026-10-07T13:39:13.723Z",
+      "expires_at": "2026-10-07T15:39:13.723Z"
+    }
+  ],
+  "realms": [
+    {
+      "id": "arsefinland-official",
+      "name": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "icon": "🔴",
+      "description": "Official verified ArseFinland community members and supporters",
+      "is_default": true,
+      "created_at": "2026-10-07T13:40:05.682Z"
+    },
+    {
+      "id": "neutral-football-fan",
+      "name": "Neutral Football Fan",
+      "badge_color": "#94A3B8",
+      "icon": "⚪",
+      "description": "Neutral fans, tacticians, and general football supporters",
+      "is_default": false,
+      "created_at": "2026-10-07T13:40:05.682Z"
+    },
+    {
+      "id": "testers",
+      "name": "Testers",
+      "badge_color": "#A855F7",
+      "icon": "🧪",
+      "description": "Test realm for quality assurance and feature verification",
+      "is_default": false,
+      "created_at": "2026-10-07T13:40:05.682Z"
     }
   ],
   "nextPostId": 11,
