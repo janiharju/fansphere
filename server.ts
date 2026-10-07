@@ -283,6 +283,17 @@ export interface Session {
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours of inactivity before expiration
 const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes of recent activity for online presence
 
+export function normalizeFlair(flair: string | undefined): string {
+  if (!flair) return 'ArseFinland Official Member';
+  const str = String(flair).trim().toLowerCase();
+  if (str.includes('tester')) return 'Testers';
+  if (str.includes('neutral')) return 'Neutral Football Fan';
+  if (str.includes('arsefinland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
+    return 'ArseFinland Official Member';
+  }
+  return 'ArseFinland Official Member';
+}
+
 function getInitialSessions(): Session[] {
   const now = Date.now();
   const twoHours = SESSION_TTL_MS;
@@ -291,7 +302,7 @@ function getInitialSessions(): Session[] {
       id: 'sess-helsinki-gunner',
       nickname: 'HelsinkiGunner',
       email: 'helsinki.gunner@arsefinland.fi',
-      flair: 'ArseFinland Member',
+      flair: 'ArseFinland Official Member',
       created_at: new Date(now - 3600000).toISOString(),
       last_active_at: new Date(now - 60000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
@@ -300,7 +311,7 @@ function getInitialSessions(): Session[] {
       id: 'sess-tampere-gooner',
       nickname: 'TampereGooner',
       email: 'tampere.gooner@arsefinland.fi',
-      flair: 'Gunner',
+      flair: 'ArseFinland Official Member',
       created_at: new Date(now - 7200000).toISOString(),
       last_active_at: new Date(now - 120000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
@@ -309,16 +320,16 @@ function getInitialSessions(): Session[] {
       id: 'sess-arsefin-admin',
       nickname: 'ArseFinlandAdmin',
       email: 'admin@arsefinland.fi',
-      flair: 'Club Official',
+      flair: 'ArseFinland Official Member',
       created_at: new Date(now - 10000000).toISOString(),
       last_active_at: new Date(now - 30000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
     },
     {
-      id: 'sess-turku-gunner',
-      nickname: 'TurkuGunner',
-      email: 'turku.gunner@arsefinland.fi',
-      flair: 'Gunner',
+      id: 'sess-turku-tester',
+      nickname: 'TurkuTester',
+      email: 'tester.turku@arsefinland.fi',
+      flair: 'Testers',
       created_at: new Date(now - 4000000).toISOString(),
       last_active_at: new Date(now - 180000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
@@ -336,6 +347,19 @@ interface StoredData {
   nextChatId: number;
 }
 
+const CANDIDATE_FILES = Array.from(new Set([
+  DATA_FILE,
+  BACKUP_FILE,
+  path.resolve(process.cwd(), 'data', 'store.json'),
+  path.resolve(process.cwd(), 'data', 'store.backup.json'),
+  path.resolve('/app/data/store.json'),
+  path.resolve('/app/data/store.backup.json'),
+  path.resolve('/app/applet/data/store.json'),
+  path.resolve('/app/applet/data/store.backup.json'),
+  path.resolve('/tmp/fansphere_store.json'),
+  path.resolve('/tmp/fansphere_store_backup.json')
+]));
+
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -345,15 +369,28 @@ function ensureDataDir() {
 function saveDataSync(data: StoredData) {
   try {
     ensureDataDir();
-    const tempFile = `${DATA_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
-    fs.renameSync(tempFile, DATA_FILE);
+    const serialized = JSON.stringify(data, null, 2);
 
-    // Keep secondary backup file to safeguard against image redeployments or container resets
     try {
-      fs.copyFileSync(DATA_FILE, BACKUP_FILE);
-    } catch {
-      // non-blocking
+      const tempFile = `${DATA_FILE}.tmp`;
+      fs.writeFileSync(tempFile, serialized, 'utf-8');
+      fs.renameSync(tempFile, DATA_FILE);
+    } catch (e) {
+      console.error(`Failed to write DATA_FILE at ${DATA_FILE}:`, e);
+    }
+
+    // Mirror to secondary backups and /tmp to ensure data survives any restart
+    for (const target of CANDIDATE_FILES) {
+      if (target === DATA_FILE) continue;
+      try {
+        const dir = path.dirname(target);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const temp = `${target}.tmp`;
+        fs.writeFileSync(temp, serialized, 'utf-8');
+        fs.renameSync(temp, target);
+      } catch {
+        // non-blocking
+      }
     }
   } catch (err) {
     console.error('Error saving persistent store to disk:', err);
@@ -418,32 +455,98 @@ function parseStoreFile(filePath: string): StoredData | null {
   return null;
 }
 
+function mergeStores(stores: StoredData[]): StoredData {
+  const mergedPostsMap = new Map<number, Post>();
+  const mergedCommentsMap = new Map<number, Comment>();
+  const mergedChatMap = new Map<number, ChatMessage>();
+  const mergedSessionsMap = new Map<string, Session>();
+  let maxPostId = 1;
+  let maxCommentId = 1;
+  let maxChatId = 1;
+
+  for (const s of stores) {
+    if (!s) continue;
+    if (Array.isArray(s.posts)) {
+      for (const p of s.posts) {
+        if (!p || !p.id) continue;
+        const existing = mergedPostsMap.get(p.id);
+        if (!existing || new Date(p.last_activity_at || p.created_at).getTime() >= new Date(existing.last_activity_at || existing.created_at).getTime()) {
+          mergedPostsMap.set(p.id, p);
+        }
+        maxPostId = Math.max(maxPostId, p.id + 1);
+      }
+    }
+    if (Array.isArray(s.comments)) {
+      for (const c of s.comments) {
+        if (!c || !c.id) continue;
+        mergedCommentsMap.set(c.id, c);
+        maxCommentId = Math.max(maxCommentId, c.id + 1);
+      }
+    }
+    if (Array.isArray(s.chatMessages)) {
+      for (const m of s.chatMessages) {
+        if (!m || !m.id) continue;
+        mergedChatMap.set(m.id, m);
+        maxChatId = Math.max(maxChatId, m.id + 1);
+      }
+    }
+    if (Array.isArray(s.sessions)) {
+      for (const sess of s.sessions) {
+        if (!sess || !sess.id) continue;
+        mergedSessionsMap.set(sess.id, sess);
+      }
+    }
+    maxPostId = Math.max(maxPostId, s.nextPostId || 1);
+    maxCommentId = Math.max(maxCommentId, s.nextCommentId || 1);
+    maxChatId = Math.max(maxChatId, s.nextChatId || 1);
+  }
+
+  if (mergedPostsMap.size === 0) {
+    for (const p of getInitialPosts()) mergedPostsMap.set(p.id, p);
+  }
+  if (mergedCommentsMap.size === 0) {
+    for (const c of getInitialComments()) mergedCommentsMap.set(c.id, c);
+  }
+  if (mergedChatMap.size === 0) {
+    for (const m of getInitialChatMessages()) mergedChatMap.set(m.id, m);
+  }
+  if (mergedSessionsMap.size === 0) {
+    for (const s of getInitialSessions()) mergedSessionsMap.set(s.id, s);
+  }
+
+  const postsList = Array.from(mergedPostsMap.values()).sort((a, b) => b.id - a.id);
+  const commentsList = Array.from(mergedCommentsMap.values()).sort((a, b) => a.id - b.id);
+  const chatList = Array.from(mergedChatMap.values()).sort((a, b) => a.id - b.id);
+  const sessionList = Array.from(mergedSessionsMap.values());
+
+  return {
+    posts: postsList,
+    comments: commentsList,
+    chatMessages: chatList,
+    sessions: sessionList,
+    nextPostId: Math.max(maxPostId, ...postsList.map(p => p.id + 1)),
+    nextCommentId: Math.max(maxCommentId, ...commentsList.map(c => c.id + 1)),
+    nextChatId: Math.max(maxChatId, ...chatList.map(m => m.id + 1))
+  };
+}
+
 function loadInitialStore(): StoredData {
   ensureDataDir();
 
-  // 1. Try loading primary DATA_FILE
-  let primary = parseStoreFile(DATA_FILE);
-
-  // 2. Try loading secondary BACKUP_FILE
-  const backup = parseStoreFile(BACKUP_FILE);
-
-  // If backup has more content than primary (e.g. fresh container deploy), prioritize backup
-  if (backup && (!primary || (backup.posts.length > primary.posts.length))) {
-    console.log(`Preserving data from backup (${backup.posts.length} posts vs ${primary?.posts.length ?? 0} in primary store)`);
-    primary = backup;
-    try {
-      fs.copyFileSync(BACKUP_FILE, DATA_FILE);
-    } catch {
-      // non-blocking
-    }
+  const validStores: StoredData[] = [];
+  for (const candidate of CANDIDATE_FILES) {
+    const parsed = parseStoreFile(candidate);
+    if (parsed) validStores.push(parsed);
   }
 
-  if (primary) {
-    console.log(`Loaded ${primary.posts.length} posts, ${primary.comments.length} comments, and ${primary.chatMessages.length} chat messages from persistent store at ${DATA_FILE}`);
-    return primary;
+  if (validStores.length > 0) {
+    const merged = mergeStores(validStores);
+    console.log(`Loaded and merged ${merged.posts.length} posts, ${merged.comments.length} comments, and ${merged.chatMessages.length} chat messages from ${validStores.length} storage candidate(s)`);
+    saveDataSync(merged);
+    return merged;
   }
 
-  // 3. Fallback to initial seed only if no store or backup exists
+  // 3. Fallback to initial seed only if no store exists anywhere
   const initial: StoredData = {
     posts: getInitialPosts(),
     comments: getInitialComments(),
@@ -667,7 +770,7 @@ app.post('/api/auth/session', (req, res) => {
 
   const cleanNickname = nickname.trim();
   const cleanEmail = email.trim().toLowerCase();
-  const cleanFlair = flair && typeof flair === 'string' && flair.trim().length > 0 ? flair.trim() : 'Gunner';
+  const cleanFlair = normalizeFlair(flair);
 
   const now = Date.now();
   const sessionId = crypto.randomUUID();
@@ -758,7 +861,7 @@ const handleSessionUpdate = (req: express.Request, res: express.Response) => {
   }
 
   if (flair !== undefined && typeof flair === 'string' && flair.trim().length > 0) {
-    session.flair = flair.trim();
+    session.flair = normalizeFlair(flair);
   }
 
   session.last_active_at = new Date().toISOString();
@@ -835,45 +938,20 @@ export function matchClubRealm(authorFlair: string | undefined, selectedRealm: s
   const b = selectedRealm.trim().toLowerCase();
   if (a === b) return true;
 
-  // ArseFinland official club realm
-  const arseFinlandVariants = ['arsefinland member', 'arsefinland official member', 'arsenal finland', 'arsefinland', 'club official', 'official'];
-  if (arseFinlandVariants.some(v => b.includes(v) || v.includes(b))) {
-    return arseFinlandVariants.some(v => a.includes(v) || v.includes(a));
-  }
-
-  // Gunner (Arsenal FC) realm
-  if (b.includes('gunner') && !b.includes('suomi')) {
-    return a.includes('gunner') && !a.includes('suomi');
-  }
-
-  // Suomi Gooner realm
-  if (b.includes('suomi') || b.includes('lappi') || b.includes('tactics')) {
-    return a.includes('suomi') || a.includes('lappi') || a.includes('tactics') || a.includes('analyst');
-  }
-
-  // Blue Lion (Chelsea) realm
-  if (b.includes('blue lion') || b.includes('chelsea')) {
-    return a.includes('blue lion') || a.includes('chelsea');
-  }
-
-  // Red Army (Liverpool) realm
-  if (b.includes('red army') || b.includes('liverpool')) {
-    return a.includes('red army') || a.includes('liverpool');
-  }
-
-  // Cityzen (Man City) realm
-  if (b.includes('cityzen') || b.includes('man city')) {
-    return a.includes('cityzen') || a.includes('man city') || a.includes('manchester city');
-  }
-
-  // Klubi / Helsinki Fan realm
-  if (b.includes('helsinki fan') || b.includes('klubi') || b.includes('hjk')) {
-    return a.includes('helsinki fan') || a.includes('klubi') || a.includes('hjk');
+  // Testers realm
+  if (b.includes('tester')) {
+    return a.includes('tester');
   }
 
   // Neutral Football Fan realm
   if (b.includes('neutral')) {
     return a.includes('neutral');
+  }
+
+  // ArseFinland official club realm
+  const arseFinlandVariants = ['arsefinland', 'arsenal', 'gunner', 'gooner', 'official', 'member'];
+  if (arseFinlandVariants.some(v => b.includes(v))) {
+    return arseFinlandVariants.some(v => a.includes(v));
   }
 
   return a.includes(b) || b.includes(a);
@@ -929,7 +1007,7 @@ app.post('/api/posts', (req, res) => {
     title: title.trim(),
     content: content.trim(),
     author: session.nickname,
-    author_flair: session.flair || 'Gunner',
+    author_flair: session.flair || 'ArseFinland Official Member',
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
@@ -1042,7 +1120,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
     author: session.nickname,
-    author_flair: session.flair || 'Gunner',
+    author_flair: session.flair || 'ArseFinland Official Member',
     content: content.trim(),
     upvotes: 1,
     created_at: new Date().toISOString()
@@ -1122,7 +1200,7 @@ app.post('/api/chat/message', (req, res) => {
     id: nextChatId++,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
-    author_flair: session.flair || 'Gunner',
+    author_flair: session.flair || 'ArseFinland Official Member',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: content.trim(),
     created_at: new Date().toISOString()
@@ -1210,19 +1288,43 @@ app.post('/api/league/simulate-event', (req, res) => {
   });
 });
 
-// 12. Reset League
+// 12. Reset League (Resets matches/standings only, preserving all posts and chat)
 app.post('/api/league/reset', (_req, res) => {
   teams = getInitialTeams();
   matches = getInitialMatches();
-  posts = getInitialPosts();
-  comments = getInitialComments();
-  chatMessages = getInitialChatMessages();
-  nextPostId = 6;
-  nextCommentId = 12;
-  nextChatId = 18;
-
   const standings = getStandings();
   res.json({ status: 'reset', standings });
+});
+
+// 13. Full Persistent Data Backup (For deployment migration, restart sync, and automated backup)
+app.get('/api/backup', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.json({
+    posts,
+    comments,
+    chatMessages,
+    sessions: Array.from(sessions.values()),
+    nextPostId,
+    nextCommentId,
+    nextChatId,
+  });
+});
+
+// 14. Restore Post (Self-healing endpoint if client detects a restarted server is missing a locally cached post)
+app.post('/api/posts/restore', (req, res) => {
+  const incoming = req.body as Post;
+  if (incoming && incoming.id && incoming.title && incoming.content) {
+    const existing = posts.find(p => p.id === incoming.id);
+    if (!existing) {
+      posts.unshift(incoming);
+      nextPostId = Math.max(nextPostId, incoming.id + 1);
+      forceSaveNow();
+      console.log(`Restored post #${incoming.id} ("${incoming.title}") from client cache`);
+    }
+  }
+  res.json({ status: 'ok' });
 });
 
 // Static Files & SPA Fallback
@@ -1318,7 +1420,7 @@ wss.on('connection', (ws: WebSocket) => {
             id: nextChatId++,
             room: payload.room || 'general',
             author: session.nickname,
-            author_flair: session.flair || 'Gunner',
+            author_flair: session.flair || 'ArseFinland Official Member',
             badge_color: payload.badge_color || '#EF4444',
             content,
             created_at: new Date().toISOString()
@@ -1369,71 +1471,75 @@ process.on('unhandledRejection', (reason, promise) => {
 // Asynchronous startup sync: If running on Cloud Run or configured via environment,
 // pull and merge any newer posts, comments, or sessions from the published platform so data is preserved.
 async function syncLatestDataFromLive() {
-  const syncUrl = process.env.LIVE_SYNC_URL || 
-    (process.env.K_SERVICE && process.env.K_SERVICE.startsWith('ais-dev')
-      ? 'https://ais-pre-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup'
-      : (process.env.K_SERVICE ? 'https://ais-dev-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup' : null));
+  const targets = [
+    process.env.LIVE_SYNC_URL,
+    'https://ais-pre-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup',
+    'https://ais-dev-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup',
+  ].filter(Boolean) as string[];
 
-  if (!syncUrl) return;
+  for (const syncUrl of targets) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(syncUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(syncUrl, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) return;
+      const data = await res.json() as StoredData;
+      if (!data || !Array.isArray(data.posts) || data.posts.length === 0) continue;
 
-    const data = await res.json() as StoredData;
-    if (!data || !Array.isArray(data.posts) || data.posts.length === 0) return;
-
-    let updated = false;
-    const existingPostIds = new Set(posts.map(p => p.id));
-    for (const post of data.posts) {
-      if (!existingPostIds.has(post.id)) {
-        posts.push(post);
-        updated = true;
-      }
-    }
-
-    const existingCommentIds = new Set(comments.map(c => c.id));
-    if (Array.isArray(data.comments)) {
-      for (const comment of data.comments) {
-        if (!existingCommentIds.has(comment.id)) {
-          comments.push(comment);
+      let updated = false;
+      const existingPostIds = new Set(posts.map(p => p.id));
+      for (const post of data.posts) {
+        if (!existingPostIds.has(post.id)) {
+          posts.push(post);
+          existingPostIds.add(post.id);
           updated = true;
         }
       }
-    }
 
-    const existingChatIds = new Set(chatMessages.map(m => m.id));
-    if (Array.isArray(data.chatMessages)) {
-      for (const chat of data.chatMessages) {
-        if (!existingChatIds.has(chat.id)) {
-          chatMessages.push(chat);
-          updated = true;
+      const existingCommentIds = new Set(comments.map(c => c.id));
+      if (Array.isArray(data.comments)) {
+        for (const comment of data.comments) {
+          if (!existingCommentIds.has(comment.id)) {
+            comments.push(comment);
+            existingCommentIds.add(comment.id);
+            updated = true;
+          }
         }
       }
-    }
 
-    if (Array.isArray(data.sessions)) {
-      for (const s of data.sessions) {
-        if (!sessions.has(s.id)) {
-          sessions.set(s.id, s);
-          updated = true;
+      const existingChatIds = new Set(chatMessages.map(m => m.id));
+      if (Array.isArray(data.chatMessages)) {
+        for (const chat of data.chatMessages) {
+          if (!existingChatIds.has(chat.id)) {
+            chatMessages.push(chat);
+            existingChatIds.add(chat.id);
+            updated = true;
+          }
         }
       }
-    }
 
-    if (updated) {
-      nextPostId = Math.max(nextPostId, ...posts.map(p => p.id)) + 1;
-      nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id)) + 1;
-      nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id)) + 1;
-      forceSaveNow();
-      console.log(`Synced and preserved live community data on startup: ${posts.length} posts, ${comments.length} comments, ${sessions.size} sessions`);
+      if (Array.isArray(data.sessions)) {
+        for (const s of data.sessions) {
+          if (!sessions.has(s.id)) {
+            sessions.set(s.id, s);
+            updated = true;
+          }
+        }
+      }
+
+      if (updated) {
+        nextPostId = Math.max(nextPostId, ...posts.map(p => p.id + 1));
+        nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id + 1));
+        nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id + 1));
+        forceSaveNow();
+        console.log(`Synced and preserved live community data from ${syncUrl}: ${posts.length} posts, ${comments.length} comments, ${sessions.size} sessions`);
+        break;
+      }
+    } catch {
+      // Continue to next candidate
     }
-  } catch (err) {
-    // Non-blocking fallback; normal startup continues
-    console.debug('Startup live sync skipped:', err);
   }
 }
 

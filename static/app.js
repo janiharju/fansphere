@@ -1,5 +1,23 @@
 // ArseFinland FanSphere - Real-time Sports Fan Community Client
 
+function normalizeFlair(flair) {
+  if (!flair) return 'ArseFinland Official Member';
+  const str = String(flair).trim().toLowerCase();
+  if (str.includes('tester')) return 'Testers';
+  if (str.includes('neutral')) return 'Neutral Football Fan';
+  if (str.includes('arsefinland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
+    return 'ArseFinland Official Member';
+  }
+  return 'ArseFinland Official Member';
+}
+
+function getFlairBadgeColor(flair) {
+  const norm = normalizeFlair(flair);
+  if (norm === 'Testers') return '#A855F7';
+  if (norm === 'Neutral Football Fan') return '#94A3B8';
+  return '#EF4444';
+}
+
 // State
 const state = {
   sessionId: localStorage.getItem('fansphere_session_id') || null,
@@ -7,8 +25,8 @@ const state = {
   user: {
     handle: localStorage.getItem('fansphere_handle') || '',
     email: localStorage.getItem('fansphere_email') || '',
-    flair: localStorage.getItem('fansphere_flair') || 'ArseFinland Member',
-    badgeColor: '#EF4444'
+    flair: normalizeFlair(localStorage.getItem('fansphere_flair')),
+    badgeColor: getFlairBadgeColor(localStorage.getItem('fansphere_flair'))
   },
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
@@ -31,7 +49,7 @@ const state = {
 
 function getEffectiveRealm() {
   if (state.selectedRealm === 'user_club') {
-    return state.user.flair || 'ArseFinland Member';
+    return state.user.flair || 'ArseFinland Official Member';
   }
   return state.selectedRealm;
 }
@@ -39,16 +57,12 @@ function getEffectiveRealm() {
 function getRealmDisplayName(realm) {
   if (!realm || realm === 'All' || realm === 'all') return 'All Realms (Cross-Club)';
   if (realm === 'user_club') {
-    return `My Club (${getRealmDisplayName(state.user.flair || 'ArseFinland Member')})`;
+    return `My Club (${getRealmDisplayName(state.user.flair || 'ArseFinland Official Member')})`;
   }
-  if (realm === 'ArseFinland Member' || realm === 'Arsenal Finland' || realm === 'ArseFinland Official Member') return 'ArseFinland Official';
-  if (realm === 'Gunner') return 'Gunner (Arsenal FC)';
-  if (realm === 'Suomi Gooner') return 'Suomi Gooner';
-  if (realm === 'Blue Lion') return 'Blue Lion (Chelsea)';
-  if (realm === 'Red Army') return 'Red Army (Liverpool)';
-  if (realm === 'Cityzen') return 'Cityzen (Man City)';
-  if (realm === 'Helsinki Fan') return 'Klubi (HJK)';
-  if (realm === 'Neutral Scout') return 'Neutral Fan';
+  const norm = normalizeFlair(realm);
+  if (norm === 'ArseFinland Official Member') return 'ArseFinland Official Member';
+  if (norm === 'Neutral Football Fan') return 'Neutral Football Fan';
+  if (norm === 'Testers') return 'Testers';
   return realm;
 }
 
@@ -57,48 +71,23 @@ function matchClubRealm(authorFlair, targetRealm) {
   if (!authorFlair) return false;
 
   const a = authorFlair.trim().toLowerCase();
-  const effective = (targetRealm === 'user_club' ? (state.user.flair || 'ArseFinland Member') : targetRealm).trim().toLowerCase();
+  const effective = (targetRealm === 'user_club' ? (state.user.flair || 'ArseFinland Official Member') : targetRealm).trim().toLowerCase();
   if (a === effective) return true;
 
-  // ArseFinland official club realm
-  const arseFinlandVariants = ['arsefinland member', 'arsefinland official member', 'arsenal finland', 'arsefinland', 'club official', 'official'];
-  if (arseFinlandVariants.some(v => effective.includes(v) || v.includes(effective))) {
-    return arseFinlandVariants.some(v => a.includes(v) || v.includes(a));
-  }
-
-  // Gunner (Arsenal FC) realm
-  if (effective.includes('gunner') && !effective.includes('suomi')) {
-    return a.includes('gunner') && !a.includes('suomi');
-  }
-
-  // Suomi Gooner realm
-  if (effective.includes('suomi') || effective.includes('lappi') || effective.includes('tactics')) {
-    return a.includes('suomi') || a.includes('lappi') || a.includes('tactics') || a.includes('analyst');
-  }
-
-  // Blue Lion (Chelsea) realm
-  if (effective.includes('blue lion') || effective.includes('chelsea')) {
-    return a.includes('blue lion') || a.includes('chelsea');
-  }
-
-  // Red Army (Liverpool) realm
-  if (effective.includes('red army') || effective.includes('liverpool')) {
-    return a.includes('red army') || a.includes('liverpool');
-  }
-
-  // Cityzen (Man City) realm
-  if (effective.includes('cityzen') || effective.includes('man city')) {
-    return a.includes('cityzen') || a.includes('man city') || a.includes('manchester city');
-  }
-
-  // Klubi / Helsinki Fan realm
-  if (effective.includes('helsinki fan') || effective.includes('klubi') || effective.includes('hjk')) {
-    return a.includes('helsinki fan') || a.includes('klubi') || a.includes('hjk');
+  // Testers realm
+  if (effective.includes('tester')) {
+    return a.includes('tester');
   }
 
   // Neutral Football Fan realm
   if (effective.includes('neutral')) {
     return a.includes('neutral');
+  }
+
+  // ArseFinland official club realm
+  const arseFinlandVariants = ['arsefinland', 'arsenal', 'gunner', 'gooner', 'official', 'member'];
+  if (arseFinlandVariants.some(v => effective.includes(v))) {
+    return arseFinlandVariants.some(v => a.includes(v));
   }
 
   return a.includes(effective) || effective.includes(a);
@@ -107,7 +96,7 @@ function matchClubRealm(authorFlair, targetRealm) {
 function updateRealmIndicators() {
   const flairInput = document.getElementById('profileFlairInput');
   if (flairInput) {
-    flairInput.value = (state.selectedRealm === 'All') ? 'All' : (state.user.flair || 'ArseFinland Member');
+    flairInput.value = (state.selectedRealm === 'All') ? 'All' : normalizeFlair(state.user.flair);
   }
 }
 
@@ -261,29 +250,17 @@ function initUserProfile(force = false) {
   const currentNickname = state.user.handle || 'Guest Fan';
   if (handleEl) handleEl.textContent = currentNickname;
 
-  // Ensure current user flair exists in inputFlair dropdown
-  if (inputFlair && state.user.flair) {
-    let exists = false;
-    for (let i = 0; i < inputFlair.options.length; i++) {
-      if (inputFlair.options[i].value === state.user.flair) {
-        exists = true;
-        break;
-      }
-    }
-    if (!exists) {
-      const opt = document.createElement('option');
-      opt.value = state.user.flair;
-      opt.textContent = `${state.user.flair} (Custom)`;
-      inputFlair.appendChild(opt);
-    }
-  }
+  // Normalize user flair to ensure only allowed supporter flairs are used
+  state.user.flair = normalizeFlair(state.user.flair);
+  state.user.badgeColor = getFlairBadgeColor(state.user.flair);
+  localStorage.setItem('fansphere_flair', state.user.flair);
 
   // CRITICAL: NEVER overwrite inputs if the modal is currently open, unless explicitly forced on opening
   const isModalOpen = profileModal && profileModal.open;
   if (!isModalOpen || force) {
     if (inputHandle) inputHandle.value = state.user.handle || '';
     if (inputEmail) inputEmail.value = state.user.email || '';
-    if (inputFlair) inputFlair.value = state.user.flair || 'ArseFinland Member';
+    if (inputFlair) inputFlair.value = (state.selectedRealm === 'All') ? 'All' : state.user.flair;
   }
 
   if (sessionIdDisplay) {
@@ -340,12 +317,13 @@ function applySession(session, skipWsAuth = false) {
   state.sessionId = session.id;
   state.user.handle = session.nickname;
   state.user.email = session.email;
-  state.user.flair = session.flair || 'ArseFinland Member';
+  state.user.flair = normalizeFlair(session.flair);
+  state.user.badgeColor = getFlairBadgeColor(state.user.flair);
 
   localStorage.setItem('fansphere_session_id', session.id);
   localStorage.setItem('fansphere_handle', session.nickname);
   localStorage.setItem('fansphere_email', session.email);
-  localStorage.setItem('fansphere_flair', session.flair || 'ArseFinland Member');
+  localStorage.setItem('fansphere_flair', state.user.flair);
 
   initUserProfile();
 
@@ -593,7 +571,33 @@ async function loadPosts() {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load posts');
     const rawPosts = await res.json();
-    state.posts = sortPostsByLatestActivity(rawPosts);
+
+    let merged = Array.isArray(rawPosts) ? [...rawPosts] : [];
+
+    // Client-side self-healing: if server was restarted and is missing any locally created/cached posts,
+    // merge them and restore them to the server so they never disappear
+    try {
+      const cachedRaw = localStorage.getItem('fansphere_cached_posts');
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (Array.isArray(cached) && cached.length > 0) {
+          const serverIds = new Set(merged.map(p => p.id));
+          const missing = cached.filter(p => !serverIds.has(p.id));
+          if (missing.length > 0) {
+            missing.forEach(p => {
+              merged.push(p);
+              fetch('/api/posts/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p)
+              }).catch(() => {});
+            });
+          }
+        }
+      }
+    } catch {}
+
+    state.posts = sortPostsByLatestActivity(merged);
     if (state.currentTag === 'All') {
       try {
         localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
@@ -1006,7 +1010,7 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : ''}">${escapeHtml(msg.author)}</span>
-      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'ArseFinland Member')}</span>
+      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'ArseFinland Official Member')}</span>
       <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
     <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs">
@@ -1301,7 +1305,7 @@ function initEventHandlers() {
     if (!handleInput || !emailInput) return false;
     const newHandle = handleInput.value.trim();
     const newEmail = emailInput.value.trim();
-    const newFlair = flairInput ? flairInput.value : (state.user.flair || 'ArseFinland Member');
+    const newFlair = flairInput ? normalizeFlair(flairInput.value) : normalizeFlair(state.user.flair);
 
     // Immediate local state update so user changes are NEVER undone by blur or loss of focus
     if (newHandle.length >= 2 && newHandle.length <= 30) {
@@ -1492,7 +1496,7 @@ function initEventHandlers() {
 
     const nickname = nickInput.value.trim();
     const email = emailInput.value.trim();
-    const flair = flairInput ? flairInput.value : 'Gunner';
+    const flair = flairInput ? normalizeFlair(flairInput.value) : 'ArseFinland Official Member';
 
     if (nickname.length < 2) {
       if (errEl) {

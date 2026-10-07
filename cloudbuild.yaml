@@ -34,36 +34,70 @@ steps:
           fi
         done
 
-        # Compare item counts so we never overwrite a store with fewer posts or sessions
-        count_posts() {
-          local file="$1"
-          if [ -f "$file" ]; then
-            grep -o '"id":' "$file" | wc -l || echo 0
-          else
-            echo 0
-          fi
-        }
+        # Compare and merge all available stores (remote live + workspace local) so no posts are ever lost
+        python3 -c "
+import json, os
 
-        LOCAL_COUNT=$(count_posts data/store.json)
-        BACKUP_COUNT=$(count_posts data/store.backup.json)
-        REMOTE_COUNT=0
-        if [ "$FOUND_REMOTE" = true ]; then
-          REMOTE_COUNT=$(count_posts /workspace/backup_check/remote_store.json)
-        fi
+def load(f):
+    if os.path.exists(f):
+        try:
+            with open(f) as fp:
+                d = json.load(fp)
+                if isinstance(d, dict) and 'posts' in d:
+                    return d
+        except Exception:
+            pass
+    return None
 
-        echo "Store item counts - Local: $LOCAL_COUNT, Local Backup: $BACKUP_COUNT, Remote Live: $REMOTE_COUNT"
+files = ['/workspace/backup_check/remote_store.json', 'data/store.json', 'data/store.backup.json']
+stores = [s for s in [load(f) for f in files] if s]
 
-        if [ "$FOUND_REMOTE" = true ] && [ "$REMOTE_COUNT" -ge "$LOCAL_COUNT" ]; then
-          echo "Using live remote store with $REMOTE_COUNT items to preserve community activity."
-          cp /workspace/backup_check/remote_store.json data/store.json
-          cp /workspace/backup_check/remote_store.json data/store.backup.json
-        elif [ -s data/store.json ] && [ "$LOCAL_COUNT" -gt 0 ]; then
-          echo "Retaining existing workspace data/store.json with $LOCAL_COUNT items."
-          cp data/store.json data/store.backup.json
-        elif [ -s data/store.backup.json ] && [ "$BACKUP_COUNT" -gt 0 ]; then
-          echo "Restoring from workspace data/store.backup.json with $BACKUP_COUNT items."
-          cp data/store.backup.json data/store.json
-        fi
+if stores:
+    posts_map = {}
+    comments_map = {}
+    chat_map = {}
+    sessions_map = {}
+    max_post_id = 1
+    max_comment_id = 1
+    max_chat_id = 1
+
+    for s in stores:
+        for p in s.get('posts', []):
+            if p and 'id' in p:
+                pid = p['id']
+                posts_map[pid] = p
+                max_post_id = max(max_post_id, pid + 1)
+        for c in s.get('comments', []):
+            if c and 'id' in c:
+                cid = c['id']
+                comments_map[cid] = c
+                max_comment_id = max(max_comment_id, cid + 1)
+        for m in s.get('chatMessages', []):
+            if m and 'id' in m:
+                mid = m['id']
+                chat_map[mid] = m
+                max_chat_id = max(max_chat_id, mid + 1)
+        for sess in s.get('sessions', []):
+            if sess and 'id' in sess:
+                sessions_map[sess['id']] = sess
+
+    merged = {
+        'posts': sorted(posts_map.values(), key=lambda x: x.get('id', 0), reverse=True),
+        'comments': sorted(comments_map.values(), key=lambda x: x.get('id', 0)),
+        'chatMessages': sorted(chat_map.values(), key=lambda x: x.get('id', 0)),
+        'sessions': list(sessions_map.values()),
+        'nextPostId': max(max_post_id, 6),
+        'nextCommentId': max(max_comment_id, 12),
+        'nextChatId': max(max_chat_id, 18)
+    }
+
+    os.makedirs('data', exist_ok=True)
+    with open('data/store.json', 'w') as fp:
+        json.dump(merged, fp, indent=2)
+    with open('data/store.backup.json', 'w') as fp:
+        json.dump(merged, fp, indent=2)
+    print(f'Preserved and merged store with {len(merged[\"posts\"])} posts, {len(merged[\"comments\"])} comments, and {len(merged[\"chatMessages\"])} chat messages.')
+"
 
         echo "Data preservation check complete. Active store.json verified."
 
