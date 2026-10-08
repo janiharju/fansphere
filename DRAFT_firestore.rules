@@ -87,8 +87,10 @@ service cloud.firestore {
     match /posts/{postId} {
       allow get, list: if true;
       allow create: if isValidId(postId) && isValidPost(incoming());
-      allow update: if isValidId(postId) && isValidPost(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'downvotes', 'comment_count', 'last_activity_at'])
+      allow update: if isValidId(postId) && isValidPost(incoming()) && incoming().id == existing().id && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'downvotes', 'comment_count', 'last_activity_at']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'image_url', 'tag', 'last_activity_at']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly([])
       );
       allow delete: if false;
     }
@@ -96,8 +98,10 @@ service cloud.firestore {
     match /comments/{commentId} {
       allow get, list: if true;
       allow create: if isValidId(commentId) && isValidComment(incoming());
-      allow update: if isValidId(commentId) && isValidComment(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes'])
+      allow update: if isValidId(commentId) && isValidComment(incoming()) && incoming().id == existing().id && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['content']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly([])
       );
       allow delete: if false;
     }
@@ -105,14 +109,16 @@ service cloud.firestore {
     match /chat_messages/{messageId} {
       allow get, list: if true;
       allow create: if isValidId(messageId) && isValidChatMessage(incoming());
-      allow update, delete: if false;
+      allow update: if isValidId(messageId) && isValidChatMessage(incoming()) && incoming().id == existing().id;
+      allow delete: if false;
     }
 
     match /sessions/{sessionId} {
-      allow get, list: if isValidId(sessionId);
+      allow get, list: if true;
       allow create: if isValidId(sessionId) && isValidSession(incoming());
-      allow update: if isValidId(sessionId) && isValidSession(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['last_active_at', 'expires_at', 'flair', 'nickname'])
+      allow update: if isValidId(sessionId) && isValidSession(incoming()) && incoming().id == existing().id && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['last_active_at', 'expires_at', 'flair', 'nickname']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly([])
       );
       allow delete: if isValidId(sessionId);
     }
@@ -120,7 +126,7 @@ service cloud.firestore {
     match /realms/{realmId} {
       allow get, list: if true;
       allow create: if isValidId(realmId) && isValidRealm(incoming());
-      allow update: if isValidId(realmId) && isValidRealm(incoming());
+      allow update: if isValidId(realmId) && isValidRealm(incoming()) && incoming().id == existing().id;
       allow delete: if false;
     }
   }

@@ -1168,8 +1168,10 @@ app.post('/api/posts', (req, res) => {
   }
 
   const nowIso = new Date().toISOString();
+  const assignedPostId = Math.max(nextPostId++, ...posts.map(p => p.id + 1), 1);
+  nextPostId = assignedPostId + 1;
   const newPost: Post = {
-    id: nextPostId++,
+    id: assignedPostId,
     title: title.trim(),
     content: content.trim(),
     author: session.nickname,
@@ -1285,8 +1287,10 @@ app.post('/api/posts/:id/comments', (req, res) => {
     return res.status(400).json({ detail: 'Comment content cannot be empty' });
   }
 
+  const assignedCommentId = Math.max(nextCommentId++, ...comments.map(c => c.id + 1), 1);
+  nextCommentId = assignedCommentId + 1;
   const comment: Comment = {
-    id: nextCommentId++,
+    id: assignedCommentId,
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
     author: session.nickname,
@@ -1369,8 +1373,10 @@ app.post('/api/chat/message', (req, res) => {
     return res.status(400).json({ detail: 'Chat content cannot be empty' });
   }
 
+  const assignedChatId = Math.max(nextChatId++, ...chatMessages.map(m => m.id + 1), 1);
+  nextChatId = assignedChatId + 1;
   const msg: ChatMessage = {
-    id: nextChatId++,
+    id: assignedChatId,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
     author_flair: session.flair || 'ArseFinland Official Member',
