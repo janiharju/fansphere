@@ -37,6 +37,11 @@ body {
   padding: 0;
 }
 
+/* Hidden utility to guarantee zero flash of ungated contents */
+.hidden {
+  display: none !important;
+}
+
 /* Zero-scroll: hide all scrollbars completely */
 * {
   scrollbar-width: none !important;

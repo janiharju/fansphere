@@ -29,7 +29,7 @@
   </script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="/static/style.css?v=20261006_07">
+  <link rel="stylesheet" href="/static/style.css?v=20261008_02">
 </head>
 <body class="bg-[#0B1120] text-slate-100 h-screen h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden selection:bg-red-600 selection:text-white">
 
@@ -54,8 +54,8 @@
         </div>
       </div>
 
-      <!-- Right Controls: Profile & Live Status -->
-      <div class="flex items-center gap-2.5">
+      <!-- Right Controls: Profile & Live Status (Visible only with active session & realm) -->
+      <div id="navUserControls" class="hidden flex items-center gap-2.5">
         <!-- Live Fans Pill with Active Sessions Dropdown / Tooltip -->
         <div class="relative group">
           <div id="onlineFansPill" class="flex items-center gap-1.5 bg-emerald-950/70 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/60 text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition select-none shadow-sm">
@@ -95,8 +95,8 @@
     </div>
   </header>
 
-  <!-- MOBILE NAVIGATION TABS (visible only on small screens) -->
-  <div class="lg:hidden bg-slate-900 border-b border-slate-800 flex justify-around text-xs font-semibold py-1.5 px-2 shrink-0">
+  <!-- MOBILE NAVIGATION TABS (visible only with active session & selected realm) -->
+  <div id="mobileNavTabs" class="hidden lg:hidden bg-slate-900 border-b border-slate-800 flex justify-around text-xs font-semibold py-1.5 px-2 shrink-0">
     <button id="mobileTabForum" class="flex-1 py-1.5 px-3 rounded-lg text-center text-red-400 bg-slate-800 flex items-center justify-center gap-1.5">
       <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
       <span>Forum Feed</span>
@@ -108,8 +108,84 @@
     </button>
   </div>
 
-  <!-- MAIN ZERO-SCROLL LAYOUT -->
-  <main class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 overflow-hidden">
+  <!-- SESSION & REALM REQUIRED GATE (Visible when NOT authenticated or realm NOT selected) -->
+  <section id="sessionGateView" class="flex-1 flex flex-col items-center justify-center p-4 my-auto w-full">
+    <div class="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl p-6 sm:p-8 max-w-md w-full">
+      <div class="text-center space-y-2 mb-6">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-red-600/10 border border-red-600/20 text-red-500 flex items-center justify-center text-3xl shadow-inner mb-3">
+          ⚽
+        </div>
+        <h1 id="gateTitle" class="text-xl sm:text-2xl font-black tracking-tight text-white">Join ArseFinland FanSphere</h1>
+        <p id="gateSubtitle" class="text-xs text-slate-400 leading-relaxed">
+          Please enter your nickname, email, and choose your club realm to enter the community and view discussions.
+        </p>
+      </div>
+
+      <div id="gateError" class="hidden mb-4 p-3 rounded-xl bg-red-950/60 border border-red-800/60 text-xs text-red-300 flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+        <span id="gateErrorText">Please complete all fields</span>
+      </div>
+
+      <form id="gateForm" class="space-y-4 text-xs">
+        <div>
+          <label for="gateNicknameInput" class="block font-semibold text-slate-200 mb-1.5">
+            Nickname / Fan Handle <span class="text-red-400">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="gateNicknameInput" 
+            class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-red-500 font-medium placeholder:text-slate-500"
+            placeholder="e.g. HelsinkiGunner"
+            required
+            minlength="2"
+            maxlength="30"
+            autocomplete="nickname"
+          />
+          <p class="text-[10px] text-slate-500 mt-1">Attached to your forum posts and live chat messages.</p>
+        </div>
+
+        <div>
+          <label for="gateEmailInput" class="block font-semibold text-slate-200 mb-1.5">
+            Email Address <span class="text-red-400">*</span>
+          </label>
+          <input 
+            type="email" 
+            id="gateEmailInput" 
+            class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-red-500 font-medium placeholder:text-slate-500"
+            placeholder="e.g. gunner@example.com"
+            required
+            autocomplete="email"
+          />
+          <p class="text-[10px] text-slate-500 mt-1">Used to establish and restore your fan session.</p>
+        </div>
+
+        <div>
+          <label for="gateRealmInput" class="block font-semibold text-slate-200 mb-1.5">
+            Club Realm & Supporter Flair <span class="text-red-400">*</span>
+          </label>
+          <select id="gateRealmInput" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-red-500 font-medium cursor-pointer" required>
+            <option value="" disabled selected>Select your Club Realm...</option>
+            <option value="ArseFinland Official Member">🔴 ArseFinland Official Member</option>
+            <option value="Neutral Football Fan">⚪ Neutral Football Fan</option>
+            <option value="Testers">🧪 Testers</option>
+          </select>
+          <p class="text-[10px] text-slate-500 mt-1">Choose your supporter group or testing realm to enter.</p>
+        </div>
+
+        <button 
+          type="submit" 
+          id="gateSubmitBtn"
+          class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer text-sm"
+        >
+          <span>Enter FanSphere</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- MAIN ZERO-SCROLL LAYOUT (hidden unless active session and selected realm) -->
+  <main id="mainAppContent" class="hidden max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 overflow-hidden">
 
     <!-- ================= COLUMN 1: LEFT SIDEBAR (COMMUNITY & TOPICS) ================= -->
     <aside id="leftSidebar" class="hidden lg:flex lg:col-span-3 flex-col gap-2.5 h-full min-h-0 overflow-hidden">
@@ -610,7 +686,7 @@
   <audio id="chimeAudio" preload="auto"></audio>
 
   <!-- Application Script -->
-  <script src="/static/app.js?v=20261006_07"></script>
+  <script src="/static/app.js?v=20261008_02"></script>
 </body>
 </html>
 

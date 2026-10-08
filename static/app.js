@@ -42,7 +42,7 @@ const state = {
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
   currentTag: 'All',
-  selectedRealm: localStorage.getItem('fansphere_realm') || 'All',
+  selectedRealm: localStorage.getItem('fansphere_realm') || null,
   currentPage: 1,
   postsPerPage: 3,
   userVotes: JSON.parse(localStorage.getItem('fansphere_votes') || '{}'),
@@ -122,6 +122,56 @@ function updateRealmIndicators() {
   }
 }
 
+// Session & Realm Gate: Enforce that page contents are only visible if there is both an active session and a selected realm
+function hasActiveSessionAndRealm() {
+  const hasSession = !!(state.sessionId && state.session);
+  const realm = (state.selectedRealm || (state.session && state.session.flair) || '').trim();
+  const hasRealm = !!(realm && realm.length > 0 && realm !== 'undefined' && realm !== 'null');
+  return hasSession && hasRealm;
+}
+
+function updateGateState() {
+  const isAuthed = hasActiveSessionAndRealm();
+  const mainApp = document.getElementById('mainAppContent');
+  const gateView = document.getElementById('sessionGateView');
+  const mobileNav = document.getElementById('mobileNavTabs');
+  const navUserControls = document.getElementById('navUserControls');
+  const modal = document.getElementById('sessionPromptModal');
+
+  if (isAuthed) {
+    if (mainApp) mainApp.classList.remove('hidden');
+    if (mobileNav) mobileNav.classList.remove('hidden');
+    if (navUserControls) navUserControls.classList.remove('hidden');
+    if (gateView) gateView.classList.add('hidden');
+    if (modal && modal.open) modal.close();
+  } else {
+    if (mainApp) mainApp.classList.add('hidden');
+    if (mobileNav) mobileNav.classList.add('hidden');
+    if (navUserControls) navUserControls.classList.add('hidden');
+    if (gateView) gateView.classList.remove('hidden');
+
+    const postModal = document.getElementById('postDetailModal');
+    const createModal = document.getElementById('createPostModal');
+    const profileModal = document.getElementById('userProfileModal');
+    if (postModal && postModal.open) postModal.close();
+    if (createModal && createModal.open) createModal.close();
+    if (profileModal && profileModal.open) profileModal.close();
+
+    // Pre-fill previous values from local storage if available
+    const gateNick = document.getElementById('gateNicknameInput');
+    const gateEmail = document.getElementById('gateEmailInput');
+    const gateRealm = document.getElementById('gateRealmInput');
+    if (gateNick && !gateNick.value) gateNick.value = localStorage.getItem('fansphere_handle') || '';
+    if (gateEmail && !gateEmail.value) gateEmail.value = localStorage.getItem('fansphere_email') || '';
+    if (gateRealm && (!gateRealm.value || gateRealm.value === '')) {
+      const savedRealm = localStorage.getItem('fansphere_realm') || localStorage.getItem('fansphere_flair');
+      if (savedRealm && savedRealm !== 'All') {
+        gateRealm.value = savedRealm;
+      }
+    }
+  }
+}
+
 function setRealmFilter(realm) {
   state.selectedRealm = realm;
   if (realm !== 'All') {
@@ -130,6 +180,7 @@ function setRealmFilter(realm) {
   }
   localStorage.setItem('fansphere_realm', realm);
   updateRealmIndicators();
+  updateGateState();
   state.currentPage = 1;
   renderPosts();
   renderChatStream();
@@ -173,6 +224,17 @@ function updateRealmSelectDropdowns() {
     `).join('');
     if (currentSessionVal) sessionSelect.value = currentSessionVal;
   }
+
+  const gateSelect = document.getElementById('gateRealmInput');
+  if (gateSelect) {
+    const currentGateVal = gateSelect.value;
+    gateSelect.innerHTML = `
+      <option value="" disabled ${!currentGateVal ? 'selected' : ''}>Select your Club Realm...</option>
+      ${state.realms.map(r => `
+        <option value="${escapeHtml(r.name)}" ${currentGateVal === r.name ? 'selected' : ''}>${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
+      `).join('')}
+    `;
+  }
 }
 
 // ==================== INITIALIZATION ====================
@@ -184,24 +246,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModalLightDismiss();
   initMobileTabs();
   initSessionAutoRefresh();
+  initEventHandlers();
 
-  // Instant restore of cached posts and chat messages so user sees old messages immediately on reload
-  loadCachedData();
+  // Immediately enforce gate: hide page contents until verified active session & selected realm
+  updateGateState();
 
-  // Connect WebSocket
-  connectWebSocket();
+  // Always load club realms first so gate dropdown has the dynamic realms ready
+  await loadRealms();
 
   // Check or initialize fan session (reuses if valid, prompts if new or expired)
-  await checkSession();
+  const isSessionValid = await checkSession();
 
-  // Load latest persistent data from server
-  await Promise.all([
-    loadRealms(),
-    loadPosts(),
-    loadChatHistory()
-  ]);
-
-  initEventHandlers();
+  if (isSessionValid && hasActiveSessionAndRealm()) {
+    // Only load and render community posts and chat when verified active session and selected realm
+    loadCachedData();
+    connectWebSocket();
+    await Promise.all([
+      loadPosts(),
+      loadChatHistory()
+    ]);
+  } else {
+    // Ensure gate is displayed and page contents stay strictly hidden
+    updateGateState();
+  }
 });
 
 function loadCachedData() {
@@ -284,9 +351,21 @@ function playChime(freq = 587.33, duration = 0.12) {
 function initModalLightDismiss() {
   const dialogs = document.querySelectorAll('dialog');
   dialogs.forEach(dialog => {
+    // Prevent Escape key from closing session modal if not authenticated
+    if (dialog.id === 'sessionPromptModal') {
+      dialog.addEventListener('cancel', (e) => {
+        if (!hasActiveSessionAndRealm()) {
+          e.preventDefault();
+        }
+      });
+    }
     if (!('closedBy' in HTMLDialogElement.prototype)) {
       dialog.addEventListener('click', (event) => {
         if (event.target !== dialog) return;
+        // Never allow clicking outside to dismiss sessionPromptModal when not authenticated
+        if (dialog.id === 'sessionPromptModal' && !hasActiveSessionAndRealm()) {
+          return;
+        }
         const rect = dialog.getBoundingClientRect();
         const isDialogContent = (
           rect.top <= event.clientY &&
@@ -347,6 +426,7 @@ async function checkSession() {
         const data = await res.json();
         applySession(data.session);
         updateOnlinePresence(data.online_count, data.active_nicknames);
+        updateGateState();
         return true;
       } else {
         const err = await res.json().catch(() => ({}));
@@ -354,15 +434,18 @@ async function checkSession() {
         state.sessionId = null;
         state.session = null;
         localStorage.removeItem('fansphere_session_id');
+        updateGateState();
         openSessionPromptModal(err.expired ? 'expired' : 'new');
         return false;
       }
     } catch (e) {
       console.error('Session network check error', e);
+      updateGateState();
       return false;
     }
   } else {
     // No existing session, prompt user for Nickname & Email
+    updateGateState();
     openSessionPromptModal('new');
     return false;
   }
@@ -382,13 +465,18 @@ function applySession(session, skipWsAuth = false) {
   state.user.email = session.email;
   state.user.flair = normalizeFlair(session.flair);
   state.user.badgeColor = getFlairBadgeColor(state.user.flair);
+  state.selectedRealm = session.flair || state.selectedRealm;
 
   localStorage.setItem('fansphere_session_id', session.id);
   localStorage.setItem('fansphere_handle', session.nickname);
   localStorage.setItem('fansphere_email', session.email);
   localStorage.setItem('fansphere_flair', state.user.flair);
+  if (state.selectedRealm) {
+    localStorage.setItem('fansphere_realm', state.selectedRealm);
+  }
 
   initUserProfile();
+  updateGateState();
 
   // If websocket is open and not skipping WS auth, authenticate socket connection only once per session ID
   if (!skipWsAuth && state.ws && state.ws.readyState === WebSocket.OPEN) {
@@ -415,7 +503,19 @@ function applySession(session, skipWsAuth = false) {
 }
 
 function openSessionPromptModal(reason = 'new') {
+  updateGateState();
   const modal = document.getElementById('sessionPromptModal');
+  const gateTitle = document.getElementById('gateTitle');
+  const gateSubtitle = document.getElementById('gateSubtitle');
+
+  if (reason === 'expired') {
+    if (gateTitle) gateTitle.textContent = 'Session Expired';
+    if (gateSubtitle) gateSubtitle.textContent = 'Your previous session has expired. Please confirm your nickname, email, and club realm to reactivate.';
+  } else {
+    if (gateTitle) gateTitle.textContent = 'Welcome to FanSphere';
+    if (gateSubtitle) gateSubtitle.textContent = 'Please enter your nickname, email, and choose your club realm to enter the community and view discussions.';
+  }
+
   if (!modal) return;
 
   const titleEl = document.getElementById('sessionPromptTitle');
@@ -1383,7 +1483,16 @@ function initEventHandlers() {
   });
   document.getElementById('switchSessionBtn')?.addEventListener('click', () => {
     profileModal.close();
-    openSessionPromptModal('new');
+    state.sessionId = null;
+    state.session = null;
+    state.selectedRealm = null;
+    localStorage.removeItem('fansphere_session_id');
+    localStorage.removeItem('fansphere_realm');
+    if (state.ws) {
+      try { state.ws.close(); } catch {}
+      state.ws = null;
+    }
+    updateGateState();
   });
 
   // Unified session persistence function for both blur auto-save and explicit form submit
@@ -1634,6 +1743,91 @@ function initEventHandlers() {
       if (errEl) {
         errEl.textContent = err.message || 'Error creating session';
         errEl.classList.remove('hidden');
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Enter FanSphere</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        initLucide();
+      }
+    }
+  });
+
+  // 6b. Main Session & Realm Gate Form Submission
+  document.getElementById('gateForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nickInput = document.getElementById('gateNicknameInput');
+    const emailInput = document.getElementById('gateEmailInput');
+    const realmInput = document.getElementById('gateRealmInput');
+    const errBox = document.getElementById('gateError');
+    const errText = document.getElementById('gateErrorText');
+    const submitBtn = document.getElementById('gateSubmitBtn');
+
+    if (!nickInput || !emailInput || !realmInput) return;
+
+    const nickname = nickInput.value.trim();
+    const email = emailInput.value.trim();
+    const flair = realmInput.value.trim();
+
+    if (errBox) errBox.classList.add('hidden');
+
+    if (nickname.length < 2) {
+      if (errBox && errText) {
+        errText.textContent = 'Nickname must be at least 2 characters';
+        errBox.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+      if (errBox && errText) {
+        errText.textContent = 'Please enter a valid email address';
+        errBox.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (!flair) {
+      if (errBox && errText) {
+        errText.textContent = 'Please select your Club Realm';
+        errBox.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Entering FanSphere...</span>';
+    }
+
+    try {
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, email, flair })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || 'Failed to create session');
+      }
+
+      state.selectedRealm = flair;
+      localStorage.setItem('fansphere_realm', flair);
+      applySession(data.session);
+      updateGateState();
+      playChime(523.25, 0.2);
+
+      loadCachedData();
+      connectWebSocket();
+      await Promise.all([
+        loadPosts(),
+        loadChatHistory()
+      ]);
+    } catch (err) {
+      if (errBox && errText) {
+        errText.textContent = err.message || 'Error joining community';
+        errBox.classList.remove('hidden');
       }
     } finally {
       if (submitBtn) {
