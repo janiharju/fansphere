@@ -1,6 +1,20 @@
 {
   "posts": [
     {
+      "id": 11,
+      "title": "Permanent Post Verification",
+      "content": "Testing persistence across restarts and reloads",
+      "author": "TurkuTester",
+      "author_flair": "Testers",
+      "tag": "Discussion",
+      "upvotes": 1,
+      "downvotes": 0,
+      "comment_count": 0,
+      "image_url": "",
+      "created_at": "2026-10-08T08:52:12.780Z",
+      "last_activity_at": "2026-10-08T08:52:12.780Z"
+    },
+    {
       "id": 10,
       "title": "Matchday Prediction: Arsenal vs Chelsea",
       "content": "What is everyone score prediction for the weekend clash?",
@@ -586,6 +600,15 @@
       "created_at": "2026-10-07T12:00:04.724Z",
       "last_active_at": "2026-10-07T13:39:13.723Z",
       "expires_at": "2026-10-07T15:39:13.723Z"
+    },
+    {
+      "id": "126c9a61-14e9-4fe1-93ae-96c3330d4a56",
+      "nickname": "TurkuTester",
+      "email": "turku@test.fi",
+      "flair": "Testers",
+      "created_at": "2026-10-08T08:52:12.697Z",
+      "last_active_at": "2026-10-08T08:52:12.780Z",
+      "expires_at": "2026-10-08T10:52:12.780Z"
     }
   ],
   "realms": [
@@ -594,30 +617,30 @@
       "name": "ArseFinland Official Member",
       "badge_color": "#EF4444",
       "icon": "🔴",
-      "description": "Official verified ArseFinland community members and supporters",
+      "description": "Official ArseFinland supporters club members",
       "is_default": true,
-      "created_at": "2026-10-07T13:40:05.682Z"
+      "created_at": "2026-10-07T00:00:00.000Z"
     },
     {
       "id": "neutral-football-fan",
       "name": "Neutral Football Fan",
       "badge_color": "#94A3B8",
       "icon": "⚪",
-      "description": "Neutral fans, tacticians, and general football supporters",
+      "description": "Neutral fans and general football analysts",
       "is_default": false,
-      "created_at": "2026-10-07T13:40:05.682Z"
+      "created_at": "2026-10-07T00:00:00.000Z"
     },
     {
       "id": "testers",
       "name": "Testers",
       "badge_color": "#A855F7",
       "icon": "🧪",
-      "description": "Test realm for quality assurance and feature verification",
+      "description": "Community testing and quality assurance realm",
       "is_default": false,
-      "created_at": "2026-10-07T13:40:05.682Z"
+      "created_at": "2026-10-07T00:00:00.000Z"
     }
   ],
-  "nextPostId": 11,
+  "nextPostId": 12,
   "nextCommentId": 15,
   "nextChatId": 27
 }

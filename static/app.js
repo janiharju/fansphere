@@ -1,5 +1,7 @@
 // ArseFinland FanSphere - Real-time Sports Fan Community Client
 
+let currentRealms = [];
+
 function normalizeFlair(flair) {
   if (!flair) return 'ArseFinland Official Member';
   const str = String(flair).trim().toLowerCase();
@@ -8,8 +10,8 @@ function normalizeFlair(flair) {
   if (str.includes('arsefinland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
     return 'ArseFinland Official Member';
   }
-  if (state && Array.isArray(state.realms)) {
-    const matched = state.realms.find(r => r.name.toLowerCase() === str || r.id === str);
+  if (Array.isArray(currentRealms)) {
+    const matched = currentRealms.find(r => r.name.toLowerCase() === str || r.id === str);
     if (matched) return matched.name;
   }
   return 'ArseFinland Official Member';
@@ -20,8 +22,8 @@ function getFlairBadgeColor(flair) {
   if (norm === 'Testers') return '#A855F7';
   if (norm === 'Neutral Football Fan') return '#94A3B8';
   if (norm === 'ArseFinland Official Member') return '#EF4444';
-  if (state && Array.isArray(state.realms)) {
-    const matched = state.realms.find(r => r.name === norm || r.id === norm);
+  if (Array.isArray(currentRealms)) {
+    const matched = currentRealms.find(r => r.name === norm || r.id === norm);
     if (matched && matched.badge_color) return matched.badge_color;
   }
   return '#EF4444';
@@ -118,7 +120,6 @@ function updateRealmIndicators() {
   if (flairInput) {
     flairInput.value = (state.selectedRealm === 'All') ? 'All' : normalizeFlair(state.user.flair);
   }
-  renderForumRealmPills();
 }
 
 function setRealmFilter(realm) {
@@ -140,9 +141,9 @@ async function loadRealms() {
     if (!res.ok) return;
     const data = await res.json();
     if (Array.isArray(data.realms) && data.realms.length > 0) {
+      currentRealms = data.realms;
       state.realms = data.realms;
       updateRealmSelectDropdowns();
-      renderForumRealmPills();
     }
   } catch (err) {
     console.debug('Error loading club realms', err);
@@ -172,58 +173,6 @@ function updateRealmSelectDropdowns() {
     `).join('');
     if (currentSessionVal) sessionSelect.value = currentSessionVal;
   }
-}
-
-function renderForumRealmPills() {
-  const container = document.getElementById('forumRealmPillsContainer');
-  if (!container) return;
-
-  const allCount = state.posts ? state.posts.length : 0;
-  const activeRealm = state.selectedRealm;
-
-  const pills = [
-    { id: 'All', name: 'All Realms', icon: '🌐', count: allCount }
-  ];
-
-  if (Array.isArray(state.realms)) {
-    state.realms.forEach(r => {
-      const realmPostsCount = (state.posts || []).filter(p => matchClubRealm(p.author_flair, r.name)).length;
-      pills.push({
-        id: r.name,
-        name: r.name.replace(' Official Member', '').replace(' Football Fan', ''),
-        fullName: r.name,
-        icon: r.icon || '🛡️',
-        count: realmPostsCount,
-        color: r.badge_color || '#EF4444'
-      });
-    });
-  }
-
-  container.innerHTML = pills.map(p => {
-    const isSelected = (p.id === activeRealm) || (p.fullName && p.fullName === activeRealm);
-    const activeClasses = isSelected
-      ? 'bg-red-600 text-white font-bold shadow-sm border-red-500'
-      : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/70 font-medium';
-
-    return `
-      <button 
-        type="button" 
-        class="realm-filter-pill px-2.5 py-1 rounded-lg border text-xs shrink-0 transition flex items-center gap-1.5 cursor-pointer ${activeClasses}"
-        data-realm="${escapeHtml(p.fullName || p.id)}"
-      >
-        <span>${escapeHtml(p.icon)}</span>
-        <span class="truncate">${escapeHtml(p.name)}</span>
-        <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-400'} font-mono">${p.count}</span>
-      </button>
-    `;
-  }).join('');
-
-  container.querySelectorAll('.realm-filter-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetRealm = btn.getAttribute('data-realm');
-      setRealmFilter(targetRealm);
-    });
-  });
 }
 
 // ==================== INITIALIZATION ====================
@@ -662,9 +611,9 @@ function handleWebSocketMessage(msg) {
 
     case 'realms_updated':
       if (Array.isArray(msg.realms)) {
+        currentRealms = msg.realms;
         state.realms = msg.realms;
         updateRealmSelectDropdowns();
-        renderForumRealmPills();
         renderPosts();
         renderChatStream();
       }
@@ -730,7 +679,6 @@ async function loadPosts() {
     if (countAllEl && state.currentTag === 'All') {
       countAllEl.textContent = state.posts.length;
     }
-    renderForumRealmPills();
     renderPosts();
   } catch (err) {
     console.error(err);
@@ -1314,7 +1262,6 @@ function initEventHandlers() {
           if (state.selectedRealm !== 'All' && !matchClubRealm(createdPost.author_flair, getEffectiveRealm())) {
             setRealmFilter('All');
           } else {
-            renderForumRealmPills();
             renderPosts();
           }
         }
