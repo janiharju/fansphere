@@ -1,0 +1,260 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "User created forum discussion post",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Numeric identifier of the post"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300,
+          "description": "Title of the post"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 10000,
+          "description": "Body content of the post"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Author nickname or handle"
+        },
+        "author_flair": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Club realm flair of the author"
+        },
+        "tag": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Category tag of the post"
+        },
+        "upvotes": {
+          "type": "number",
+          "description": "Upvote count"
+        },
+        "downvotes": {
+          "type": "number",
+          "description": "Downvote count"
+        },
+        "comment_count": {
+          "type": "number",
+          "description": "Number of comments on the post"
+        },
+        "image_url": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "Optional attached image URL"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp when post was created"
+        },
+        "last_activity_at": {
+          "type": "string",
+          "description": "ISO timestamp of latest activity"
+        }
+      },
+      "required": ["id", "title", "content", "author", "created_at"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a forum post",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Numeric identifier of comment"
+        },
+        "post_id": {
+          "type": "number",
+          "description": "ID of parent post"
+        },
+        "parent_id": {
+          "type": "number",
+          "description": "Parent comment ID if nested reply"
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Author handle"
+        },
+        "author_flair": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Author flair"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Comment text"
+        },
+        "upvotes": {
+          "type": "number",
+          "description": "Upvotes on comment"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp"
+        }
+      },
+      "required": ["id", "post_id", "author", "content", "created_at"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Live chat message in club rooms",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Numeric message ID"
+        },
+        "room": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Chat room identifier"
+        },
+        "author": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Author handle"
+        },
+        "author_flair": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Author flair"
+        },
+        "badge_color": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Color hex"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Chat message text"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp"
+        }
+      },
+      "required": ["id", "room", "author", "content", "created_at"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "Active user session record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique session ID"
+        },
+        "nickname": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "User nickname"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "User email address"
+        },
+        "flair": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Selected club realm"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Session creation time"
+        },
+        "last_active_at": {
+          "type": "string",
+          "description": "Latest heartbeat time"
+        },
+        "expires_at": {
+          "type": "string",
+          "description": "Session expiration time"
+        }
+      },
+      "required": ["id", "nickname", "flair", "created_at", "expires_at"]
+    },
+    "ClubRealm": {
+      "title": "ClubRealm",
+      "description": "Available club realm community",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Realm slug or ID"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Realm display name"
+        },
+        "badge_color": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Badge hex color"
+        },
+        "icon": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Emoji or icon symbol"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Realm description"
+        },
+        "is_default": {
+          "type": "boolean",
+          "description": "Whether this realm is default"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "name", "created_at"]
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Collection of forum posts"
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Collection of post comments"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Collection of live chat room messages"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Active session storage for persistence"
+    },
+    "/realms/{realmId}": {
+      "schema": "ClubRealm",
+      "description": "Club realms available on the platform"
+    }
+  }
+}

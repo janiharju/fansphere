@@ -5,6 +5,18 @@ import crypto from 'node:crypto';
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
+import {
+  fetchAllPostsFromFirestore,
+  savePostToFirestore,
+  fetchAllCommentsFromFirestore,
+  saveCommentToFirestore,
+  fetchAllChatMessagesFromFirestore,
+  saveChatMessageToFirestore,
+  fetchAllSessionsFromFirestore,
+  saveSessionToFirestore,
+  fetchAllRealmsFromFirestore,
+  saveRealmToFirestore
+} from './firestoreService.js';
 
 interface Team {
   id: string;
@@ -931,6 +943,7 @@ app.post('/api/auth/session', (req, res) => {
 
   sessions.set(sessionId, session);
   forceSaveNow();
+  saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session save error:', err));
   broadcastPresence();
 
   const active = getActiveSessions();
@@ -1172,6 +1185,7 @@ app.post('/api/posts', (req, res) => {
 
   posts.unshift(newPost);
   forceSaveNow();
+  savePostToFirestore(newPost).catch(err => console.error('[Firestore] Post save error:', err));
 
   broadcast({
     type: 'new_post',
@@ -1234,6 +1248,9 @@ app.post('/api/posts/:id/vote', (req, res) => {
     post.downvotes = Math.max(post.downvotes - 1, 0);
   }
 
+  forceSaveNow();
+  savePostToFirestore(post).catch(err => console.error('[Firestore] Vote update save error:', err));
+
   broadcast({
     type: 'vote_update',
     post_id: postId,
@@ -1284,6 +1301,8 @@ app.post('/api/posts/:id/comments', (req, res) => {
   const nowIso = comment.created_at;
   post.last_activity_at = nowIso;
   forceSaveNow();
+  saveCommentToFirestore(comment).catch(err => console.error('[Firestore] Comment save error:', err));
+  savePostToFirestore(post).catch(err => console.error('[Firestore] Post comment count save error:', err));
 
   broadcast({
     type: 'new_comment',
@@ -1307,6 +1326,7 @@ app.post('/api/comments/:id/vote', (req, res) => {
 
   comment.upvotes += 1;
   scheduleSave();
+  saveCommentToFirestore(comment).catch(err => console.error('[Firestore] Comment vote save error:', err));
 
   broadcast({
     type: 'comment_vote_update',
@@ -1361,6 +1381,7 @@ app.post('/api/chat/message', (req, res) => {
 
   chatMessages.push(msg);
   forceSaveNow();
+  saveChatMessageToFirestore(msg).catch(err => console.error('[Firestore] Chat save error:', err));
 
   broadcast({
     type: 'chat_message',
@@ -1550,6 +1571,7 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
 
   realms.push(newRealm);
   forceSaveNow();
+  saveRealmToFirestore(newRealm).catch(err => console.error('[Firestore] Realm save error:', err));
 
   broadcast({
     type: 'realms_updated',
@@ -1608,6 +1630,7 @@ app.post('/api/posts/restore', (req, res) => {
       posts.unshift(incoming);
       nextPostId = Math.max(nextPostId, incoming.id + 1);
       forceSaveNow();
+      savePostToFirestore(incoming).catch(err => console.error('[Firestore] Restore post error:', err));
       console.log(`Restored post #${incoming.id} ("${incoming.title}") from client cache`);
     }
   }
@@ -1735,6 +1758,7 @@ wss.on('connection', (ws: WebSocket) => {
           };
           chatMessages.push(newChat);
           scheduleSave();
+          saveChatMessageToFirestore(newChat).catch(err => console.error('[Firestore] WS chat save error:', err));
           broadcast({
             type: 'chat_message',
             data: newChat
@@ -1860,6 +1884,143 @@ async function syncLatestDataFromLive() {
   }
 }
 
+async function syncWithFirestore() {
+  try {
+    console.log('[Firestore] Initiating bi-directional Firestore synchronization...');
+    const [fsPosts, fsComments, fsChats, fsSessions, fsRealms] = await Promise.allSettled([
+      fetchAllPostsFromFirestore(),
+      fetchAllCommentsFromFirestore(),
+      fetchAllChatMessagesFromFirestore(),
+      fetchAllSessionsFromFirestore(),
+      fetchAllRealmsFromFirestore()
+    ]);
+
+    let updated = false;
+
+    // 1. Sync Posts
+    if (fsPosts.status === 'fulfilled' && Array.isArray(fsPosts.value) && fsPosts.value.length > 0) {
+      const existingPostIds = new Set(posts.map(p => p.id));
+      for (const p of fsPosts.value) {
+        if (!existingPostIds.has(p.id)) {
+          posts.push(p);
+          existingPostIds.add(p.id);
+          updated = true;
+        } else {
+          const localIndex = posts.findIndex(lp => lp.id === p.id);
+          if (localIndex !== -1) {
+            const local = posts[localIndex];
+            const localTime = new Date(local.last_activity_at || local.created_at).getTime();
+            const remoteTime = new Date(p.last_activity_at || p.created_at).getTime();
+            if (remoteTime > localTime || p.upvotes > local.upvotes || p.comment_count > local.comment_count) {
+              posts[localIndex] = p;
+              updated = true;
+            }
+          }
+        }
+      }
+    }
+
+    // Seed missing local posts to Firestore
+    const firestorePostIds = new Set(
+      (fsPosts.status === 'fulfilled' && Array.isArray(fsPosts.value)) ? fsPosts.value.map(p => p.id) : []
+    );
+    for (const p of posts) {
+      if (!firestorePostIds.has(p.id)) {
+        savePostToFirestore(p).catch(e => console.warn('[Firestore] Failed seeding post:', e));
+      }
+    }
+
+    // 2. Sync Comments
+    if (fsComments.status === 'fulfilled' && Array.isArray(fsComments.value) && fsComments.value.length > 0) {
+      const existingCommentIds = new Set(comments.map(c => c.id));
+      for (const c of fsComments.value) {
+        if (!existingCommentIds.has(c.id)) {
+          comments.push(c);
+          existingCommentIds.add(c.id);
+          updated = true;
+        }
+      }
+    }
+    const firestoreCommentIds = new Set(
+      (fsComments.status === 'fulfilled' && Array.isArray(fsComments.value)) ? fsComments.value.map(c => c.id) : []
+    );
+    for (const c of comments) {
+      if (!firestoreCommentIds.has(c.id)) {
+        saveCommentToFirestore(c).catch(e => console.warn('[Firestore] Failed seeding comment:', e));
+      }
+    }
+
+    // 3. Sync Chat Messages
+    if (fsChats.status === 'fulfilled' && Array.isArray(fsChats.value) && fsChats.value.length > 0) {
+      const existingChatIds = new Set(chatMessages.map(m => m.id));
+      for (const m of fsChats.value) {
+        if (!existingChatIds.has(m.id)) {
+          chatMessages.push(m);
+          existingChatIds.add(m.id);
+          updated = true;
+        }
+      }
+    }
+    const firestoreChatIds = new Set(
+      (fsChats.status === 'fulfilled' && Array.isArray(fsChats.value)) ? fsChats.value.map(m => m.id) : []
+    );
+    for (const m of chatMessages) {
+      if (!firestoreChatIds.has(m.id)) {
+        saveChatMessageToFirestore(m).catch(e => console.warn('[Firestore] Failed seeding chat:', e));
+      }
+    }
+
+    // 4. Sync Sessions
+    if (fsSessions.status === 'fulfilled' && Array.isArray(fsSessions.value) && fsSessions.value.length > 0) {
+      for (const s of fsSessions.value) {
+        if (!sessions.has(s.id)) {
+          sessions.set(s.id, s);
+          updated = true;
+        }
+      }
+    }
+    for (const s of sessions.values()) {
+      saveSessionToFirestore(s).catch(e => console.warn('[Firestore] Failed seeding session:', e));
+    }
+
+    // 5. Sync Realms
+    if (fsRealms.status === 'fulfilled' && Array.isArray(fsRealms.value) && fsRealms.value.length > 0) {
+      for (const r of fsRealms.value) {
+        if (!realms.some(existing => existing.id === r.id || existing.name.toLowerCase() === r.name.toLowerCase())) {
+          realms.push(r);
+          updated = true;
+        }
+      }
+    }
+    for (const r of realms) {
+      saveRealmToFirestore(r).catch(e => console.warn('[Firestore] Failed seeding realm:', e));
+    }
+
+    if (updated) {
+      nextPostId = Math.max(nextPostId, ...posts.map(p => p.id + 1));
+      nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id + 1));
+      nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id + 1));
+      forceSaveNow();
+      console.log(`[Firestore] Sync complete. Active posts: ${posts.length}, comments: ${comments.length}, chats: ${chatMessages.length}, sessions: ${sessions.size}`);
+    } else {
+      console.log(`[Firestore] Sync complete. In-sync with ${posts.length} posts and ${comments.length} comments.`);
+    }
+  } catch (err) {
+    console.error('[Firestore] Error during Firestore sync:', err);
+  }
+}
+
+app.get('/api/firebase/status', async (_req, res) => {
+  res.json({
+    connected: true,
+    firestore_database_id: 'ai-studio-fansphere-0efd3258-52ad-4cbd-8135-986aaf14b0c7',
+    posts_count: posts.length,
+    comments_count: comments.length,
+    chat_messages_count: chatMessages.length,
+    realms_count: realms.length
+  });
+});
+
 const PORT = 3000;
 const HOST = '0.0.0.0';
 
@@ -1868,5 +2029,6 @@ server.listen(PORT, HOST, () => {
   console.log(`  ➜  Local:   http://localhost:${PORT}/`);
   console.log(`  ➜  Network: http://${HOST}:${PORT}/`);
   console.log(`FanSphere server running at http://${HOST}:${PORT}`);
+  syncWithFirestore().catch(() => {});
   syncLatestDataFromLive().catch(() => {});
 });

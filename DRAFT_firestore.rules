@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['id', 'title', 'content', 'author', 'created_at']) &&
+             data.keys().hasOnly(['id', 'title', 'content', 'author', 'author_flair', 'tag', 'upvotes', 'downvotes', 'comment_count', 'image_url', 'created_at', 'last_activity_at']) &&
+             data.id is number &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 300 &&
+             data.content is string && data.content.size() >= 5 && data.content.size() <= 10000 &&
+             data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
+             (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
+             (!('tag' in data) || (data.tag is string && data.tag.size() <= 50)) &&
+             (!('upvotes' in data) || data.upvotes is number) &&
+             (!('downvotes' in data) || data.downvotes is number) &&
+             (!('comment_count' in data) || data.comment_count is number) &&
+             (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 2048)) &&
+             data.created_at is string && data.created_at.size() <= 100 &&
+             (!('last_activity_at' in data) || (data.last_activity_at is string && data.last_activity_at.size() <= 100));
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['id', 'post_id', 'author', 'content', 'created_at']) &&
+             data.keys().hasOnly(['id', 'post_id', 'parent_id', 'author', 'author_flair', 'content', 'upvotes', 'created_at']) &&
+             data.id is number &&
+             data.post_id is number &&
+             (!('parent_id' in data) || data.parent_id == null || data.parent_id is number) &&
+             data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
+             (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 2000 &&
+             (!('upvotes' in data) || data.upvotes is number) &&
+             data.created_at is string && data.created_at.size() <= 100;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'room', 'author', 'content', 'created_at']) &&
+             data.keys().hasOnly(['id', 'room', 'author', 'author_flair', 'badge_color', 'content', 'created_at']) &&
+             data.id is number &&
+             data.room is string && data.room.size() <= 50 &&
+             data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
+             (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
+             (!('badge_color' in data) || (data.badge_color is string && data.badge_color.size() <= 20)) &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 1000 &&
+             data.created_at is string && data.created_at.size() <= 100;
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['id', 'nickname', 'flair', 'created_at', 'expires_at']) &&
+             data.keys().hasOnly(['id', 'nickname', 'email', 'flair', 'created_at', 'last_active_at', 'expires_at']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 255)) &&
+             data.flair is string && data.flair.size() <= 100 &&
+             data.created_at is string && data.created_at.size() <= 100 &&
+             (!('last_active_at' in data) || (data.last_active_at is string && data.last_active_at.size() <= 100)) &&
+             data.expires_at is string && data.expires_at.size() <= 100;
+    }
+
+    function isValidRealm(data) {
+      return data.keys().hasAll(['id', 'name', 'created_at']) &&
+             data.keys().hasOnly(['id', 'name', 'badge_color', 'icon', 'description', 'is_default', 'created_at']) &&
+             data.id is string && data.id.size() <= 100 &&
+             data.name is string && data.name.size() <= 100 &&
+             (!('badge_color' in data) || (data.badge_color is string && data.badge_color.size() <= 20)) &&
+             (!('icon' in data) || (data.icon is string && data.icon.size() <= 20)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+             (!('is_default' in data) || data.is_default is bool) &&
+             data.created_at is string && data.created_at.size() <= 100;
+    }
+
+    match /posts/{postId} {
+      allow get, list: if true;
+      allow create: if isValidId(postId) && isValidPost(incoming());
+      allow update: if isValidId(postId) && isValidPost(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'downvotes', 'comment_count', 'last_activity_at'])
+      );
+      allow delete: if false;
+    }
+
+    match /comments/{commentId} {
+      allow get, list: if true;
+      allow create: if isValidId(commentId) && isValidComment(incoming());
+      allow update: if isValidId(commentId) && isValidComment(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes'])
+      );
+      allow delete: if false;
+    }
+
+    match /chat_messages/{messageId} {
+      allow get, list: if true;
+      allow create: if isValidId(messageId) && isValidChatMessage(incoming());
+      allow update, delete: if false;
+    }
+
+    match /sessions/{sessionId} {
+      allow get, list: if isValidId(sessionId);
+      allow create: if isValidId(sessionId) && isValidSession(incoming());
+      allow update: if isValidId(sessionId) && isValidSession(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['last_active_at', 'expires_at', 'flair', 'nickname'])
+      );
+      allow delete: if isValidId(sessionId);
+    }
+
+    match /realms/{realmId} {
+      allow get, list: if true;
+      allow create: if isValidId(realmId) && isValidRealm(incoming());
+      allow update: if isValidId(realmId) && isValidRealm(incoming());
+      allow delete: if false;
+    }
+  }
+}
