@@ -180,7 +180,7 @@ input:focus, select:focus, textarea:focus {
 
 /* Online Fans Dropdown Popup */
 .online-fans-popup {
-  display: none;
+  display: none !important;
   animation: popupFadeIn 0.15s ease-out;
 }
 
@@ -196,8 +196,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .online-fans-popup.show,
-#onlineFansWrapper:hover .online-fans-popup,
-#onlineFansWrapper:focus-within .online-fans-popup {
+#onlineFansWrapper:hover .online-fans-popup:not(.closed),
+#onlineFansWrapper:focus-within .online-fans-popup:not(.closed) {
   display: flex !important;
 }
 

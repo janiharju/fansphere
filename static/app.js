@@ -607,22 +607,32 @@ function updateOnlinePresence(count, nicknames = []) {
   }
 }
 
-// Online fans pill & popup interactivity (click toggle + outside click + esc dismiss)
+// Online fans pill & popup interactivity (hover + click toggle + outside click + esc dismiss)
 function initOnlineFansPopup() {
   const pill = document.getElementById('onlineFansPill');
   const tooltip = document.getElementById('onlineFansTooltip');
   const wrapper = document.getElementById('onlineFansWrapper');
   if (!pill || !tooltip) return;
 
-  const togglePopup = (force) => {
-    const isShowing = tooltip.classList.contains('show');
-    const willShow = force !== undefined ? force : !isShowing;
-    if (willShow) {
-      tooltip.classList.add('show');
-      pill.setAttribute('aria-expanded', 'true');
+  const showPopup = () => {
+    tooltip.classList.remove('closed');
+    tooltip.classList.add('show');
+    pill.setAttribute('aria-expanded', 'true');
+  };
+
+  const hidePopup = () => {
+    tooltip.classList.remove('show');
+    tooltip.classList.add('closed');
+    pill.setAttribute('aria-expanded', 'false');
+  };
+
+  const togglePopup = () => {
+    const isShowing = tooltip.classList.contains('show') ||
+      (wrapper && wrapper.matches(':hover') && !tooltip.classList.contains('closed'));
+    if (isShowing) {
+      hidePopup();
     } else {
-      tooltip.classList.remove('show');
-      pill.setAttribute('aria-expanded', 'false');
+      showPopup();
     }
   };
 
@@ -630,6 +640,11 @@ function initOnlineFansPopup() {
     e.preventDefault();
     e.stopPropagation();
     togglePopup();
+  });
+
+  // When mouse leaves the wrapper, reset the 'closed' flag so subsequent hovers show the tooltip
+  wrapper?.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('closed');
   });
 
   // Keep open when clicking inside the popup
@@ -640,14 +655,14 @@ function initOnlineFansPopup() {
   // Dismiss popup on outside click
   document.addEventListener('click', (e) => {
     if (wrapper && !wrapper.contains(e.target)) {
-      togglePopup(false);
+      hidePopup();
     }
   });
 
   // Dismiss on Escape key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && tooltip.classList.contains('show')) {
-      togglePopup(false);
+    if (e.key === 'Escape') {
+      hidePopup();
     }
   });
 }
