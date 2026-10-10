@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
+  setLogLevel,
   doc,
   getDocFromServer,
   getDocs,
@@ -12,6 +13,41 @@ import {
 } from 'firebase/firestore';
 import fs from 'node:fs';
 import path from 'node:path';
+
+// Suppress harmless Firestore idle stream disconnect notifications in stdout/stderr
+setLogLevel('error');
+
+const originalWarn = console.warn.bind(console);
+console.warn = (...args: any[]) => {
+  const msg = args.map(a => (typeof a === 'string' ? a : (a?.message || ''))).join(' ');
+  if (msg.includes('Disconnecting idle stream') || msg.includes('Timed out waiting for new targets')) {
+    return;
+  }
+  originalWarn(...args);
+};
+
+const originalError = console.error.bind(console);
+console.error = (...args: any[]) => {
+  const msg = args.map(a => (typeof a === 'string' ? a : (a?.message || ''))).join(' ');
+  if (msg.includes('Disconnecting idle stream') || msg.includes('Timed out waiting for new targets')) {
+    return;
+  }
+  originalError(...args);
+};
+
+if (typeof process !== 'undefined' && process.stderr && process.stderr.write) {
+  const originalStderrWrite = process.stderr.write.bind(process.stderr);
+  // @ts-ignore
+  process.stderr.write = (chunk: any, encoding?: any, callback?: any) => {
+    const str = typeof chunk === 'string' ? chunk : chunk?.toString() || '';
+    if (str.includes('Disconnecting idle stream') || str.includes('Timed out waiting for new targets')) {
+      if (typeof encoding === 'function') encoding();
+      else if (typeof callback === 'function') callback();
+      return true;
+    }
+    return originalStderrWrite(chunk, encoding, callback);
+  };
+}
 
 // Read firebase-applet-config.json
 const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');

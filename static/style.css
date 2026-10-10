@@ -178,3 +178,26 @@ input:focus, select:focus, textarea:focus {
 .flair-memes { background-color: rgba(168, 85, 247, 0.2); color: #D8B4FE; border: 1px solid rgba(168, 85, 247, 0.3); }
 .flair-discussion { background-color: rgba(100, 116, 139, 0.2); color: #CBD5E1; border: 1px solid rgba(100, 116, 139, 0.3); }
 
+/* Online Fans Dropdown Popup */
+.online-fans-popup {
+  display: none;
+  animation: popupFadeIn 0.15s ease-out;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.online-fans-popup.show,
+#onlineFansWrapper:hover .online-fans-popup,
+#onlineFansWrapper:focus-within .online-fans-popup {
+  display: flex !important;
+}
+

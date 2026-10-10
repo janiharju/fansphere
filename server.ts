@@ -2016,6 +2016,14 @@ async function syncWithFirestore() {
   }
 }
 
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/firebase/status', async (_req, res) => {
   res.json({
     connected: true,

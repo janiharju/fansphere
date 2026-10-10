@@ -248,8 +248,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initAudio();
   initModalLightDismiss();
   initMobileTabs();
+  initOnlineFansPopup();
   initSessionAutoRefresh();
   initEventHandlers();
+  loadPresence();
 
   // Immediately enforce gate: hide page contents until verified active session & selected realm
   updateGateState();
@@ -564,29 +566,102 @@ function updateOnlinePresence(count, nicknames = []) {
   const tooltipCount = document.getElementById('tooltipActiveCount');
   const listEl = document.getElementById('onlineFansList');
 
-  const fansCount = count !== undefined ? count : (state.activeNicknames?.length || 1);
-  if (countEl) countEl.textContent = `${fansCount} ${fansCount === 1 ? 'Fan' : 'Fans'} Online`;
-  if (tooltipCount) tooltipCount.textContent = fansCount;
-
   if (Array.isArray(nicknames) && nicknames.length > 0) {
     state.activeNicknames = nicknames;
   }
 
-  if (listEl) {
-    const list = (state.activeNicknames && state.activeNicknames.length > 0)
-      ? state.activeNicknames
-      : [state.user.handle || 'You'];
+  const fansCount = count !== undefined
+    ? count
+    : (state.activeNicknames && state.activeNicknames.length > 0 ? state.activeNicknames.length : 1);
 
-    listEl.innerHTML = list.map(name => {
-      const isYou = name === state.user.handle;
-      return `
-        <li class="flex items-center gap-1.5 py-0.5">
-          <span class="w-1.5 h-1.5 rounded-full ${isYou ? 'bg-red-400' : 'bg-emerald-400'}"></span>
-          <span class="truncate ${isYou ? 'text-red-400 font-bold' : 'text-slate-200'}">${escapeHtml(name)}</span>
-          ${isYou ? '<span class="text-[9px] text-slate-400 ml-auto font-medium">(You)</span>' : ''}
+  if (countEl) {
+    countEl.textContent = `${fansCount} ${fansCount === 1 ? 'Fan' : 'Fans'} Online`;
+  }
+  if (tooltipCount) {
+    tooltipCount.textContent = fansCount;
+  }
+
+  if (listEl) {
+    let list = (state.activeNicknames && state.activeNicknames.length > 0)
+      ? state.activeNicknames
+      : (state.user.handle ? [state.user.handle] : []);
+
+    if (list.length === 0) {
+      listEl.innerHTML = `
+        <li class="text-[11px] text-slate-400 italic py-1 text-center">
+          No fans currently active
         </li>
       `;
-    }).join('');
+    } else {
+      listEl.innerHTML = list.map(name => {
+        const isYou = Boolean(state.user.handle && name.toLowerCase() === state.user.handle.toLowerCase());
+        return `
+          <li class="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-800/60 transition">
+            <span class="w-2 h-2 rounded-full ${isYou ? 'bg-red-400 ring-2 ring-red-400/20' : 'bg-emerald-400 ring-2 ring-emerald-400/20'} shrink-0"></span>
+            <span class="truncate ${isYou ? 'text-red-400 font-bold' : 'text-slate-200 font-medium'}">${escapeHtml(name)}</span>
+            ${isYou ? '<span class="text-[9px] bg-red-950/80 text-red-300 border border-red-800/60 px-1.5 py-0.2 rounded ml-auto font-medium shrink-0">You</span>' : ''}
+          </li>
+        `;
+      }).join('');
+    }
+  }
+}
+
+// Online fans pill & popup interactivity (click toggle + outside click + esc dismiss)
+function initOnlineFansPopup() {
+  const pill = document.getElementById('onlineFansPill');
+  const tooltip = document.getElementById('onlineFansTooltip');
+  const wrapper = document.getElementById('onlineFansWrapper');
+  if (!pill || !tooltip) return;
+
+  const togglePopup = (force) => {
+    const isShowing = tooltip.classList.contains('show');
+    const willShow = force !== undefined ? force : !isShowing;
+    if (willShow) {
+      tooltip.classList.add('show');
+      pill.setAttribute('aria-expanded', 'true');
+    } else {
+      tooltip.classList.remove('show');
+      pill.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  pill.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    togglePopup();
+  });
+
+  // Keep open when clicking inside the popup
+  tooltip.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  // Dismiss popup on outside click
+  document.addEventListener('click', (e) => {
+    if (wrapper && !wrapper.contains(e.target)) {
+      togglePopup(false);
+    }
+  });
+
+  // Dismiss on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && tooltip.classList.contains('show')) {
+      togglePopup(false);
+    }
+  });
+}
+
+// Fetch initial presence immediately on load
+async function loadPresence() {
+  try {
+    const res = await fetch('/api/presence');
+    if (res.ok) {
+      const data = await res.json();
+      updateOnlinePresence(data.online_count, data.active_nicknames);
+    }
+  } catch (err) {
+    console.debug('Failed to load initial presence', err);
   }
 }
 
