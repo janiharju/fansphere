@@ -144,6 +144,9 @@ function updateGateState() {
     if (navUserControls) navUserControls.classList.remove('hidden');
     if (gateView) gateView.classList.add('hidden');
     if (modal && modal.open) modal.close();
+    setTimeout(() => {
+      if (state.posts && state.posts.length > 0) renderPosts();
+    }, 50);
   } else {
     if (mainApp) mainApp.classList.add('hidden');
     if (mobileNav) mobileNav.classList.add('hidden');
@@ -805,6 +808,61 @@ function getFilteredPosts() {
   return list;
 }
 
+function calculateFeedCapacity(totalVisibleCount) {
+  const centerForum = document.getElementById('centerForum');
+  const paginationEl = document.getElementById('postsPagination');
+
+  let forumHeight = centerForum ? centerForum.clientHeight : 0;
+  if (!forumHeight || forumHeight <= 0) {
+    const isMobile = window.innerWidth < 1024;
+    const headerHeight = 56;
+    const padding = 20;
+    const mobileTabsHeight = isMobile ? 40 : 0;
+    forumHeight = Math.max(300, window.innerHeight - headerHeight - padding - mobileTabsHeight);
+  }
+
+  const topCta = centerForum?.firstElementChild;
+  const topCtaHeight = (topCta && topCta.offsetHeight > 20) ? topCta.offsetHeight : 50;
+  const gap = 8; // Tailwind gap-2 = 8px
+
+  // Measure actual rendered cards if any exist in the DOM
+  const existingCards = Array.from(document.querySelectorAll('#postsList .post-card'));
+  let cardHeight = 106;
+  if (existingCards.length > 0) {
+    const maxH = Math.max(...existingCards.map(c => c.offsetHeight));
+    if (maxH >= 60 && maxH <= 250) {
+      cardHeight = maxH;
+    }
+  }
+
+  const cardSlot = cardHeight + gap;
+
+  // Available height WITHOUT pagination controls:
+  const spaceWithoutPag = Math.max(0, forumHeight - topCtaHeight - gap);
+  const maxPostsWithoutPag = Math.max(1, Math.floor((spaceWithoutPag + gap) / cardSlot));
+
+  // If ALL visible posts fit without needing pagination:
+  if (totalVisibleCount <= maxPostsWithoutPag) {
+    return {
+      shouldPaginate: false,
+      postsPerPage: Math.max(1, totalVisibleCount),
+      totalPages: 1
+    };
+  }
+
+  // Not enough room for all posts: paginate and fill each page to capacity
+  const paginationHeight = (paginationEl && paginationEl.offsetHeight > 20) ? paginationEl.offsetHeight : 36;
+  const spaceWithPag = Math.max(0, forumHeight - topCtaHeight - paginationHeight - (gap * 2));
+  const maxPostsWithPag = Math.max(1, Math.floor((spaceWithPag + gap) / cardSlot));
+  const totalPages = Math.max(1, Math.ceil(totalVisibleCount / maxPostsWithPag));
+
+  return {
+    shouldPaginate: true,
+    postsPerPage: maxPostsWithPag,
+    totalPages
+  };
+}
+
 function renderPosts() {
   const container = document.getElementById('postsList');
   if (!container) return;
@@ -834,28 +892,43 @@ function renderPosts() {
     document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
       document.getElementById('openProfileModalBtn')?.click();
     });
-    updatePaginationControls(1, 1);
+    updatePaginationControls(1, 1, false);
     return;
   }
 
-  const totalPages = Math.max(1, Math.ceil(visiblePosts.length / state.postsPerPage));
+  const { shouldPaginate, postsPerPage, totalPages } = calculateFeedCapacity(visiblePosts.length);
+  state.postsPerPage = postsPerPage;
+
   if (state.currentPage > totalPages) state.currentPage = totalPages;
   if (state.currentPage < 1) state.currentPage = 1;
 
-  const startIndex = (state.currentPage - 1) * state.postsPerPage;
-  const pagePosts = visiblePosts.slice(startIndex, startIndex + state.postsPerPage);
+  let pagePosts;
+  if (!shouldPaginate) {
+    pagePosts = visiblePosts;
+    state.currentPage = 1;
+  } else {
+    const startIndex = (state.currentPage - 1) * state.postsPerPage;
+    pagePosts = visiblePosts.slice(startIndex, startIndex + state.postsPerPage);
+  }
 
   container.innerHTML = pagePosts.map(post => renderPostCardHtml(post)).join('');
-  updatePaginationControls(totalPages, state.currentPage);
+  updatePaginationControls(totalPages, state.currentPage, shouldPaginate);
   initLucide();
   attachPostCardListeners();
 }
 
-function updatePaginationControls(totalPages, currentPage) {
+function updatePaginationControls(totalPages, currentPage, shouldPaginate = true) {
+  const paginationEl = document.getElementById('postsPagination');
   const pageIndicator = document.getElementById('pageIndicator');
   const prevBtn = document.getElementById('prevPageBtn');
   const nextBtn = document.getElementById('nextPageBtn');
 
+  if (!shouldPaginate || totalPages <= 1) {
+    if (paginationEl) paginationEl.classList.add('hidden');
+    return;
+  }
+
+  if (paginationEl) paginationEl.classList.remove('hidden');
   if (pageIndicator) pageIndicator.textContent = `Page ${currentPage} / ${totalPages}`;
   if (prevBtn) {
     prevBtn.disabled = (currentPage <= 1);
@@ -1300,7 +1373,8 @@ function initEventHandlers() {
   });
 
   document.getElementById('nextPageBtn')?.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(state.posts.length / state.postsPerPage));
+    const visiblePosts = getFilteredPosts();
+    const totalPages = Math.max(1, Math.ceil(visiblePosts.length / (state.postsPerPage || 1)));
     if (state.currentPage < totalPages) {
       state.currentPage++;
       renderPosts();
@@ -1869,6 +1943,7 @@ function initMobileTabs() {
     forumSection?.classList.remove('hidden');
     rightSidebar?.classList.add('hidden');
     setActiveTab(tabForum, [tabChat]);
+    setTimeout(() => renderPosts(), 50);
   });
 
   tabChat?.addEventListener('click', () => {
@@ -1894,4 +1969,34 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// Window & container resize handlers to keep feed container filled and pagination optimal
+let feedResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(feedResizeTimer);
+  feedResizeTimer = setTimeout(() => {
+    if (state.posts && state.posts.length > 0) {
+      renderPosts();
+    }
+  }, 100);
+});
+
+if (typeof ResizeObserver !== 'undefined') {
+  const centerForum = document.getElementById('centerForum');
+  if (centerForum) {
+    let lastForumHeight = centerForum.clientHeight;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const currentHeight = Math.round(entry.contentRect.height);
+        if (Math.abs(currentHeight - lastForumHeight) > 15) {
+          lastForumHeight = currentHeight;
+          if (state.posts && state.posts.length > 0) {
+            renderPosts();
+          }
+        }
+      }
+    });
+    ro.observe(centerForum);
+  }
 }
