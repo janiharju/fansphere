@@ -35,8 +35,19 @@ htmlcov/
 *.db
 *.db-journal
 
+# Environment & Secrets
+.env
+.env*.local
+*.env
+!.env.example
+
+# Dependencies
+node_modules/
+dist/
+
 # IDE & OS
 .vscode/
 .idea/
 .DS_Store
 *.swp
+
