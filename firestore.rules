@@ -37,7 +37,7 @@ service cloud.firestore {
 
     function isValidComment(data) {
       return data.keys().hasAll(['id', 'post_id', 'author', 'content', 'created_at']) &&
-             data.keys().hasOnly(['id', 'post_id', 'parent_id', 'author', 'author_flair', 'content', 'upvotes', 'created_at']) &&
+             data.keys().hasOnly(['id', 'post_id', 'parent_id', 'author', 'author_flair', 'content', 'upvotes', 'image_url', 'created_at']) &&
              data.id is number &&
              data.post_id is number &&
              (!('parent_id' in data) || data.parent_id == null || data.parent_id is number) &&
@@ -45,6 +45,7 @@ service cloud.firestore {
              (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
              data.content is string && data.content.size() >= 1 && data.content.size() <= 2000 &&
              (!('upvotes' in data) || data.upvotes is number) &&
+             (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 2048)) &&
              data.created_at is string && data.created_at.size() <= 100;
     }
 

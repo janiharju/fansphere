@@ -411,7 +411,7 @@
         <label class="block text-slate-300 font-semibold mb-1">Content / Body</label>
         <textarea 
           id="postContentInput" 
-          rows="4" 
+          rows="3" 
           placeholder="Share your detailed analysis, questions, or fan thoughts..." 
           class="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2 focus:outline-none focus:border-red-500"
           required
@@ -419,12 +419,60 @@
         ></textarea>
       </div>
 
+      <!-- Image Attachment Support -->
+      <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700/60 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="block text-slate-300 font-semibold flex items-center gap-1.5 text-xs">
+            <span>📷 Attach Image</span>
+            <span class="text-[10px] text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <div class="flex items-center gap-1 bg-slate-900/80 p-0.5 rounded-lg border border-slate-700 text-[10px]">
+            <button type="button" id="imgModeUploadBtn" class="px-2 py-0.5 rounded-md bg-red-600 text-white font-medium transition cursor-pointer">
+              Upload File
+            </button>
+            <button type="button" id="imgModeUrlBtn" class="px-2 py-0.5 rounded-md text-slate-400 hover:text-slate-200 transition cursor-pointer">
+              Web URL
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode A: File Upload Dropzone / Input -->
+        <div id="imageUploadWrapper" class="space-y-1.5">
+          <label for="postImageFileInput" class="flex flex-col items-center justify-center border border-dashed border-slate-600 hover:border-red-500 rounded-xl p-3 bg-slate-900/50 hover:bg-slate-900/80 transition cursor-pointer group">
+            <div class="flex items-center gap-2 text-slate-400 group-hover:text-red-400 transition text-xs">
+              <i data-lucide="image-plus" class="w-4 h-4 text-red-500"></i>
+              <span class="font-medium">Click to choose image or drag & drop</span>
+            </div>
+            <span class="text-[10px] text-slate-500 mt-0.5">JPG, PNG, WebP or GIF (max 5MB)</span>
+            <input type="file" id="postImageFileInput" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
+          </label>
+        </div>
+
+        <!-- Mode B: Direct Image URL -->
+        <div id="imageUrlWrapper" class="hidden">
+          <input 
+            type="url" 
+            id="postImageUrlInput" 
+            placeholder="https://images.unsplash.com/... or direct image link" 
+            class="w-full bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-red-500"
+          />
+        </div>
+
+        <!-- Image Preview Card -->
+        <div id="postImagePreviewContainer" class="hidden relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950 max-h-36 flex items-center justify-center">
+          <img id="postImagePreview" src="" alt="Post image preview" class="max-h-36 w-full object-cover rounded-xl" />
+          <button type="button" id="removePostImageBtn" class="absolute top-2 right-2 bg-slate-900/90 hover:bg-red-600 text-slate-200 hover:text-white p-1 rounded-full border border-slate-700 transition cursor-pointer shadow-md" title="Remove attached image">
+            ✕
+          </button>
+        </div>
+      </div>
+
       <div class="flex items-center justify-end gap-2 pt-2">
         <button type="button" id="cancelPostBtn" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition">
           Cancel
         </button>
-        <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-5 py-2 rounded-xl transition shadow-md shadow-red-600/30">
-          Publish Post
+        <button type="submit" id="submitPostBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold px-5 py-2 rounded-xl transition shadow-md shadow-red-600/30 flex items-center gap-1.5 cursor-pointer">
+          <span>Publish Post</span>
         </button>
       </div>
     </form>
@@ -463,10 +511,46 @@
               class="w-full bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500"
               required
             ></textarea>
-            <div class="flex justify-end">
-              <button type="submit" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition">
-                Post Comment
-              </button>
+
+            <!-- Comment Image Attachment Strip -->
+            <div id="commentImageAttachmentRow" class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <label for="commentImageFileInput" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-medium transition cursor-pointer" title="Attach picture to comment">
+                    <i data-lucide="image-plus" class="w-3.5 h-3.5 text-red-400"></i>
+                    <span>Photo</span>
+                    <input type="file" id="commentImageFileInput" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
+                  </label>
+                  <button type="button" id="toggleCommentUrlBtn" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 text-[11px] transition cursor-pointer" title="Paste Image URL">
+                    <i data-lucide="link" class="w-3 h-3"></i>
+                    <span>URL</span>
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button type="submit" id="submitCommentBtn" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer">
+                    <span>Post Comment</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Comment Image URL input (expandable) -->
+              <div id="commentUrlInputWrapper" class="hidden">
+                <input 
+                  type="url" 
+                  id="commentImageUrlInput" 
+                  placeholder="https://... direct image URL" 
+                  class="w-full bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <!-- Comment Image Preview Thumbnail -->
+              <div id="commentImagePreviewWrapper" class="hidden relative inline-block max-w-[200px] rounded-lg overflow-hidden border border-slate-700 bg-slate-950">
+                <img id="commentImagePreview" src="" alt="Comment preview" class="max-h-24 max-w-[200px] object-cover rounded-lg" />
+                <button type="button" id="removeCommentImageBtn" class="absolute top-1 right-1 bg-slate-900/90 hover:bg-red-600 text-slate-200 hover:text-white p-0.5 rounded-full border border-slate-700 transition cursor-pointer" title="Remove image">
+                  ✕
+                </button>
+              </div>
             </div>
           </form>
 
@@ -661,11 +745,22 @@
     </form>
   </dialog>
 
+  <!-- 5. IMAGE LIGHTBOX MODAL (Full Screen Preview) -->
+  <dialog id="imageLightboxModal" class="bg-black/90 p-4 rounded-2xl border border-slate-700 shadow-2xl backdrop:backdrop-blur-md max-w-4xl w-[95vw] text-slate-100">
+    <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+      <span id="lightboxCaption" class="text-xs text-slate-300 font-semibold truncate">Image Preview</span>
+      <button id="closeLightboxBtn" class="text-slate-400 hover:text-white text-lg font-bold p-1 cursor-pointer" title="Close preview">✕</button>
+    </div>
+    <div class="py-3 flex items-center justify-center max-h-[80vh] overflow-hidden">
+      <img id="lightboxImage" src="" alt="Full view" class="max-h-[75vh] w-auto max-w-full rounded-xl object-contain shadow-2xl" />
+    </div>
+  </dialog>
+
   <!-- Sound Audio synthesized or chime -->
   <audio id="chimeAudio" preload="auto"></audio>
 
   <!-- Application Script -->
-  <script src="/static/app.js?v=20261008_02"></script>
+  <script src="/static/app.js?v=20261011_01"></script>
 </body>
 </html>
 

@@ -74,6 +74,7 @@ interface Comment {
   author_flair: string;
   content: string;
   upvotes: number;
+  image_url?: string;
   created_at: string;
 }
 
@@ -168,7 +169,7 @@ function getInitialPosts(): Post[] {
       upvotes: 87,
       downvotes: 3,
       comment_count: 4,
-      image_url: '',
+      image_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1000&q=80',
       created_at: new Date(now - 2 * 3600 * 1000).toISOString()
     },
     {
@@ -181,7 +182,7 @@ function getInitialPosts(): Post[] {
       upvotes: 64,
       downvotes: 1,
       comment_count: 2,
-      image_url: '',
+      image_url: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=1000&q=80',
       created_at: new Date(now - 4 * 3600 * 1000).toISOString()
     },
     {
@@ -220,7 +221,7 @@ function getInitialPosts(): Post[] {
       upvotes: 98,
       downvotes: 2,
       comment_count: 1,
-      image_url: '',
+      image_url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1000&q=80',
       created_at: new Date(now - 48 * 3600 * 1000).toISOString()
     },
     {
@@ -298,13 +299,13 @@ function getInitialPosts(): Post[] {
 function getInitialComments(): Comment[] {
   const now = Date.now();
   return [
-    { id: 1, post_id: 1, parent_id: null, author: 'TurkuGunner', author_flair: 'Gunner', content: "Saka's goal in the 18th minute was pure filth! Cut inside, two defenders flat-footed.", upvotes: 18, created_at: new Date(now - 50 * 60 * 1000).toISOString() },
+    { id: 1, post_id: 1, parent_id: null, author: 'TurkuGunner', author_flair: 'Gunner', content: "Saka's goal in the 18th minute was pure filth! Cut inside, two defenders flat-footed.", upvotes: 18, image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80', created_at: new Date(now - 50 * 60 * 1000).toISOString() },
     { id: 2, post_id: 1, parent_id: 1, author: 'TampereGooner', author_flair: 'Gunner', content: "Agreed! And look at Havertz's pressing run to drag the center back away to create the shooting lane.", upvotes: 9, created_at: new Date(now - 40 * 60 * 1000).toISOString() },
     { id: 3, post_id: 1, parent_id: null, author: 'Mikko_V', author_flair: 'Fan', content: "Raya's distribution from the back tonight has been world class under pressure.", upvotes: 12, created_at: new Date(now - 25 * 60 * 1000).toISOString() },
     { id: 4, post_id: 1, parent_id: null, author: 'OuluCannon', author_flair: 'Gunner', content: "Havertz makes it 2-1!! The Emirates is electric right now!", upvotes: 24, created_at: new Date(now - 10 * 60 * 1000).toISOString() },
 
     { id: 5, post_id: 2, parent_id: null, author: 'EspooRed', author_flair: 'Gunner', content: "Nähdään Sports Academyssa! Viime katsomossa oli aivan mieletön tunnelma Pohjois-Lontoon derbyssä.", upvotes: 8, created_at: new Date(now - 3 * 3600 * 1000).toISOString() },
-    { id: 6, post_id: 2, parent_id: null, author: 'Jari_Arsenal', author_flair: 'Member', content: "Tampereen Hookissa myös pöytävaraus hoidettu 12 hengelle. Tervetuloa mukaan uudetkin fanit!", upvotes: 11, created_at: new Date(now - 2 * 3600 * 1000).toISOString() },
+    { id: 6, post_id: 2, parent_id: null, author: 'Jari_Arsenal', author_flair: 'Member', content: "Tampereen Hookissa myös pöytävaraus hoidettu 12 hengelle. Tervetuloa mukaan uudetkin fanit!", upvotes: 11, image_url: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80', created_at: new Date(now - 2 * 3600 * 1000).toISOString() },
 
     { id: 7, post_id: 3, parent_id: null, author: 'NordicGooner', author_flair: 'Tactics', content: "Spot on analysis. Timber's recovery pace when we lose possession high up the pitch is unmatched.", upvotes: 6, created_at: new Date(now - 5 * 3600 * 1000).toISOString() },
     { id: 8, post_id: 3, parent_id: 7, author: 'ArtetaTactics', author_flair: 'Analyst', content: "Exactly, it allows Gabriel to step up aggressively knowing Timber can sweep behind.", upvotes: 4, created_at: new Date(now - 4 * 3600 * 1000).toISOString() },
@@ -761,7 +762,17 @@ function getStandings() {
 // Express App
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Ensure uploads folder exists and serve it statically
+const uploadsDir = path.resolve(process.cwd(), 'static', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/static/uploads', express.static(uploadsDir, {
+  maxAge: '1d'
+}));
 
 // Broadcast manager & Session sockets
 const activeSockets = new Set<WebSocket>();
@@ -1205,7 +1216,57 @@ app.post('/api/posts', (req, res) => {
   });
 });
 
-// 3. Post Detail
+// Upload image endpoint (supports base64 image data or URL verification)
+app.post('/api/upload', (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session required to upload images' });
+  }
+
+  const { data, filename } = req.body;
+  if (!data || typeof data !== 'string') {
+    return res.status(400).json({ detail: 'Missing image data' });
+  }
+
+  // If already a valid web URL (http/https), return it directly
+  if (data.startsWith('http://') || data.startsWith('https://')) {
+    return res.json({ url: data });
+  }
+
+  // Handle Base64 Data URI: data:image/png;base64,xxxx
+  const matches = data.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+  if (!matches) {
+    return res.status(400).json({ detail: 'Invalid image format. Expected JPEG, PNG, WEBP, or GIF' });
+  }
+
+  const ext = matches[1].toLowerCase().replace('jpeg', 'jpg');
+  const allowedExts = ['jpg', 'png', 'webp', 'gif', 'svg+xml'];
+  if (!allowedExts.includes(ext) && ext !== 'svg') {
+    return res.status(400).json({ detail: 'Unsupported image type' });
+  }
+
+  const base64Data = matches[2];
+  const buffer = Buffer.from(base64Data, 'base64');
+
+  // Limit size to 5MB
+  if (buffer.length > 5 * 1024 * 1024) {
+    return res.status(400).json({ detail: 'Image too large (max 5MB)' });
+  }
+
+  const safeExt = ext.includes('svg') ? 'svg' : ext;
+  const uniqueName = `post_${Date.now()}_${crypto.randomBytes(6).toString('hex')}.${safeExt}`;
+  const filePath = path.join(uploadsDir, uniqueName);
+
+  try {
+    fs.writeFileSync(filePath, buffer);
+    const imageUrl = `/static/uploads/${uniqueName}`;
+    res.json({ url: imageUrl });
+  } catch (err) {
+    console.error('Failed to write uploaded image:', err);
+    res.status(500).json({ detail: 'Failed to save image' });
+  }
+});
+
 app.get('/api/posts/:id', (req, res) => {
   const postId = parseInt(req.params.id, 10);
   const post = posts.find(p => p.id === postId);
@@ -1282,7 +1343,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     return res.status(404).json({ detail: 'Post not found' });
   }
 
-  const { content, parent_id } = req.body;
+  const { content, parent_id, image_url } = req.body;
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     return res.status(400).json({ detail: 'Comment content cannot be empty' });
   }
@@ -1297,6 +1358,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     author_flair: session.flair || 'ArseFinland Official Member',
     content: content.trim(),
     upvotes: 1,
+    image_url: image_url ? String(image_url).trim() : '',
     created_at: new Date().toISOString()
   };
 

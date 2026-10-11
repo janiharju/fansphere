@@ -109,6 +109,7 @@ export async function persistCommentToFirestore(comment: any) {
       author_flair: String(comment.author_flair || 'ArseFinland Official Member').trim(),
       content: String(comment.content || '').trim(),
       upvotes: Number(comment.upvotes || 0),
+      image_url: String(comment.image_url || '').trim(),
       created_at: String(comment.created_at || new Date().toISOString())
     };
     await setDoc(ref, cleanComment);

@@ -103,6 +103,11 @@
           "type": "number",
           "description": "Upvotes on comment"
         },
+        "image_url": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "Optional attached image URL in comment"
+        },
         "created_at": {
           "type": "string",
           "description": "ISO timestamp"

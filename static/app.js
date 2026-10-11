@@ -1085,10 +1085,26 @@ function renderPostCardHtml(post) {
           ${escapeHtml(post.title)}
         </h2>
 
-        <!-- Post Body Snippet -->
-        <p class="post-title-link text-[11px] text-slate-300 leading-snug line-clamp-1 mb-1.5 cursor-pointer" data-post-id="${post.id}">
-          ${escapeHtml(post.content)}
-        </p>
+        <!-- Post Body & Optional Image Thumbnail -->
+        <div class="flex items-start gap-2.5 mb-1.5">
+          <p class="post-title-link text-[11px] text-slate-300 leading-snug line-clamp-2 cursor-pointer flex-1 min-w-0" data-post-id="${post.id}">
+            ${escapeHtml(post.content)}
+          </p>
+          ${post.image_url ? `
+            <div class="shrink-0 relative group/thumb cursor-pointer" onclick="event.stopPropagation(); openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
+              <img 
+                src="${escapeHtml(post.image_url)}" 
+                alt="Post thumbnail" 
+                loading="lazy"
+                class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border border-slate-700/80 group-hover/thumb:border-red-500/80 group-hover/thumb:scale-105 transition shadow-sm bg-slate-900"
+                onerror="this.parentElement.style.display='none'"
+              />
+              <div class="absolute inset-0 bg-black/30 group-hover/thumb:bg-black/10 rounded-lg flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition pointer-events-none">
+                <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-white drop-shadow"></i>
+              </div>
+            </div>
+          ` : ''}
+        </div>
 
         <!-- Post Actions Footer -->
         <div class="flex items-center gap-3 text-[10px] text-slate-400 pt-1 border-t border-slate-700/40">
@@ -1097,6 +1113,13 @@ function renderPostCardHtml(post) {
             <span>${post.comment_count} Comments</span>
           </button>
           
+          ${post.image_url ? `
+            <button class="view-post-image-btn flex items-center gap-1 text-slate-400 hover:text-red-400 transition py-0.5" onclick="event.stopPropagation(); openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
+              <i data-lucide="image" class="w-3 h-3 text-red-400"></i>
+              <span>Photo</span>
+            </button>
+          ` : ''}
+
           <button class="share-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5 ml-auto" data-post-id="${post.id}">
             <i data-lucide="share-2" class="w-3 h-3"></i>
             <span>Share</span>
@@ -1177,6 +1200,19 @@ async function openPostDetailModal(postId) {
     contentEl.innerHTML = `
       <h2 class="text-base sm:text-lg font-bold text-slate-100">${escapeHtml(post.title)}</h2>
       <p class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed">${escapeHtml(post.content)}</p>
+      ${post.image_url ? `
+        <div class="mt-3 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950/60 max-h-72 flex items-center justify-center relative group cursor-pointer" onclick="openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
+          <img 
+            src="${escapeHtml(post.image_url)}" 
+            alt="Attached image" 
+            class="max-h-72 w-full object-contain rounded-xl transition duration-300 group-hover:scale-[1.01]" 
+          />
+          <div class="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] px-2 py-1 rounded-md border border-slate-700 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+            <i data-lucide="zoom-in" class="w-3 h-3 text-red-400"></i>
+            <span>Click to enlarge</span>
+          </div>
+        </div>
+      ` : ''}
     `;
 
     commentCountEl.textContent = comments.length;
@@ -1196,7 +1232,7 @@ async function openPostDetailModal(postId) {
 
 function renderCommentHtml(comment) {
   return `
-    <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60 space-y-1.5" data-comment-id="${comment.id}">
+    <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60 space-y-2" data-comment-id="${comment.id}">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="font-bold text-slate-200">${escapeHtml(comment.author)}</span>
@@ -1205,6 +1241,20 @@ function renderCommentHtml(comment) {
         </div>
       </div>
       <p class="text-slate-300 leading-relaxed text-xs">${escapeHtml(comment.content)}</p>
+      ${comment.image_url ? `
+        <div class="relative group/cimg inline-block max-w-[280px] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer mt-1" onclick="openImageLightbox('${escapeHtml(comment.image_url)}', 'Comment by ${escapeHtml(comment.author)}')">
+          <img 
+            src="${escapeHtml(comment.image_url)}" 
+            alt="Comment attachment" 
+            loading="lazy" 
+            class="max-h-48 max-w-[280px] object-cover rounded-xl transition group-hover/cimg:scale-105" 
+            onerror="this.parentElement.style.display='none'"
+          />
+          <div class="absolute inset-0 bg-black/25 opacity-0 group-hover/cimg:opacity-100 transition rounded-xl flex items-center justify-center pointer-events-none">
+            <i data-lucide="zoom-in" class="w-4 h-4 text-white drop-shadow"></i>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
 }
@@ -1473,17 +1523,110 @@ function initEventHandlers() {
 
   // 3. Create Post Modal
   const createPostModal = document.getElementById('createPostModal');
+  let currentPostImageUrl = '';
+
+  function resetCreatePostImageState() {
+    currentPostImageUrl = '';
+    const previewContainer = document.getElementById('postImagePreviewContainer');
+    const previewImg = document.getElementById('postImagePreview');
+    const fileInput = document.getElementById('postImageFileInput');
+    const urlInput = document.getElementById('postImageUrlInput');
+    if (previewContainer) previewContainer.classList.add('hidden');
+    if (previewImg) previewImg.src = '';
+    if (fileInput) fileInput.value = '';
+    if (urlInput) urlInput.value = '';
+    // Reset toggle to upload mode
+    setImageUploadMode('upload');
+  }
+
+  function setImageUploadMode(mode) {
+    const uploadWrapper = document.getElementById('imageUploadWrapper');
+    const urlWrapper = document.getElementById('imageUrlWrapper');
+    const uploadBtn = document.getElementById('imgModeUploadBtn');
+    const urlBtn = document.getElementById('imgModeUrlBtn');
+
+    if (mode === 'upload') {
+      uploadWrapper?.classList.remove('hidden');
+      urlWrapper?.classList.add('hidden');
+      uploadBtn?.classList.add('bg-red-600', 'text-white');
+      uploadBtn?.classList.remove('text-slate-400');
+      urlBtn?.classList.remove('bg-red-600', 'text-white');
+      urlBtn?.classList.add('text-slate-400');
+    } else {
+      uploadWrapper?.classList.add('hidden');
+      urlWrapper?.classList.remove('hidden');
+      urlBtn?.classList.add('bg-red-600', 'text-white');
+      urlBtn?.classList.remove('text-slate-400');
+      uploadBtn?.classList.remove('bg-red-600', 'text-white');
+      uploadBtn?.classList.add('text-slate-400');
+      document.getElementById('postImageUrlInput')?.focus();
+    }
+  }
+
+  document.getElementById('imgModeUploadBtn')?.addEventListener('click', () => setImageUploadMode('upload'));
+  document.getElementById('imgModeUrlBtn')?.addEventListener('click', () => setImageUploadMode('url'));
+
+  // File picker handler: read file as Base64 data URL
+  document.getElementById('postImageFileInput')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Selected image exceeds the 5MB size limit.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      currentPostImageUrl = event.target.result;
+      const previewContainer = document.getElementById('postImagePreviewContainer');
+      const previewImg = document.getElementById('postImagePreview');
+      if (previewContainer && previewImg) {
+        previewImg.src = currentPostImageUrl;
+        previewContainer.classList.remove('hidden');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // URL input handler with debounce
+  document.getElementById('postImageUrlInput')?.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const previewContainer = document.getElementById('postImagePreviewContainer');
+    const previewImg = document.getElementById('postImagePreview');
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      currentPostImageUrl = url;
+      if (previewContainer && previewImg) {
+        previewImg.src = url;
+        previewContainer.classList.remove('hidden');
+      }
+    } else if (!url) {
+      currentPostImageUrl = '';
+      if (previewContainer) previewContainer.classList.add('hidden');
+    }
+  });
+
+  // Remove preview button
+  document.getElementById('removePostImageBtn')?.addEventListener('click', () => {
+    resetCreatePostImageState();
+  });
+
   document.getElementById('openCreatePostBtn')?.addEventListener('click', () => {
     if (!state.sessionId) {
       openSessionPromptModal('new');
       return;
     }
+    resetCreatePostImageState();
     createPostModal.showModal();
+    initLucide();
   });
   document.getElementById('closeCreatePostModalBtn')?.addEventListener('click', () => {
+    resetCreatePostImageState();
     createPostModal.close();
   });
   document.getElementById('cancelPostBtn')?.addEventListener('click', () => {
+    resetCreatePostImageState();
     createPostModal.close();
   });
 
@@ -1497,10 +1640,44 @@ function initEventHandlers() {
     const title = document.getElementById('postTitleInput').value.trim();
     const tag = document.getElementById('postTagInput').value;
     const content = document.getElementById('postContentInput').value.trim();
+    const submitBtn = document.getElementById('submitPostBtn');
 
     if (!title || !content) return;
 
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50');
+      submitBtn.innerHTML = `<span>Publishing...</span>`;
+    }
+
     try {
+      let finalImageUrl = currentPostImageUrl;
+
+      // If user uploaded a local file (base64 Data URI), upload to server to get permanent URL
+      if (currentPostImageUrl && currentPostImageUrl.startsWith('data:image/')) {
+        try {
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-session-id': state.sessionId
+            },
+            body: JSON.stringify({
+              data: currentPostImageUrl,
+              session_id: state.sessionId
+            })
+          });
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            if (uploadData && uploadData.url) {
+              finalImageUrl = uploadData.url;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('Image upload to local server failed, continuing with direct data URI:', uploadErr);
+        }
+      }
+
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: {
@@ -1511,6 +1688,7 @@ function initEventHandlers() {
           title,
           content,
           tag,
+          image_url: finalImageUrl,
           session_id: state.sessionId
         })
       });
@@ -1530,6 +1708,7 @@ function initEventHandlers() {
           }
         }
         document.getElementById('createPostForm').reset();
+        resetCreatePostImageState();
         createPostModal.close();
         await loadPosts();
         playChime(659.25, 0.15);
@@ -1538,6 +1717,34 @@ function initEventHandlers() {
       }
     } catch (err) {
       console.error('Failed to create post', err);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50');
+        submitBtn.innerHTML = `<span>Publish Post</span>`;
+      }
+    }
+  });
+
+  // Lightbox Modal helpers
+  const lightboxModal = document.getElementById('imageLightboxModal');
+  const lightboxImg = document.getElementById('lightboxImage');
+  const lightboxCaption = document.getElementById('lightboxCaption');
+  const closeLightboxBtn = document.getElementById('closeLightboxBtn');
+
+  window.openImageLightbox = function(src, caption = 'Post Image') {
+    if (!lightboxModal || !lightboxImg) return;
+    lightboxImg.src = src;
+    if (lightboxCaption) lightboxCaption.textContent = caption;
+    lightboxModal.showModal();
+  };
+
+  closeLightboxBtn?.addEventListener('click', () => {
+    lightboxModal?.close();
+  });
+  lightboxModal?.addEventListener('click', (e) => {
+    if (e.target === lightboxModal) {
+      lightboxModal.close();
     }
   });
 
@@ -1548,40 +1755,155 @@ function initEventHandlers() {
     state.activePostDetailId = null;
   });
 
-  document.getElementById('addCommentForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!state.sessionId) {
-      openSessionPromptModal('new');
-      return;
+    let currentCommentImageUrl = '';
+
+    function resetCommentImageState() {
+      currentCommentImageUrl = '';
+      const previewWrapper = document.getElementById('commentImagePreviewWrapper');
+      const previewImg = document.getElementById('commentImagePreview');
+      const fileInput = document.getElementById('commentImageFileInput');
+      const urlInput = document.getElementById('commentImageUrlInput');
+      const urlWrapper = document.getElementById('commentUrlInputWrapper');
+      if (previewWrapper) previewWrapper.classList.add('hidden');
+      if (previewImg) previewImg.src = '';
+      if (fileInput) fileInput.value = '';
+      if (urlInput) urlInput.value = '';
+      if (urlWrapper) urlWrapper.classList.add('hidden');
     }
 
-    const input = document.getElementById('commentTextInput');
-    const content = input.value.trim();
-    if (!content || !state.activePostDetailId) return;
-
-    try {
-      const res = await fetch(`/api/posts/${state.activePostDetailId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-session-id': state.sessionId
-        },
-        body: JSON.stringify({
-          content,
-          session_id: state.sessionId
-        })
-      });
-
-      if (res.ok) {
-        input.value = '';
-        playChime(587.33, 0.08);
-      } else if (res.status === 401) {
-        openSessionPromptModal('expired');
+    // Toggle comment URL input
+    document.getElementById('toggleCommentUrlBtn')?.addEventListener('click', () => {
+      const urlWrapper = document.getElementById('commentUrlInputWrapper');
+      const urlInput = document.getElementById('commentImageUrlInput');
+      if (!urlWrapper) return;
+      if (urlWrapper.classList.contains('hidden')) {
+        urlWrapper.classList.remove('hidden');
+        urlInput?.focus();
+      } else {
+        urlWrapper.classList.add('hidden');
       }
-    } catch (err) {
-      console.error(err);
-    }
-  });
+    });
+
+    // Handle Comment Image File Input
+    document.getElementById('commentImageFileInput')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Selected image exceeds the 5MB size limit.');
+        e.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        currentCommentImageUrl = event.target.result;
+        const previewWrapper = document.getElementById('commentImagePreviewWrapper');
+        const previewImg = document.getElementById('commentImagePreview');
+        if (previewWrapper && previewImg) {
+          previewImg.src = currentCommentImageUrl;
+          previewWrapper.classList.remove('hidden');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Handle Comment Image URL Input
+    document.getElementById('commentImageUrlInput')?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const previewWrapper = document.getElementById('commentImagePreviewWrapper');
+      const previewImg = document.getElementById('commentImagePreview');
+      if (val.startsWith('http://') || val.startsWith('https://')) {
+        currentCommentImageUrl = val;
+        if (previewWrapper && previewImg) {
+          previewImg.src = val;
+          previewWrapper.classList.remove('hidden');
+        }
+      } else if (!val) {
+        currentCommentImageUrl = '';
+        if (previewWrapper) previewWrapper.classList.add('hidden');
+      }
+    });
+
+    // Remove Comment Image button
+    document.getElementById('removeCommentImageBtn')?.addEventListener('click', () => {
+      resetCommentImageState();
+    });
+
+    document.getElementById('addCommentForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!state.sessionId) {
+        openSessionPromptModal('new');
+        return;
+      }
+
+      const input = document.getElementById('commentTextInput');
+      const content = input.value.trim();
+      const submitBtn = document.getElementById('submitCommentBtn');
+      if (!content || !state.activePostDetailId) return;
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50');
+      }
+
+      try {
+        let finalCommentImg = currentCommentImageUrl;
+
+        // If local data URI was chosen, upload to server first
+        if (currentCommentImageUrl && currentCommentImageUrl.startsWith('data:image/')) {
+          try {
+            const uploadRes = await fetch('/api/upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-session-id': state.sessionId
+              },
+              body: JSON.stringify({
+                data: currentCommentImageUrl,
+                session_id: state.sessionId
+              })
+            });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              if (uploadData && uploadData.url) {
+                finalCommentImg = uploadData.url;
+              }
+            }
+          } catch (uploadErr) {
+            console.warn('Comment image upload to server failed:', uploadErr);
+          }
+        }
+
+        const res = await fetch(`/api/posts/${state.activePostDetailId}/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-id': state.sessionId
+          },
+          body: JSON.stringify({
+            content,
+            image_url: finalCommentImg,
+            session_id: state.sessionId
+          })
+        });
+
+        if (res.ok) {
+          input.value = '';
+          resetCommentImageState();
+          playChime(587.33, 0.08);
+        } else if (res.status === 401) {
+          openSessionPromptModal('expired');
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-50');
+        }
+      }
+    });
 
   // 5. User Profile Modal & Session Form
   const profileModal = document.getElementById('userProfileModal');
