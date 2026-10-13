@@ -347,15 +347,15 @@
 
         <!-- Chat Input Form (Fixed at bottom) -->
         <form id="chatForm" class="p-2.5 border-t border-slate-700/70 bg-slate-900/90 rounded-b-2xl flex items-center gap-2 shrink-0">
-          <input 
-            type="text" 
+          <textarea 
             id="chatInput" 
+            rows="2"
             placeholder="Send a live message to the fans..." 
-            class="flex-1 bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500"
-            maxlength="300"
+            class="flex-1 bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500 overflow-hidden"
+            maxlength="1000"
             required
             autocomplete="off"
-          />
+          ></textarea>
           <button 
             type="submit" 
             class="bg-red-600 hover:bg-red-500 text-white p-2 rounded-xl transition flex items-center justify-center font-bold shadow-md shadow-red-600/20 shrink-0"

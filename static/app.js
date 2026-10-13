@@ -54,7 +54,9 @@ const state = {
   realms: [],
   allChatMessages: [],
   renderedChatIds: new Set(),
-  activeNicknames: []
+  activeNicknames: [],
+  lastRenderedPagination: {},
+  lastRenderedPostIds: []
 };
 
 // ==================== REALM & CLUB TAG FILTERING HELPERS ====================
@@ -502,8 +504,10 @@ function applySession(session, skipWsAuth = false) {
                      prevFlair !== state.user.flair ||
                      prevHandle !== state.user.handle;
   if (hasChanged) {
-    renderPosts();
-    renderChatStream();
+    requestAnimationFrame(() => {
+      renderPosts();
+      renderChatStream();
+    });
   }
 }
 
@@ -1001,10 +1005,12 @@ function renderPosts() {
     pagePosts = visiblePosts.slice(startIndex, startIndex + state.postsPerPage);
   }
 
-  container.innerHTML = pagePosts.map(post => renderPostCardHtml(post)).join('');
-  updatePaginationControls(totalPages, state.currentPage, shouldPaginate);
-  initLucide();
-  attachPostCardListeners();
+  requestAnimationFrame(() => {
+    container.innerHTML = pagePosts.map(post => renderPostCardHtml(post)).join('');
+    updatePaginationControls(totalPages, state.currentPage, shouldPaginate);
+    initLucide();
+    attachPostCardListeners();
+  });
 }
 
 function updatePaginationControls(totalPages, currentPage, shouldPaginate = true) {
@@ -1332,28 +1338,31 @@ function renderChatStream() {
     if (same) return;
   }
 
-  container.innerHTML = '';
-  state.renderedChatIds.clear();
+  requestAnimationFrame(() => {
+    container.innerHTML = '';
+    state.renderedChatIds.clear();
 
-  if (filtered.length === 0) {
-    const realmName = getRealmDisplayName(effective);
-    container.innerHTML = `
-      <div class="text-center py-6 text-slate-500 my-auto">
-        <p class="text-xs font-semibold mb-1">No chat messages in <span class="text-red-400">${escapeHtml(realmName)}</span> realm yet.</p>
-        <p class="text-[10px] text-slate-500 mb-2">Say hello to your fellow club supporters below, or switch realm in your profile!</p>
-        <button id="chatEmptyProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">
-          👤 Change Realm in Profile
-        </button>
-      </div>
-    `;
-    document.getElementById('chatEmptyProfileBtn')?.addEventListener('click', () => {
-      document.getElementById('openProfileModalBtn')?.click();
-    });
-    return;
-  }
+    if (filtered.length === 0) {
+      const realmName = getRealmDisplayName(effective);
+      container.innerHTML = `
+        <div class="text-center py-6 text-slate-500 my-auto">
+          <p class="text-xs font-semibold mb-1">No chat messages in <span class="text-red-400">${escapeHtml(realmName)}</span> realm yet.</p>
+          <p class="text-[10px] text-slate-500 mb-2">Say hello to your fellow club supporters below, or switch realm in your profile!</p>
+          <button id="chatEmptyProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition cursor-pointer">
+            👤 Change Realm in Profile
+          </button>
+        </div>
+      `;
+      document.getElementById('chatEmptyProfileBtn')?.addEventListener('click', () => {
+        document.getElementById('openProfileModalBtn')?.click();
+      });
+      return;
+    }
 
-  filtered.forEach(msg => appendChatMessage(msg, false, false));
-  scrollChatToBottom();
+    filtered.forEach(msg => appendChatMessage(msg, false, false));
+    initLucide();
+    scrollChatToBottom();
+  });
 }
 
 async function loadChatHistory() {
@@ -1379,6 +1388,7 @@ function handleIncomingChatMessage(chatData) {
   const effective = getEffectiveRealm();
   if (state.selectedRealm === 'All' || matchClubRealm(chatData.author_flair, effective)) {
     appendChatMessage(chatData, true, true);
+    initLucide();
     playChime(523.25, 0.1);
   }
 }
@@ -1404,9 +1414,12 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : ''}">${escapeHtml(msg.author)}</span>
       <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'ArseFinland Official Member')}</span>
-      <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
+      <button class="quote-chat-btn text-slate-500 hover:text-red-400 ml-auto shrink-0 transition p-0.5" title="Quote message" data-content="${escapeHtml(msg.content)}" data-author="${escapeHtml(msg.author)}">
+        <i data-lucide="quote" class="w-3 h-3"></i>
+      </button>
+      <span class="text-slate-500 text-[9px] shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
-    <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs">
+    <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs whitespace-pre-wrap">
       ${escapeHtml(msg.content)}
     </div>
   `;
@@ -1496,6 +1509,19 @@ function initEventHandlers() {
 
       loadPosts();
     });
+  });
+
+  // Quote chat message
+  document.getElementById('chatMessages')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.quote-chat-btn');
+    if (btn) {
+      const author = btn.dataset.author;
+      const content = btn.dataset.content;
+      const chatInput = document.getElementById('chatInput');
+      const quotedText = `> _@${author}: ${content}_\n\n`;
+      chatInput.value = quotedText + chatInput.value;
+      chatInput.focus();
+    }
   });
 
   document.getElementById('clearTagFilterBtn')?.addEventListener('click', () => {
@@ -2074,7 +2100,7 @@ function initEventHandlers() {
       let res;
       if (state.sessionId) {
         res = await fetch('/api/auth/session', {
-          method: 'PATCH',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-session-id': state.sessionId
@@ -2399,15 +2425,17 @@ if (typeof ResizeObserver !== 'undefined') {
   if (centerForum) {
     let lastForumHeight = centerForum.clientHeight;
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const currentHeight = Math.round(entry.contentRect.height);
-        if (Math.abs(currentHeight - lastForumHeight) > 15) {
-          lastForumHeight = currentHeight;
-          if (state.posts && state.posts.length > 0) {
-            renderPosts();
+      requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const currentHeight = Math.round(entry.contentRect.height);
+          if (Math.abs(currentHeight - lastForumHeight) > 15) {
+            lastForumHeight = currentHeight;
+            if (state.posts && state.posts.length > 0) {
+              renderPosts();
+            }
           }
         }
-      }
+      });
     });
     ro.observe(centerForum);
   }

@@ -925,6 +925,9 @@ app.post('/api/admin/store-restore', (req, res) => {
 
 // 0a. Create Session (Nickname + Email)
 app.post('/api/auth/session', (req, res) => {
+  if (req.headers['x-session-id']) {
+    return handleSessionUpdate(req, res);
+  }
   const { nickname, email, flair } = req.body;
 
   if (!nickname || typeof nickname !== 'string' || nickname.trim().length < 2 || nickname.trim().length > 30) {
