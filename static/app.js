@@ -1596,7 +1596,8 @@ function initEventHandlers() {
       const author = btn.dataset.author;
       const content = btn.dataset.content;
       const chatInput = document.getElementById('chatInput');
-      const quotedText = `> _@${author}: ${content}_\n\n`;
+      // Cursivate quoted text without blockquote indent prefix
+      const quotedText = `_@${author}: ${content}_\n\n`;
       chatInput.value = quotedText + chatInput.value;
       chatInput.focus();
     }
@@ -2431,9 +2432,25 @@ function initEventHandlers() {
   // 6. Chat Input & Quick Reaction Buttons
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
+
+  chatInput?.addEventListener('keydown', (e) => {
+    // Enter sends message directly without creating a new line; Shift+Enter creates a new line
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (text) {
+        if (typeof chatForm?.requestSubmit === 'function') {
+          chatForm.requestSubmit();
+        } else {
+          chatForm?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    }
+  });
+
   chatForm?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const text = chatInput.value;
+    const text = chatInput.value.trim();
     if (text) {
       sendChatMessage(text);
       chatInput.value = '';
