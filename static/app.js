@@ -3,7 +3,7 @@
 let currentRealms = [];
 
 function normalizeFlair(flair) {
-  if (!flair) return 'ArseFinland Official Member';
+  if (!flair) return 'Neutral Football Fan';
   const str = String(flair).trim().toLowerCase();
   if (str.includes('tester')) return 'Testers';
   if (str.includes('neutral')) return 'Neutral Football Fan';
@@ -69,7 +69,6 @@ function getEffectiveRealm() {
 }
 
 function getRealmDisplayName(realm) {
-  if (!realm || realm === 'All' || realm === 'all') return 'All Realms (Cross-Club)';
   if (realm === 'user_club') {
     return `My Club (${getRealmDisplayName(state.user.flair || 'ArseFinland Official Member')})`;
   }
@@ -120,7 +119,7 @@ function matchClubRealm(authorFlair, targetRealm) {
 function updateRealmIndicators() {
   const flairInput = document.getElementById('profileFlairInput');
   if (flairInput) {
-    flairInput.value = (state.selectedRealm === 'All') ? 'All' : normalizeFlair(state.user.flair);
+    flairInput.value = normalizeFlair(state.user.flair);
   }
 }
 
@@ -187,6 +186,11 @@ function setRealmFilter(realm) {
   updateRealmIndicators();
   updateGateState();
   state.currentPage = 1;
+  const postsContainer = document.getElementById('postsList');
+  if (postsContainer) {
+    postsContainer.dataset.lastRenderKey = '';
+  }
+  state.renderedChatIds.clear();
   renderPosts();
   renderChatStream();
 }
@@ -213,7 +217,6 @@ function updateRealmSelectDropdowns() {
   if (profileSelect) {
     const currentVal = profileSelect.value || state.selectedRealm;
     profileSelect.innerHTML = `
-      <option value="All">🌐 All Realms (View All Clubs)</option>
       ${state.realms.map(r => `
         <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
       `).join('')}
@@ -461,11 +464,6 @@ async function checkSession() {
 function applySession(session, skipWsAuth = false) {
   if (!session) return;
 
-  const prevSessionId = state.sessionId;
-  const prevHandle = state.user.handle;
-  const prevEmail = state.user.email;
-  const prevFlair = state.user.flair;
-
   state.session = session;
   state.sessionId = session.id;
   state.user.handle = session.nickname;
@@ -499,15 +497,86 @@ function applySession(session, skipWsAuth = false) {
     modal.close();
   }
 
-  // Re-render feed and chat only if session ID, flair or handle actually changed
-  const hasChanged = prevSessionId !== session.id ||
-                     prevFlair !== state.user.flair ||
-                     prevHandle !== state.user.handle;
-  if (hasChanged) {
-    requestAnimationFrame(() => {
-      renderPosts();
-      renderChatStream();
-    });
+  // Refresh all application content whenever session is updated or initialized
+  refreshAllContent();
+}
+
+/**
+ * Refreshes all application content when session is updated:
+ * - Re-fetches community posts from server
+ * - Re-fetches live chat history from server
+ * - Re-fetches realm list and online presence
+ * - Clears render keys/caches to force a fresh re-render of feed and chat
+ * - Refreshes active post detail modal if open
+ * - Synchronizes realm indicators and profile inputs
+ */
+async function refreshAllContent() {
+  // Clear feed and chat render keys/caches to force a fresh render
+  const postsContainer = document.getElementById('postsList');
+  if (postsContainer) {
+    postsContainer.dataset.lastRenderKey = '';
+  }
+  state.renderedChatIds.clear();
+
+  // Synchronize realm indicators and profile inputs
+  updateRealmIndicators();
+  initUserProfile();
+
+  try {
+    // Re-fetch all dynamic content in parallel
+    await Promise.all([
+      loadPosts(),
+      loadChatHistory(),
+      loadRealms(),
+      loadPresence()
+    ]);
+  } catch (err) {
+    console.warn('[Session Update] Content refresh error:', err);
+  }
+
+  // Re-render feed and chat stream with freshly fetched data
+  renderPosts();
+  renderChatStream();
+
+  // If a post details modal is currently open, reload its details and comments
+  if (state.activePostDetailId) {
+    try {
+      const res = await fetch(`/api/posts/${state.activePostDetailId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const post = data.post;
+        const comments = data.comments;
+        const headerFlairs = document.getElementById('modalPostHeaderFlairs');
+        const commentCountEl = document.getElementById('modalCommentCount');
+        const commentsList = document.getElementById('modalCommentsList');
+
+        if (headerFlairs) {
+          headerFlairs.innerHTML = `
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${getTagClass(post.tag)}">
+              ${post.tag}
+            </span>
+            <span class="text-xs text-slate-300 font-semibold">${escapeHtml(post.author)}</span>
+            <span class="text-slate-500 text-xs">• ${formatRelativeTime(post.created_at)}</span>
+          `;
+        }
+
+        if (commentCountEl) {
+          commentCountEl.textContent = comments.length;
+        }
+
+        if (commentsList) {
+          if (comments.length === 0) {
+            commentsList.innerHTML = `<p class="text-slate-500 py-4">No comments yet. Start the conversation!</p>`;
+          } else {
+            commentsList.innerHTML = comments.map(c => renderCommentHtml(c)).join('');
+            attachCommentListeners();
+          }
+        }
+        initLucide();
+      }
+    } catch (e) {
+      console.warn('Failed to refresh open post modal', e);
+    }
   }
 }
 
@@ -905,30 +974,29 @@ function getFilteredPosts() {
 function calculateFeedCapacity(totalVisibleCount) {
   const centerForum = document.getElementById('centerForum');
   const paginationEl = document.getElementById('postsPagination');
+  const isMobile = window.innerWidth < 1024;
 
-  let forumHeight = centerForum ? centerForum.clientHeight : 0;
-  if (!forumHeight || forumHeight <= 0) {
-    const isMobile = window.innerWidth < 1024;
+  let forumHeight = 0;
+  if (isMobile) {
+    // In mobile portrait/landscape, derive forum height deterministically from window viewport
+    // to prevent circular layout feedback loops with post children
     const headerHeight = 56;
     const padding = 20;
-    const mobileTabsHeight = isMobile ? 40 : 0;
-    forumHeight = Math.max(300, window.innerHeight - headerHeight - padding - mobileTabsHeight);
-  }
-
-  const topCta = centerForum?.firstElementChild;
-  const topCtaHeight = (topCta && topCta.offsetHeight > 20) ? topCta.offsetHeight : 50;
-  const gap = 8; // Tailwind gap-2 = 8px
-
-  // Measure actual rendered cards if any exist in the DOM
-  const existingCards = Array.from(document.querySelectorAll('#postsList .post-card'));
-  let cardHeight = 106;
-  if (existingCards.length > 0) {
-    const maxH = Math.max(...existingCards.map(c => c.offsetHeight));
-    if (maxH >= 60 && maxH <= 250) {
-      cardHeight = maxH;
+    const mobileTabsHeight = 44;
+    forumHeight = Math.max(280, window.innerHeight - headerHeight - padding - mobileTabsHeight);
+  } else {
+    forumHeight = centerForum ? centerForum.clientHeight : 0;
+    if (!forumHeight || forumHeight <= 0) {
+      forumHeight = Math.max(320, window.innerHeight - 76);
     }
   }
 
+  const topCta = centerForum?.firstElementChild;
+  const topCtaHeight = (topCta && topCta.offsetHeight > 20) ? topCta.offsetHeight : 48;
+  const gap = 8; // Tailwind gap-2 = 8px
+
+  // Deterministic stable card height to guarantee zero pagination oscillations in mobile portrait
+  const cardHeight = isMobile ? 116 : 108;
   const cardSlot = cardHeight + gap;
 
   // Available height WITHOUT pagination controls:
@@ -945,7 +1013,7 @@ function calculateFeedCapacity(totalVisibleCount) {
   }
 
   // Not enough room for all posts: paginate and fill each page to capacity
-  const paginationHeight = (paginationEl && paginationEl.offsetHeight > 20) ? paginationEl.offsetHeight : 36;
+  const paginationHeight = 36;
   const spaceWithPag = Math.max(0, forumHeight - topCtaHeight - paginationHeight - (gap * 2));
   const maxPostsWithPag = Math.max(1, Math.floor((spaceWithPag + gap) / cardSlot));
   const totalPages = Math.max(1, Math.ceil(totalVisibleCount / maxPostsWithPag));
@@ -964,29 +1032,32 @@ function renderPosts() {
   const visiblePosts = getFilteredPosts();
 
   if (visiblePosts.length === 0) {
+    container.dataset.lastRenderKey = 'empty';
     const effective = getEffectiveRealm();
     const realmName = getRealmDisplayName(effective);
-    container.innerHTML = `
-      <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
-        <p class="text-xs font-semibold mb-1">No posts found in the <span class="text-red-400">${escapeHtml(realmName)}</span> realm.</p>
-        <p class="text-[10px] text-slate-500 mb-2.5">Be the first to share thoughts in this club realm, or switch realm in your profile!</p>
-        <div class="flex items-center justify-center gap-2">
-          <button id="emptyStateResetRealmBtn" class="text-[10px] bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
-            🌐 Show All Posts
-          </button>
-          <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
-            👤 Profile Realm
-          </button>
+    requestAnimationFrame(() => {
+      container.innerHTML = `
+        <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
+          <p class="text-xs font-semibold mb-1">No posts found in the <span class="text-red-400">${escapeHtml(realmName)}</span> realm.</p>
+          <p class="text-[10px] text-slate-500 mb-2.5">Be the first to share thoughts in this club realm, or switch realm in your profile!</p>
+          <div class="flex items-center justify-center gap-2">
+            <button id="emptyStateResetRealmBtn" class="text-[10px] bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
+              🌐 Show All Posts
+            </button>
+            <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
+              👤 Profile Realm
+            </button>
+          </div>
         </div>
-      </div>
-    `;
-    document.getElementById('emptyStateResetRealmBtn')?.addEventListener('click', () => {
-      setRealmFilter('All');
+      `;
+      document.getElementById('emptyStateResetRealmBtn')?.addEventListener('click', () => {
+        setRealmFilter('All');
+      });
+      document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
+        document.getElementById('openProfileModalBtn')?.click();
+      });
+      updatePaginationControls(1, 1, false);
     });
-    document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
-      document.getElementById('openProfileModalBtn')?.click();
-    });
-    updatePaginationControls(1, 1, false);
     return;
   }
 
@@ -1004,6 +1075,13 @@ function renderPosts() {
     const startIndex = (state.currentPage - 1) * state.postsPerPage;
     pagePosts = visiblePosts.slice(startIndex, startIndex + state.postsPerPage);
   }
+
+  // Prevent re-rendering and flickering if the target cards and pagination are already rendered
+  const renderKey = `${state.selectedRealm}:${state.currentTag}:${state.currentPage}:${shouldPaginate}:${totalPages}:${postsPerPage}:${pagePosts.map(p => `${p.id}_${p.comment_count || 0}_${p.upvotes || 0}_${p.title}`).join('|')}`;
+  if (container.dataset.lastRenderKey === renderKey) {
+    return;
+  }
+  container.dataset.lastRenderKey = renderKey;
 
   requestAnimationFrame(() => {
     container.innerHTML = pagePosts.map(post => renderPostCardHtml(post)).join('');
@@ -1094,7 +1172,7 @@ function renderPostCardHtml(post) {
         <!-- Post Body & Optional Image Thumbnail -->
         <div class="flex items-start gap-2.5 mb-1.5">
           <p class="post-title-link text-[11px] text-slate-300 leading-snug line-clamp-2 cursor-pointer flex-1 min-w-0" data-post-id="${post.id}">
-            ${escapeHtml(post.content)}
+            ${formatLightweightMarkdown(post.content)}
           </p>
           ${post.image_url ? `
             <div class="shrink-0 relative group/thumb cursor-pointer" onclick="event.stopPropagation(); openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
@@ -1205,7 +1283,7 @@ async function openPostDetailModal(postId) {
 
     contentEl.innerHTML = `
       <h2 class="text-base sm:text-lg font-bold text-slate-100">${escapeHtml(post.title)}</h2>
-      <p class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed">${escapeHtml(post.content)}</p>
+      <div class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed">${formatLightweightMarkdown(post.content)}</div>
       ${post.image_url ? `
         <div class="mt-3 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950/60 max-h-72 flex items-center justify-center relative group cursor-pointer" onclick="openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
           <img 
@@ -1246,7 +1324,7 @@ function renderCommentHtml(comment) {
           <span class="text-slate-500 text-[11px]">• ${formatRelativeTime(comment.created_at)}</span>
         </div>
       </div>
-      <p class="text-slate-300 leading-relaxed text-xs">${escapeHtml(comment.content)}</p>
+      <div class="text-slate-300 leading-relaxed text-xs whitespace-pre-wrap">${formatLightweightMarkdown(comment.content)}</div>
       ${comment.image_url ? `
         <div class="relative group/cimg inline-block max-w-[280px] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer mt-1" onclick="openImageLightbox('${escapeHtml(comment.image_url)}', 'Comment by ${escapeHtml(comment.author)}')">
           <img 
@@ -1420,7 +1498,7 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
       <span class="text-slate-500 text-[9px] shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
     <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs whitespace-pre-wrap">
-      ${escapeHtml(msg.content)}
+      ${formatLightweightMarkdown(msg.content)}
     </div>
   `;
 
@@ -2377,24 +2455,42 @@ function initMobileTabs() {
   const forumSection = document.getElementById('centerForum');
   const rightSidebar = document.getElementById('rightSidebar');
 
+  // Enforce initial mobile portrait & landscape state
+  if (window.innerWidth < 1024) {
+    forumSection?.classList.remove('hidden');
+    forumSection?.classList.add('flex');
+    rightSidebar?.classList.add('hidden');
+    rightSidebar?.classList.remove('flex');
+    if (tabForum && tabChat) setActiveTab(tabForum, [tabChat]);
+  } else {
+    forumSection?.classList.remove('hidden');
+    forumSection?.classList.add('flex');
+    rightSidebar?.classList.remove('hidden');
+    rightSidebar?.classList.add('flex');
+  }
+
   tabForum?.addEventListener('click', () => {
     forumSection?.classList.remove('hidden');
+    forumSection?.classList.add('flex');
     rightSidebar?.classList.add('hidden');
+    rightSidebar?.classList.remove('flex');
     setActiveTab(tabForum, [tabChat]);
-    setTimeout(() => renderPosts(), 50);
+    renderPosts();
   });
 
   tabChat?.addEventListener('click', () => {
     forumSection?.classList.add('hidden');
+    forumSection?.classList.remove('flex');
     rightSidebar?.classList.remove('hidden');
+    rightSidebar?.classList.add('flex');
     scrollChatToBottom();
     setActiveTab(tabChat, [tabForum]);
   });
 
   function setActiveTab(active, inactives) {
-    active.className = 'flex-1 py-2 px-3 rounded-lg text-center text-red-400 bg-slate-800 flex items-center justify-center gap-1.5';
+    active.className = 'flex-1 py-1.5 px-3 rounded-lg text-center text-red-400 bg-slate-800 flex items-center justify-center gap-1.5 transition shadow-sm';
     inactives.forEach(inact => {
-      inact.className = 'flex-1 py-2 px-3 rounded-lg text-center text-slate-400 flex items-center justify-center gap-1.5';
+      inact.className = 'flex-1 py-1.5 px-3 rounded-lg text-center text-slate-400 flex items-center justify-center gap-1.5 transition';
     });
   }
 }
@@ -2409,33 +2505,117 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * Lightweight Markdown Parser
+ * Formats:
+ * - Blockquotes: > quote -> indented, cursivated blockquote
+ * - Bold: **text**
+ * - Italics: _text_ or *text*
+ * - Inline Code: `code`
+ * - Strikethrough: ~~text~~
+ * - Links: https://...
+ */
+function formatLightweightMarkdown(rawText) {
+  if (!rawText) return '';
+  // 1. Sanitize to prevent XSS
+  const text = escapeHtml(rawText);
+
+  // 2. Parse blockquotes line by line
+  const lines = text.split('\n');
+  const processedLines = [];
+  let currentQuote = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('&gt;')) {
+      const quoteText = trimmed.replace(/^&gt;\s?/, '');
+      currentQuote.push(quoteText);
+    } else {
+      if (currentQuote.length > 0) {
+        processedLines.push(`<blockquote class="border-l-2 border-red-500/80 pl-2 py-0.5 my-1 text-slate-300 italic bg-slate-800/40 rounded-r text-[11px] leading-relaxed">${currentQuote.join('<br>')}</blockquote>`);
+        currentQuote = [];
+      }
+      processedLines.push(line);
+    }
+  }
+  if (currentQuote.length > 0) {
+    processedLines.push(`<blockquote class="border-l-2 border-red-500/80 pl-2 py-0.5 my-1 text-slate-300 italic bg-slate-800/40 rounded-r text-[11px] leading-relaxed">${currentQuote.join('<br>')}</blockquote>`);
+  }
+
+  let formatted = processedLines.join('\n');
+
+  // 3. Bold: **text**
+  formatted = formatted.replace(/\*\*([^*\n]+)\*\*/g, '<strong class="font-bold text-slate-100">$1</strong>');
+
+  // 4. Italics: _text_ and *text*
+  formatted = formatted.replace(/(^|[^\w])_([^_]+)_(?=[^\w]|$)/g, '$1<em class="italic text-slate-200 font-normal">$2</em>');
+  formatted = formatted.replace(/(^|[^\w])\*([^*\n]+)\*(?=[^\w]|$)/g, '$1<em class="italic text-slate-200 font-normal">$2</em>');
+
+  // 5. Inline code: `code`
+  formatted = formatted.replace(/`([^`\n]+)`/g, '<code class="bg-slate-800 text-red-300 px-1 py-0.5 rounded text-[10.5px] font-mono border border-slate-700/60">$1</code>');
+
+  // 6. Strikethrough: ~~text~~
+  formatted = formatted.replace(/~~([^~\n]+)~~/g, '<del class="line-through text-slate-500">$1</del>');
+
+  // 7. Auto-link URLs
+  formatted = formatted.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-red-400 hover:text-red-300 underline underline-offset-2 break-all">$1</a>');
+
+  return formatted;
+}
+
 // Window & container resize handlers to keep feed container filled and pagination optimal
 let feedResizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(feedResizeTimer);
   feedResizeTimer = setTimeout(() => {
+    const isDesktop = window.innerWidth >= 1024;
+    const forumSection = document.getElementById('centerForum');
+    const rightSidebar = document.getElementById('rightSidebar');
+    if (isDesktop) {
+      forumSection?.classList.remove('hidden');
+      forumSection?.classList.add('flex');
+      rightSidebar?.classList.remove('hidden');
+      rightSidebar?.classList.add('flex');
+    } else {
+      const tabChat = document.getElementById('mobileTabChat');
+      const isChatActive = tabChat?.classList.contains('text-red-400');
+      if (isChatActive) {
+        forumSection?.classList.add('hidden');
+        forumSection?.classList.remove('flex');
+        rightSidebar?.classList.remove('hidden');
+        rightSidebar?.classList.add('flex');
+      } else {
+        forumSection?.classList.remove('hidden');
+        forumSection?.classList.add('flex');
+        rightSidebar?.classList.add('hidden');
+        rightSidebar?.classList.remove('flex');
+      }
+    }
     if (state.posts && state.posts.length > 0) {
       renderPosts();
     }
-  }, 100);
+  }, 120);
 });
 
 if (typeof ResizeObserver !== 'undefined') {
   const centerForum = document.getElementById('centerForum');
   if (centerForum) {
-    let lastForumHeight = centerForum.clientHeight;
+    let lastForumHeight = Math.round(centerForum.clientHeight);
+    let roTimer = null;
     const ro = new ResizeObserver(entries => {
-      requestAnimationFrame(() => {
-        for (const entry of entries) {
-          const currentHeight = Math.round(entry.contentRect.height);
-          if (Math.abs(currentHeight - lastForumHeight) > 15) {
-            lastForumHeight = currentHeight;
+      for (const entry of entries) {
+        const currentHeight = Math.round(entry.contentRect.height);
+        // Only trigger on substantial outer viewport changes, ignoring small card micro-adjustments
+        if (Math.abs(currentHeight - lastForumHeight) > 35) {
+          lastForumHeight = currentHeight;
+          clearTimeout(roTimer);
+          roTimer = setTimeout(() => {
             if (state.posts && state.posts.length > 0) {
               renderPosts();
             }
-          }
+          }, 150);
         }
-      });
+      }
     });
     ro.observe(centerForum);
   }

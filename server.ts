@@ -1039,6 +1039,7 @@ const handleSessionUpdate = (req: express.Request, res: express.Response) => {
   session.last_active_at = new Date().toISOString();
   session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   forceSaveNow();
+  saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session update error:', err));
   broadcastPresence();
 
   const active = getActiveSessions();
