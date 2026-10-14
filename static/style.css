@@ -248,8 +248,9 @@ main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nt
   align-items: stretch !important;
 }
 
-main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nth-of-type(2) > .chat-bubble,
-#chatMessages .chat-msg-row > .chat-bubble {
+main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nth-of-type(2) {
+  width: 100% !important;
+}#chatMessages .chat-msg-row > .chat-bubble {
   flex: 1 1 0% !important;
   width: 100% !important;
   height: auto !important;
@@ -262,3 +263,27 @@ main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nt
   box-sizing: border-box !important;
 }
 
+/* Custom scrollbar for chat panel */
+#chatMessages {
+  scrollbar-width: thin !important;
+  -ms-overflow-style: auto !important;
+}
+
+#chatMessages::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+  height: 6px !important;
+}
+
+#chatMessages::-webkit-scrollbar-track {
+  background: #0B1120 !important;
+}
+
+#chatMessages::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+  border-radius: 3px !important;
+}
+
+#chatMessages::-webkit-scrollbar-thumb:hover {
+  background: #64748B !important;
+}
