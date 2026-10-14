@@ -1600,7 +1600,10 @@ function scrollChatToBottom() {
     }
 
     if (isAtBottom) {
-      container.scrollTop = container.scrollHeight;
+      const toggle = document.getElementById('autoScrollToggle');
+      if (!toggle || toggle.checked) {
+        container.scrollTop = container.scrollHeight;
+      }
     }
   }
 }
@@ -1833,6 +1836,11 @@ function initEventHandlers() {
 
       loadPosts();
     });
+  });
+  document.getElementById('threadFilterSelect')?.addEventListener('change', (e) => {
+    state.currentTag = e.target.value;
+    state.currentPage = 1;
+    loadPosts();
   });
 
   // Chat message action delegation: Quote, React, and Reaction Chips

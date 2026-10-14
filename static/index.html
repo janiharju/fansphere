@@ -247,6 +247,20 @@
         </nav>
       </div>
 
+      <!-- Thread Filter (Under control) -->
+      <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/80 shadow-sm shrink-0">
+        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Filter Threads</h3>
+        <select id="threadFilterSelect" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-red-500">
+          <option value="All">All Tags</option>
+          <option value="Match Thread">Match Thread</option>
+          <option value="Discussion">General Discussion</option>
+          <option value="Meetups">Meetups</option>
+          <option value="Tactics">Tactics</option>
+          <option value="Transfers">Transfers</option>
+          <option value="Memes">Memes</option>
+        </select>
+      </div>
+
       <!-- Community Guidelines (Compact) -->
       <div class="bg-slate-800/80 rounded-2xl p-3 border border-slate-700/80 shadow-sm shrink-0">
         <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
@@ -319,7 +333,7 @@
 
     <!-- ================= COLUMN 3: RIGHT FULL-HEIGHT REAL-TIME CHAT (ZERO-SCROLL) ================= -->
     <aside id="rightSidebar" class="hidden lg:flex col-span-1 lg:col-span-5 h-full min-h-0 flex-col overflow-hidden">
-      <div class="bg-slate-800/90 rounded-2xl border border-slate-700/80 shadow-xl flex flex-col h-full min-h-0 overflow-hidden relative">
+      <div class="bg-slate-800/90 rounded-2xl border border-slate-700/80 shadow-xl flex flex-col h-full min-h-0 overflow-visible relative">
         
         <!-- Chat Top Header -->
         <div class="p-2.5 border-b border-slate-700/70 flex items-center justify-between bg-slate-850/80 shrink-0">
@@ -330,6 +344,11 @@
               <p class="text-[10px] text-slate-400 hidden sm:block">Match reactions & instant football talk</p>
             </div>
           </div>
+
+          <label class="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
+            <input type="checkbox" id="autoScrollToggle" checked class="w-3 h-3 rounded border-slate-700 bg-slate-800 text-red-500 focus:ring-red-500">
+            <span>Auto-scroll</span>
+          </label>
 
           <div class="flex items-center gap-1.5 text-xs">
             <span class="text-[11px] text-emerald-400 font-semibold bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-800/50 flex items-center gap-1 shrink-0">

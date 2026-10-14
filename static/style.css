@@ -264,10 +264,19 @@ main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nt
 }
 
 /* Custom scrollbar for chat panel */
-#chatMessages {
+#chatMessages,
+main#mainAppContent:nth-of-type(1) > aside#rightSidebar:nth-of-type(2) > div:nth-of-type(1) > div#chatMessages:nth-of-type(2) {
   scrollbar-width: thin !important;
   -ms-overflow-style: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+  -webkit-overflow-scrolling: touch !important;
 }
+
 
 #chatMessages::-webkit-scrollbar {
   display: block !important;
