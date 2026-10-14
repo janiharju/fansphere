@@ -1310,7 +1310,9 @@ async function openPostDetailModal(postId) {
     if (comments.length === 0) {
       commentsList.innerHTML = `<p class="text-slate-500 py-4">No comments yet. Start the conversation!</p>`;
     } else {
-      commentsList.innerHTML = comments.map(c => renderCommentHtml(c)).join('');
+      // Sort oldest to newest
+      const sortedComments = [...comments].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      commentsList.innerHTML = sortedComments.map(c => renderCommentHtml(c)).join('');
       attachCommentListeners();
     }
     initLucide();
@@ -1364,7 +1366,7 @@ function handleIncomingNewComment(newComment) {
     if (list) {
       const div = document.createElement('div');
       div.innerHTML = renderCommentHtml(newComment);
-      list.prepend(div.firstElementChild);
+      list.appendChild(div.firstElementChild);
       attachCommentListeners();
       initLucide();
     }
@@ -1587,13 +1589,18 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
 function scrollChatToBottom() {
   const container = document.getElementById('chatMessages');
   if (container) {
-    container.scrollTop = container.scrollHeight;
+    const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 100;
+
     while (container.children.length > 200) {
       const removed = container.firstElementChild;
       if (removed && removed.dataset && removed.dataset.chatId) {
         state.renderedChatIds.delete(parseInt(removed.dataset.chatId, 10));
       }
       container.removeChild(removed);
+    }
+
+    if (isAtBottom) {
+      container.scrollTop = container.scrollHeight;
     }
   }
 }

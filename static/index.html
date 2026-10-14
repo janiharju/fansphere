@@ -529,8 +529,13 @@
             <span>Comments (<span id="modalCommentCount">0</span>)</span>
           </h4>
 
+          <!-- Threaded Comments Tree -->
+          <div id="modalCommentsList" class="space-y-2.5 text-xs">
+            <!-- Injected dynamically -->
+          </div>
+
           <!-- Add Comment Input Box -->
-          <form id="addCommentForm" class="mb-4 space-y-2">
+          <form id="addCommentForm" class="mt-4 space-y-2">
             <textarea 
               id="commentTextInput" 
               rows="2" 
@@ -580,11 +585,7 @@
               </div>
             </div>
           </form>
-
-          <!-- Threaded Comments Tree -->
-          <div id="modalCommentsList" class="space-y-2.5 text-xs">
-            <!-- Injected dynamically -->
-          </div>
+        </div>
         </div>
       </div>
     </div>
