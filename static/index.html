@@ -319,7 +319,7 @@
 
     <!-- ================= COLUMN 3: RIGHT FULL-HEIGHT REAL-TIME CHAT (ZERO-SCROLL) ================= -->
     <aside id="rightSidebar" class="hidden lg:flex col-span-1 lg:col-span-5 h-full min-h-0 flex-col overflow-hidden">
-      <div class="bg-slate-800/90 rounded-2xl border border-slate-700/80 shadow-xl flex flex-col h-full min-h-0 overflow-hidden">
+      <div class="bg-slate-800/90 rounded-2xl border border-slate-700/80 shadow-xl flex flex-col h-full min-h-0 overflow-hidden relative">
         
         <!-- Chat Top Header -->
         <div class="p-2.5 border-b border-slate-700/70 flex items-center justify-between bg-slate-850/80 shrink-0">
@@ -349,9 +349,9 @@
         <form id="chatForm" class="p-2.5 border-t border-slate-700/70 bg-slate-900/90 rounded-b-2xl flex items-center gap-2 shrink-0">
           <textarea 
             id="chatInput" 
-            rows="2"
+            rows="1"
             placeholder="Send a live message (Enter to send, Shift+Enter for new line)..." 
-            class="flex-1 bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500 overflow-hidden"
+            class="flex-1 bg-slate-800 text-slate-100 placeholder-slate-500 text-xs px-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-red-500 overflow-hidden resize-none min-h-[34px] max-h-28"
             maxlength="1000"
             required
             autocomplete="off"
@@ -364,6 +364,33 @@
             <i data-lucide="send" class="w-3.5 h-3.5"></i>
           </button>
         </form>
+
+        <!-- Floating Emoji Selector Popover -->
+        <div id="chatEmojiPicker" class="hidden absolute z-50 bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl p-2.5 w-64 max-w-[90vw] text-xs backdrop-blur-md">
+          <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800 text-[11px] font-semibold text-slate-300">
+            <span class="flex items-center gap-1.5"><span>⚽</span> React to message</span>
+            <button type="button" id="closeEmojiPickerBtn" class="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer transition">✕</button>
+          </div>
+
+          <!-- Quick Reaction Row -->
+          <div class="text-[10px] text-slate-400 font-medium mb-1">Quick Reactions</div>
+          <div class="grid grid-cols-6 gap-1 mb-2" id="quickEmojiGrid">
+            <!-- Injected by JS -->
+          </div>
+
+          <!-- Category Tabs -->
+          <div class="flex items-center gap-1 mb-1.5 overflow-x-auto pb-1 text-[10px]" id="emojiCategoryTabs">
+            <button type="button" class="emoji-tab-btn px-2 py-0.5 rounded-md bg-red-600/20 text-red-400 font-semibold border border-red-500/30 shrink-0 cursor-pointer" data-category="football">⚽ Match</button>
+            <button type="button" class="emoji-tab-btn px-2 py-0.5 rounded-md text-slate-400 hover:bg-slate-800 shrink-0 cursor-pointer" data-category="reactions">🔥 Fire</button>
+            <button type="button" class="emoji-tab-btn px-2 py-0.5 rounded-md text-slate-400 hover:bg-slate-800 shrink-0 cursor-pointer" data-category="smileys">😀 Faces</button>
+            <button type="button" class="emoji-tab-btn px-2 py-0.5 rounded-md text-slate-400 hover:bg-slate-800 shrink-0 cursor-pointer" data-category="celebrate">🎉 Hype</button>
+          </div>
+
+          <!-- Filterable / Scrollable Emoji Grid -->
+          <div class="max-h-36 overflow-y-auto grid grid-cols-6 gap-1 p-0.5" id="fullEmojiGrid">
+            <!-- Injected by JS -->
+          </div>
+        </div>
 
       </div>
     </aside>

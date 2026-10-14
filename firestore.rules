@@ -51,14 +51,15 @@ service cloud.firestore {
 
     function isValidChatMessage(data) {
       return data.keys().hasAll(['id', 'room', 'author', 'content', 'created_at']) &&
-             data.keys().hasOnly(['id', 'room', 'author', 'author_flair', 'badge_color', 'content', 'created_at']) &&
+             data.keys().hasOnly(['id', 'room', 'author', 'author_flair', 'badge_color', 'content', 'created_at', 'reactions']) &&
              data.id is number &&
              data.room is string && data.room.size() <= 50 &&
              data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
              (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
              (!('badge_color' in data) || (data.badge_color is string && data.badge_color.size() <= 20)) &&
-             data.content is string && data.content.size() >= 1 && data.content.size() <= 1000 &&
-             data.created_at is string && data.created_at.size() <= 100;
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 5000 &&
+             data.created_at is string && data.created_at.size() <= 100 &&
+             (!('reactions' in data) || data.reactions is map);
     }
 
     function isValidSession(data) {

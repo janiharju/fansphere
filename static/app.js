@@ -859,6 +859,12 @@ function handleWebSocketMessage(msg) {
       handleIncomingChatMessage(msg.data);
       break;
 
+    case 'chat_reaction':
+      if (msg.data) {
+        handleIncomingChatReaction(msg.data.message_id, msg.data.reactions);
+      }
+      break;
+
     case 'vote_update':
       updatePostVoteInDOM(msg.post_id, msg.upvotes, msg.downvotes);
       break;
@@ -1471,11 +1477,58 @@ function handleIncomingChatMessage(chatData) {
   }
 }
 
+function renderReactionsHtml(messageId, reactions) {
+  if (!reactions || typeof reactions !== 'object') return '';
+  const entries = Object.entries(reactions);
+  if (entries.length === 0) return '';
+
+  return entries.map(([emoji, users]) => {
+    const list = Array.isArray(users) ? users : [];
+    if (list.length === 0) return '';
+    const isUserReacted = state.user?.handle && list.includes(state.user.handle);
+    const tooltip = list.join(', ');
+    return `
+      <button 
+        type="button" 
+        class="chat-reaction-chip inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] border transition cursor-pointer select-none ${isUserReacted ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold' : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-700'}"
+        data-msg-id="${messageId}"
+        data-emoji="${escapeHtml(emoji)}"
+        title="Reacted by: ${escapeHtml(tooltip)}"
+      >
+        <span>${escapeHtml(emoji)}</span>
+        <span class="text-[9px] font-semibold">${list.length}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function updateMessageReactionsInDOM(messageId, reactions) {
+  const container = document.querySelector(`.chat-reactions-container[data-msg-id="${messageId}"]`);
+  if (!container) return;
+  const entries = reactions ? Object.entries(reactions).filter(([_, users]) => Array.isArray(users) && users.length > 0) : [];
+  if (entries.length === 0) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+  } else {
+    container.innerHTML = renderReactionsHtml(messageId, reactions);
+    container.classList.remove('hidden');
+  }
+}
+
+function handleIncomingChatReaction(messageId, reactions) {
+  const chatItem = state.allChatMessages.find(m => m.id === Number(messageId));
+  if (chatItem) {
+    chatItem.reactions = reactions;
+  }
+  updateMessageReactionsInDOM(messageId, reactions);
+}
+
 function appendChatMessage(msg, autoScroll = true, isNew = false) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
   if (msg.id && state.renderedChatIds.has(msg.id)) {
+    updateMessageReactionsInDOM(msg.id, msg.reactions);
     return;
   }
   if (msg.id) {
@@ -1483,22 +1536,47 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
   }
 
   const isSelf = msg.author === state.user.handle;
+  const reactions = msg.reactions || {};
+  const hasReactions = Object.values(reactions).some(arr => Array.isArray(arr) && arr.length > 0);
 
   const msgDiv = document.createElement('div');
-  msgDiv.className = `${isNew ? 'chat-msg-enter ' : ''}flex flex-col space-y-0.5 shrink-0`;
+  msgDiv.className = `${isNew ? 'chat-msg-enter ' : ''}flex flex-col space-y-0.5 shrink-0 group/msg relative`;
   if (msg.id) msgDiv.dataset.chatId = msg.id;
   msgDiv.innerHTML = `
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : ''}">${escapeHtml(msg.author)}</span>
       <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'ArseFinland Official Member')}</span>
-      <button class="quote-chat-btn text-slate-500 hover:text-red-400 ml-auto shrink-0 transition p-0.5" title="Quote message" data-content="${escapeHtml(msg.content)}" data-author="${escapeHtml(msg.author)}">
-        <i data-lucide="quote" class="w-3 h-3"></i>
-      </button>
-      <span class="text-slate-500 text-[9px] shrink-0">${formatRelativeTime(msg.created_at)}</span>
+      <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
-    <div class="bg-slate-900/90 text-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs whitespace-pre-wrap">
-      ${formatLightweightMarkdown(msg.content)}
+
+    <!-- Message Bubble with Right-Hand Action Buttons -->
+    <div class="chat-msg-row flex items-stretch gap-1 relative w-full">
+      <div class="chat-bubble flex-1 min-w-0 w-full bg-slate-900/90 text-slate-100 px-2 py-0.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs h-auto min-h-full flex flex-col justify-center"><div class="chat-msg-text whitespace-pre-wrap break-words leading-snug">${formatLightweightMarkdown(msg.content)}</div><div class="chat-reactions-container flex flex-wrap items-center gap-1 mt-0.5 ${hasReactions ? '' : 'hidden'}" data-msg-id="${msg.id}">${renderReactionsHtml(msg.id, reactions)}</div></div>
+
+      <!-- Action Buttons on the Right Side of the Message Div (Vertically Aligned) -->
+      <div class="flex flex-col items-center justify-center gap-0.5 shrink-0 self-stretch opacity-90 sm:opacity-40 group-hover/msg:opacity-100 focus-within:opacity-100 transition">
+        <!-- Quote Message Button -->
+        <button 
+          type="button" 
+          class="quote-chat-btn text-slate-400 hover:text-red-400 p-1 rounded-md hover:bg-slate-800 transition cursor-pointer" 
+          title="Quote message" 
+          data-content="${escapeHtml(msg.content)}" 
+          data-author="${escapeHtml(msg.author)}"
+        >
+          <i data-lucide="quote" class="w-3.5 h-3.5"></i>
+        </button>
+
+        <!-- Emoji React Button -->
+        <button 
+          type="button" 
+          class="chat-react-btn text-slate-400 hover:text-amber-400 p-1 rounded-md hover:bg-slate-800 transition cursor-pointer" 
+          title="React with emoji" 
+          data-msg-id="${msg.id}"
+        >
+          <i data-lucide="smile" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
     </div>
   `;
 
@@ -1518,6 +1596,167 @@ function scrollChatToBottom() {
       container.removeChild(removed);
     }
   }
+}
+
+// ==================== CHAT EMOJI REACTIONS & PICKER ====================
+
+const EMOJI_CATEGORIES = {
+  football: ['⚽', '🥅', '🏆', '🥇', '🥈', '🥉', '🧤', '👟', '🔴', '⚪', '🟥', '🟨', '📣', '🏟️', '🎯', '⚡', '💪', '🦁'],
+  reactions: ['🔥', '❤️', '👏', '😂', '🤣', '😍', '🤩', '🥳', '🤯', '😭', '😤', '💀', '💯', '👍', '👎', '👊', '🙌', '🤝'],
+  smileys: ['😀', '😎', '🤐', '🧐', '🥱', '🥶', '🥵', '😱', '🤫', '😬', '🫠', '🤡', '👀', '🍿', '🍻', '🫡', '🙏', '🤷'],
+  celebrate: ['🎉', '🎊', '✨', '🚀', '🌟', '💥', '🧨', '🍾', '🥂', '👑', '💣', '🪄', '🎩', '🛡️', '⚔️', '🐐', '❤️‍🔥', '🚩']
+};
+
+const QUICK_EMOJIS = ['🔥', '❤️', '⚽', '👏', '😂', '🏆', '🔴', '⚪', '👎', '🙌', '💯', '👀'];
+
+let activeEmojiMessageId = null;
+
+async function toggleChatReaction(messageId, emoji) {
+  if (!state.sessionId) {
+    openSessionPromptModal('new');
+    return;
+  }
+  if (!messageId || !emoji) return;
+
+  // Optimistic local update
+  const msg = state.allChatMessages.find(m => m.id === Number(messageId));
+  if (msg) {
+    if (!msg.reactions) msg.reactions = {};
+    if (!Array.isArray(msg.reactions[emoji])) msg.reactions[emoji] = [];
+    const user = state.user?.handle || 'Me';
+    const idx = msg.reactions[emoji].indexOf(user);
+    if (idx > -1) {
+      msg.reactions[emoji].splice(idx, 1);
+      if (msg.reactions[emoji].length === 0) delete msg.reactions[emoji];
+    } else {
+      msg.reactions[emoji].push(user);
+    }
+    updateMessageReactionsInDOM(messageId, msg.reactions);
+  }
+
+  playChime(600, 0.05);
+
+  try {
+    const res = await fetch(`/api/chat/message/${messageId}/react`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-session-id': state.sessionId
+      },
+      body: JSON.stringify({ emoji })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.reactions && msg) {
+        msg.reactions = data.reactions;
+        updateMessageReactionsInDOM(messageId, data.reactions);
+      }
+    }
+  } catch (err) {
+    console.warn('[Reaction] Error toggling reaction:', err);
+  }
+}
+
+function initEmojiPicker() {
+  const picker = document.getElementById('chatEmojiPicker');
+  const closeBtn = document.getElementById('closeEmojiPickerBtn');
+  const quickGrid = document.getElementById('quickEmojiGrid');
+  const tabs = document.querySelectorAll('.emoji-tab-btn');
+
+  if (!picker) return;
+
+  // Render quick reaction buttons
+  if (quickGrid) {
+    quickGrid.innerHTML = QUICK_EMOJIS.map(em => `
+      <button type="button" class="select-emoji-btn p-1.5 text-base hover:scale-125 transition bg-slate-800/60 hover:bg-slate-700/80 rounded-lg text-center cursor-pointer select-none" data-emoji="${em}">
+        ${em}
+      </button>
+    `).join('');
+  }
+
+  // Render initial category
+  renderCategoryEmojis('football');
+
+  // Category tab clicks
+  tabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cat = tab.dataset.category;
+      tabs.forEach(t => {
+        t.className = 'emoji-tab-btn px-2 py-0.5 rounded-md text-slate-400 hover:bg-slate-800 shrink-0 cursor-pointer';
+      });
+      tab.className = 'emoji-tab-btn px-2 py-0.5 rounded-md bg-red-600/20 text-red-400 font-semibold border border-red-500/30 shrink-0 cursor-pointer';
+      renderCategoryEmojis(cat);
+    });
+  });
+
+  // Emoji click handler
+  picker.addEventListener('click', (e) => {
+    const btn = e.target.closest('.select-emoji-btn');
+    if (btn && activeEmojiMessageId) {
+      e.stopPropagation();
+      const emoji = btn.dataset.emoji;
+      toggleChatReaction(activeEmojiMessageId, emoji);
+      closeEmojiPicker();
+    }
+  });
+
+  closeBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeEmojiPicker();
+  });
+
+  // Click outside dismisses picker
+  document.addEventListener('click', (e) => {
+    if (!picker.classList.contains('hidden')) {
+      if (!picker.contains(e.target) && !e.target.closest('.chat-react-btn')) {
+        closeEmojiPicker();
+      }
+    }
+  });
+}
+
+function renderCategoryEmojis(category) {
+  const fullGrid = document.getElementById('fullEmojiGrid');
+  if (!fullGrid) return;
+  const list = EMOJI_CATEGORIES[category] || EMOJI_CATEGORIES.football;
+  fullGrid.innerHTML = list.map(em => `
+    <button type="button" class="select-emoji-btn p-1 text-base hover:scale-125 transition bg-slate-800/40 hover:bg-slate-700 rounded-lg text-center cursor-pointer select-none" data-emoji="${em}">
+      ${em}
+    </button>
+  `).join('');
+}
+
+function openEmojiPicker(messageId, triggerBtn) {
+  const picker = document.getElementById('chatEmojiPicker');
+  if (!picker || !triggerBtn) return;
+
+  activeEmojiMessageId = messageId;
+  picker.classList.remove('hidden');
+
+  // Position relative to trigger button inside rightSidebar container
+  const sidebar = document.getElementById('rightSidebar');
+  const container = picker.offsetParent || sidebar;
+  if (container) {
+    const parentRect = container.getBoundingClientRect();
+    const btnRect = triggerBtn.getBoundingClientRect();
+    
+    // Position vertically near the message button
+    let top = btnRect.top - parentRect.top - 230;
+    if (top < 10) top = btnRect.bottom - parentRect.top + 6;
+    if (top + 250 > parentRect.height) top = Math.max(10, parentRect.height - 260);
+
+    picker.style.top = `${Math.round(top)}px`;
+    picker.style.right = `12px`;
+  }
+}
+
+function closeEmojiPicker() {
+  const picker = document.getElementById('chatEmojiPicker');
+  if (picker) {
+    picker.classList.add('hidden');
+  }
+  activeEmojiMessageId = null;
 }
 
 function sendChatMessage(text) {
@@ -1589,19 +1828,43 @@ function initEventHandlers() {
     });
   });
 
-  // Quote chat message
+  // Chat message action delegation: Quote, React, and Reaction Chips
   document.getElementById('chatMessages')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.quote-chat-btn');
-    if (btn) {
-      const author = btn.dataset.author;
-      const content = btn.dataset.content;
+    const quoteBtn = e.target.closest('.quote-chat-btn');
+    if (quoteBtn) {
+      e.stopPropagation();
+      const author = quoteBtn.dataset.author;
+      const content = quoteBtn.dataset.content;
       const chatInput = document.getElementById('chatInput');
       // Cursivate quoted text without blockquote indent prefix
       const quotedText = `_@${author}: ${content}_\n\n`;
       chatInput.value = quotedText + chatInput.value;
+      chatInput.dispatchEvent(new Event('input'));
       chatInput.focus();
+      return;
+    }
+
+    const reactBtn = e.target.closest('.chat-react-btn');
+    if (reactBtn) {
+      e.stopPropagation();
+      const msgId = Number(reactBtn.dataset.msgId);
+      openEmojiPicker(msgId, reactBtn);
+      return;
+    }
+
+    const chipBtn = e.target.closest('.chat-reaction-chip');
+    if (chipBtn) {
+      e.stopPropagation();
+      const msgId = Number(chipBtn.dataset.msgId);
+      const emoji = chipBtn.dataset.emoji;
+      if (msgId && emoji) {
+        toggleChatReaction(msgId, emoji);
+      }
+      return;
     }
   });
+
+  initEmojiPicker();
 
   document.getElementById('clearTagFilterBtn')?.addEventListener('click', () => {
     state.currentTag = 'All';
@@ -2433,6 +2696,14 @@ function initEventHandlers() {
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
 
+  const autoResizeChatInput = () => {
+    if (!chatInput) return;
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  };
+
+  chatInput?.addEventListener('input', autoResizeChatInput);
+
   chatInput?.addEventListener('keydown', (e) => {
     // Enter sends message directly without creating a new line; Shift+Enter creates a new line
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -2454,6 +2725,7 @@ function initEventHandlers() {
     if (text) {
       sendChatMessage(text);
       chatInput.value = '';
+      chatInput.style.height = '';
     }
   });
 
@@ -2534,8 +2806,9 @@ function escapeHtml(str) {
  */
 function formatLightweightMarkdown(rawText) {
   if (!rawText) return '';
-  // 1. Sanitize to prevent XSS
-  const text = escapeHtml(rawText);
+  // 1. Sanitize to prevent XSS & trim excessive empty lines
+  const cleanRaw = rawText.trim().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+  const text = escapeHtml(cleanRaw);
 
   // 2. Parse blockquotes line by line
   const lines = text.split('\n');
@@ -2549,14 +2822,14 @@ function formatLightweightMarkdown(rawText) {
       currentQuote.push(quoteText);
     } else {
       if (currentQuote.length > 0) {
-        processedLines.push(`<blockquote class="border-l-2 border-red-500/80 pl-2 py-0.5 my-1 text-slate-300 italic bg-slate-800/40 rounded-r text-[11px] leading-relaxed">${currentQuote.join('<br>')}</blockquote>`);
+        processedLines.push(`<blockquote class="border-l-2 border-red-500/80 pl-2 py-0.5 my-0.5 text-slate-300 italic bg-slate-800/40 rounded-r text-[11px] leading-snug">${currentQuote.join('<br>')}</blockquote>`);
         currentQuote = [];
       }
       processedLines.push(line);
     }
   }
   if (currentQuote.length > 0) {
-    processedLines.push(`<blockquote class="border-l-2 border-red-500/80 pl-2 py-0.5 my-1 text-slate-300 italic bg-slate-800/40 rounded-r text-[11px] leading-relaxed">${currentQuote.join('<br>')}</blockquote>`);
+    processedLines.push(`<blockquote class="border-l-2 border-red-500/80 pl-2 py-0.5 my-0.5 text-slate-300 italic bg-slate-800/40 rounded-r text-[11px] leading-snug">${currentQuote.join('<br>')}</blockquote>`);
   }
 
   let formatted = processedLines.join('\n');

@@ -176,6 +176,104 @@
       "comment_count": 4,
       "image_url": "",
       "created_at": "2026-10-05T05:14:38.813Z"
+    },
+    {
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "id": 10000,
+      "upvotes": 1,
+      "title": "Tervetuloa foorumille, testaajat",
+      "comment_count": 2,
+      "tag": "Meetups",
+      "image_url": "",
+      "created_at": "2026-10-09T11:09:43.341Z",
+      "content": "Kunhan testaan -ketju osa 3👌",
+      "downvotes": 0,
+      "last_activity_at": "2026-10-10T08:42:35.996Z"
+    },
+    {
+      "tag": "Discussion",
+      "image_url": "",
+      "downvotes": 0,
+      "author_flair": "ArseFinland Official Member",
+      "comment_count": 0,
+      "upvotes": 1,
+      "author": "janiharju",
+      "created_at": "2026-10-10T14:00:22.026Z",
+      "title": "Testaajien kehitysideat ketju",
+      "id": 10001,
+      "content": "Laittakaa tänne ideoita, ehdotuksia ja parannuksia mitä tähän alustaan voi tehdä",
+      "last_activity_at": "2026-10-10T14:00:22.026Z"
+    },
+    {
+      "upvotes": 1,
+      "downvotes": 0,
+      "id": 10002,
+      "image_url": "/static/uploads/post_1791731202420_7f6545df844f.jpg",
+      "created_at": "2026-10-11T15:06:42.532Z",
+      "tag": "Discussion",
+      "author_flair": "ArseFinland Official Member",
+      "title": "Kuvatesti",
+      "content": "Hei, täällä toimii kuvat",
+      "last_activity_at": "2026-10-11T16:04:10.275Z",
+      "author": "sdasd",
+      "comment_count": 2
+    },
+    {
+      "id": 10003,
+      "upvotes": 1,
+      "title": "The Arsenal - Lille, UCL, kickoff klo 22",
+      "tag": "Match Thread",
+      "content": "Se olis taas heti pelipäivää ja Mestareiden Liigaa. The Arsenal kotona Lillen isäntinä.\n\nLeeds-pelin jälkitohinoista jäi käteen Hincapien ja Zubimendin nilkkavammat jälkilämmittelyissä ja ukot olivat ainakin eilen avoimista reeneistä pois. Mikä on siis harmi, koska olisivat melko varmasti esiintyneet tänään jossain roolissa.\n\nSakalla oli myös sen verran heikko esiintyminen lauantaina, että voisi ehkä hakea vauhtia penkiltä. Ongelmana toki on, että myös Tzolis on poissa, ja Madueke veti hyvin vasemmalla tuuraajana. Eli ollei Artsi lähde kokeellisella Eze - Öde - Madueke kolmikolla, niin ehkä todennäköisempää on että Madueke jatkaa vasurissa ja Saka oikealla. Gyökeres tänään piikissä?\n\nAnkkuripaikan kaksikko valikoituu porukasta MLS, Bruno ja Rice, Merinon kelvatessa kentälle tunnin jälkeen.\n\nLillellä pelaa 40v Giroud.",
+      "author": "janiharju",
+      "downvotes": 0,
+      "image_url": "",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-13T06:49:51.003Z",
+      "last_activity_at": "2026-10-13T17:53:20.208Z",
+      "comment_count": 3
+    },
+    {
+      "content": "ddddds as sjflaskjfksjadf",
+      "last_activity_at": "2026-10-13T19:00:43.344Z",
+      "tag": "Discussion",
+      "title": "df _hey_",
+      "downvotes": 0,
+      "id": 10004,
+      "image_url": "",
+      "author": "sdasd",
+      "author_flair": "Testers",
+      "upvotes": 1,
+      "created_at": "2026-10-13T19:00:30.478Z",
+      "comment_count": 1
+    },
+    {
+      "last_activity_at": "2026-10-10T12:26:45.352Z",
+      "author": "janiharju",
+      "image_url": "",
+      "tag": "Match Thread",
+      "downvotes": 0,
+      "title": "The Arsenal - Dirty Leeds 10.10.2026 klo 14.30",
+      "author_flair": "ArseFinland Official Member",
+      "upvotes": 1,
+      "comment_count": 4,
+      "id": 14,
+      "created_at": "2026-10-08T10:14:55.692Z",
+      "content": "Loukit vähän painaa, etenkin Tzolis on iso puute. Mutta eiköhän tää kairata, 3-1"
+    },
+    {
+      "author": "Tester",
+      "last_activity_at": "2026-10-08T10:17:34.897Z",
+      "created_at": "2026-10-08T10:17:34.897Z",
+      "content": "Testing write content here",
+      "title": "Testing write",
+      "downvotes": 0,
+      "author_flair": "Member",
+      "image_url": "",
+      "id": 9999,
+      "tag": "General",
+      "comment_count": 0,
+      "upvotes": 0
     }
   ],
   "comments": [
@@ -318,6 +416,132 @@
       "content": "Uusi kommentti uudella nimimerkillä!",
       "upvotes": 1,
       "created_at": "2026-10-06T07:53:54.295Z"
+    },
+    {
+      "id": 15,
+      "created_at": "2026-10-08T12:02:59.964Z",
+      "post_id": 14,
+      "upvotes": 1,
+      "parent_id": null,
+      "author": "janiharju",
+      "content": "Tosiaan, Konsa saattaa myös puuttua",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "upvotes": 1,
+      "content": "Jes, pistetään tämä testiin!",
+      "parent_id": null,
+      "author": "VilleW",
+      "created_at": "2026-10-09T11:11:38.266Z",
+      "id": 16,
+      "post_id": 10000
+    },
+    {
+      "created_at": "2026-10-10T08:42:35.996Z",
+      "content": "Toimii",
+      "parent_id": null,
+      "id": 17,
+      "upvotes": 1,
+      "post_id": 10000,
+      "author": "Gunnersamulius",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "post_id": 14,
+      "author": "Janih",
+      "id": 18,
+      "content": "Veikkaan että Ezen vasemmalla, Gyökeres piikissä, Saka toki oikealla. Keskikenttä on ihan kysymysmerkki",
+      "upvotes": 1,
+      "parent_id": null,
+      "created_at": "2026-10-10T10:11:33.201Z"
+    },
+    {
+      "content": "Olikin Madueke vasurissa ja Havertz Kärjessä 💪",
+      "author": "Janiih",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T10:40:04.941Z",
+      "upvotes": 1,
+      "post_id": 14,
+      "id": 19,
+      "parent_id": null
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "post_id": 14,
+      "author": "janiharju",
+      "id": 20,
+      "content": "Pirteetä, mutta tehotonta meiltä eka 45+3. Tuntui että Leedsillä oli paremmat paikat, mutta odottamat on karvan verran meille 0,41 - 0,39 (Fotmob ja Viaplay). Parempaa pitäisi saada aikaiseksi, ehkä toi 2 puolustavampaa keskikenttäläistä on vähän turha tässä pelissä. Eze tai Bruno vaikka MLS:n tilalle, niin saataisiin ehkä enemmän puhkovuutta sekä muskelia hyökkäykseen.\n\nLeeds pelaa kyllä myös hyvin, ei meidän tuhnuaminen ole pelkästään omaa huonoutta.",
+      "upvotes": 1,
+      "parent_id": null,
+      "created_at": "2026-10-10T12:26:45.352Z"
+    },
+    {
+      "upvotes": 1,
+      "id": 21,
+      "created_at": "2026-10-11T15:45:06.949Z",
+      "author_flair": "ArseFinland Official Member",
+      "parent_id": null,
+      "content": "Here a comment pic",
+      "image_url": "/static/uploads/post_1791733506823_9d27e4f0053b.jpg",
+      "author": "sdasd",
+      "post_id": 10002
+    },
+    {
+      "created_at": "2026-10-11T16:04:10.275Z",
+      "image_url": "/static/uploads/post_1791734650142_293d1ccc5180.jpg",
+      "id": 22,
+      "parent_id": null,
+      "author": "Janih",
+      "upvotes": 1,
+      "post_id": 10002,
+      "author_flair": "ArseFinland Official Member",
+      "content": "Känmystä"
+    },
+    {
+      "post_id": 10003,
+      "author_flair": "ArseFinland Official Member",
+      "id": 23,
+      "author": "janiharju",
+      "content": "Saa nähdä millaisen vastaanoton saa",
+      "created_at": "2026-10-13T06:51:03.556Z",
+      "parent_id": null,
+      "upvotes": 1,
+      "image_url": "/static/uploads/post_1791874263408_db69f74d3e24.jpg"
+    },
+    {
+      "upvotes": 1,
+      "image_url": "",
+      "id": 24,
+      "parent_id": null,
+      "author_flair": "ArseFinland Official Member",
+      "content": "Lille Ligue Unissaan, 4-1-1, tappio Nicen vieraana ja tasuri PSG:tä vastaan kotona. UCL:ssä ovat hävinneet kotona Betisille 2-3. Seksiollille 1 maali 6 peliin.",
+      "author": "janiharju",
+      "post_id": 10003,
+      "created_at": "2026-10-13T07:24:43.883Z"
+    },
+    {
+      "upvotes": 1,
+      "author_flair": "ArseFinland Official Member",
+      "id": 25,
+      "content": "Avaus 💪",
+      "author": "Janih",
+      "image_url": "/static/uploads/post_1791914000026_c18e5e4afe01.jpg",
+      "post_id": 10003,
+      "created_at": "2026-10-13T17:53:20.208Z",
+      "parent_id": null
+    },
+    {
+      "author_flair": "Testers",
+      "image_url": "",
+      "created_at": "2026-10-13T19:00:43.344Z",
+      "upvotes": 1,
+      "parent_id": null,
+      "content": "do **one**",
+      "author": "sdasd",
+      "id": 26,
+      "post_id": 10004
     }
   ],
   "chatMessages": [
@@ -554,6 +778,628 @@
       "badge_color": "#EF4444",
       "content": "Testing realm message for Testers",
       "created_at": "2026-10-07T11:58:27.658Z"
+    },
+    {
+      "content": "fdffd",
+      "id": 27,
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-08T10:15:25.425Z",
+      "badge_color": "#EF4444",
+      "author": "janih",
+      "room": "general"
+    },
+    {
+      "author": "janiharju",
+      "room": "general",
+      "created_at": "2026-10-08T10:15:07.153Z",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "content": "ffff",
+      "id": 28
+    },
+    {
+      "room": "general",
+      "id": 29,
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-08T12:02:18.688Z",
+      "content": "Hello"
+    },
+    {
+      "author": "Janih",
+      "created_at": "2026-10-08T18:41:03.245Z",
+      "id": 30,
+      "content": "Here again",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444"
+    },
+    {
+      "room": "general",
+      "content": "Toimii",
+      "author": "Gunnersamulius",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T08:42:21.318Z",
+      "id": 31,
+      "badge_color": "#EF4444"
+    },
+    {
+      "id": 32,
+      "author_flair": "ArseFinland Official Member",
+      "content": "Alle tunti nii pelit jatkuu! #COYG ❤️",
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-10T10:42:00.540Z",
+      "author": "ForssanGunner",
+      "room": "general"
+    },
+    {
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "author": "ForssanGunner",
+      "id": 33,
+      "created_at": "2026-10-10T11:12:11.649Z",
+      "content": "⚽",
+      "badge_color": "#EF4444"
+    },
+    {
+      "room": "general",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T11:24:00.726Z",
+      "content": "Let's gooo,",
+      "id": 34,
+      "author": "janiharju"
+    },
+    {
+      "content": "Oluet kylmänä, penkki lämpimänä 🔴⚪. North London forever!",
+      "badge_color": "#EF4444",
+      "id": 35,
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "created_at": "2026-10-10T11:29:50.889Z"
+    },
+    {
+      "id": 36,
+      "content": "Noniin. Sitten lähtee. Jännä nähdä miten Madueke vasemmalla toimii.",
+      "author": "VilleW",
+      "room": "general",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T11:31:12.282Z"
+    },
+    {
+      "author": "VilleW",
+      "id": 37,
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "content": "Saas nähdä miten Madueke vasemmalla toimii",
+      "created_at": "2026-10-10T11:31:37.374Z",
+      "badge_color": "#EF4444"
+    },
+    {
+      "created_at": "2026-10-10T11:32:36.709Z",
+      "id": 38,
+      "room": "general",
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "content": "Joo mielenkiintoista nähdä",
+      "badge_color": "#EF4444"
+    },
+    {
+      "id": 39,
+      "badge_color": "#EF4444",
+      "content": "Ei taida olla monella muulla joukkueella valioliigassa näin montaa englantilaista avauksessa",
+      "room": "general",
+      "created_at": "2026-10-10T11:34:18.788Z",
+      "author": "VilleW",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "created_at": "2026-10-10T11:36:17.656Z",
+      "id": 40,
+      "badge_color": "#EF4444",
+      "content": "Niin ne ajat muuttuu :D",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "author": "janiharju"
+    },
+    {
+      "id": 41,
+      "badge_color": "#EF4444",
+      "content": "Aika pirteellä jalalla ollaan liikkeellä, lupaa hyvää",
+      "author_flair": "ArseFinland Official Member",
+      "author": "janiharju",
+      "room": "general",
+      "created_at": "2026-10-10T11:36:42.630Z"
+    },
+    {
+      "content": "Miten siitä kulma tuli jos oli paitsio? Vai eikö sit ollutkaan",
+      "author": "janiharju",
+      "room": "general",
+      "badge_color": "#EF4444",
+      "id": 42,
+      "created_at": "2026-10-10T11:39:49.241Z",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "created_at": "2026-10-10T11:40:54.660Z",
+      "content": "Eipä se sitten tainnutkaan olla paitsio",
+      "badge_color": "#EF4444",
+      "id": 43,
+      "author": "VilleW",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "id": 44,
+      "room": "general",
+      "content": "Jännä kun ollaan annettu aikalailla pallonhallinta Leedsille. Kytätäänkö tässä enemmän vastaiskuja, jotka toki meinanneet muutaman kerran jo onnistua.",
+      "created_at": "2026-10-10T11:41:56.228Z",
+      "author": "VilleW",
+      "badge_color": "#EF4444"
+    },
+    {
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "content": "Ei ole muutenkaan ihan mikään gung ho taktiikka ja ote",
+      "created_at": "2026-10-10T11:46:29.527Z",
+      "room": "general",
+      "id": 45,
+      "author": "janiharju"
+    },
+    {
+      "author": "VilleW",
+      "created_at": "2026-10-10T11:48:03.874Z",
+      "badge_color": "#EF4444",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "id": 46,
+      "content": "Meidän on kyllä todella hankala päästä paikoille."
+    },
+    {
+      "room": "general",
+      "content": "Voisi koittaa vetoja vähän kauempaa, niin ehkä sekin loisi meille enemmän tilaa boksissa kun Leedsin pelaajien olisi myös tultava blokkaamaan niitä",
+      "author": "VilleW",
+      "created_at": "2026-10-10T11:49:44.136Z",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "id": 47
+    },
+    {
+      "room": "general",
+      "author": "janiharju",
+      "created_at": "2026-10-10T11:51:56.054Z",
+      "id": 48,
+      "content": "Aattelin ennakkoon että tässä olisi voinut toimia Bruno + Ode paremmin kuin Brightonissa, koska Leeds putoaa paljon enemmän",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444"
+    },
+    {
+      "id": 49,
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "author": "janiharju",
+      "created_at": "2026-10-10T11:52:05.115Z",
+      "content": "Bruno olisi tuonut sitä kaukolaukausyhkaa",
+      "room": "general"
+    },
+    {
+      "content": "On toi boksikin aika täynnä kun palloa sinnepäin saadaan",
+      "room": "general",
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T11:53:53.940Z",
+      "badge_color": "#EF4444",
+      "id": 50
+    },
+    {
+      "room": "general",
+      "created_at": "2026-10-10T11:55:56.589Z",
+      "id": 51,
+      "badge_color": "#EF4444",
+      "content": "Siinä Tierney missasi selkeän Öden repimisen vastaiskuun",
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "content": "Kyllä. Selvästi estettiin vastahyökkäys",
+      "author": "VilleW",
+      "badge_color": "#EF4444",
+      "id": 52,
+      "room": "general",
+      "created_at": "2026-10-10T11:57:27.546Z",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "content": "Tuokaa takaisin mutakentät 🤣",
+      "author": "janiharju",
+      "created_at": "2026-10-10T12:01:09.653Z",
+      "badge_color": "#EF4444",
+      "id": 53,
+      "room": "general"
+    },
+    {
+      "id": 54,
+      "content": "Vähän vaikea visioida miten tota hyökkäyspeliä saataisiin paremmaksi. Tai ainakin siis pallon pitäisi liikkua aika paljon nopeammin kuin nyt. Mutta mitä muuta. Vetoja lisää. Ei ei yritetä yhtään edes boksin reunalta.",
+      "created_at": "2026-10-10T12:02:03.899Z",
+      "badge_color": "#EF4444",
+      "room": "general",
+      "author": "VilleW",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T12:04:16.858Z",
+      "room": "general",
+      "content": "Tuntuu olevan myös tosi nopeesti Leedsillä blokkaajat valmiina koko ajan. Low block on vaikea",
+      "author": "janiharju",
+      "badge_color": "#EF4444",
+      "id": 55
+    },
+    {
+      "created_at": "2026-10-10T12:04:31.696Z",
+      "id": 56,
+      "author": "VilleW",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "content": "On se"
+    },
+    {
+      "created_at": "2026-10-10T12:06:01.979Z",
+      "id": 57,
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "author": "janiharju",
+      "room": "general",
+      "content": "Hyvä pelastus Rayalta"
+    },
+    {
+      "id": 58,
+      "author": "janiharju",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "content": "EI näytä hyvältä Whitellä",
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-10T12:09:06.059Z"
+    },
+    {
+      "badge_color": "#EF4444",
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "content": "Ah, olikin Jurkkaa onneksi",
+      "id": 59,
+      "room": "general",
+      "created_at": "2026-10-10T12:09:24.708Z"
+    },
+    {
+      "created_at": "2026-10-10T12:12:15.361Z",
+      "id": 60,
+      "badge_color": "#EF4444",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "author": "VilleW",
+      "content": "Oispa mukavaa jos sekä White että Timber ois käytettävissä. Voisi aina ~60 min kohdilla vaihtaa."
+    },
+    {
+      "content": "Milteinpä Madueke ollut tässä Sakaa parempi. Saka ei nyt pääse ekan miehen ohi.",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "id": 61,
+      "created_at": "2026-10-10T12:13:40.445Z",
+      "room": "general",
+      "author": "VilleW"
+    },
+    {
+      "id": 62,
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T12:17:20.350Z",
+      "author": "janiharju",
+      "content": "Nii on, Madueke on ollut pirtsakka",
+      "room": "general",
+      "badge_color": "#EF4444"
+    },
+    {
+      "created_at": "2026-10-10T12:17:25.478Z",
+      "author": "janiharju",
+      "room": "general",
+      "id": 63,
+      "badge_color": "#EF4444",
+      "content": "Ja Konsa ihan Kone",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "room": "general",
+      "author": "janiharju",
+      "badge_color": "#EF4444",
+      "content": "Ei kyllä tosiaan mitään shampanjapalloa eka 45+3. Mutta tääkään ei ole mitenkään tavatonta majutauon jälkeiselle lounasmatsille",
+      "id": 64,
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T12:27:58.054Z"
+    },
+    {
+      "id": 65,
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "author": "VilleW",
+      "room": "general",
+      "created_at": "2026-10-10T12:32:52.783Z",
+      "content": "Mutta tukee kyllä todella pitkä kausi jos me jatkossakin hyökätään tällä tavalla. Saa nähdä onko se mentävä siirtomarkkinoille tammikuussa."
+    },
+    {
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "author": "VilleW",
+      "content": "*tulee",
+      "id": 66,
+      "room": "general",
+      "created_at": "2026-10-10T12:32:59.097Z"
+    },
+    {
+      "room": "general",
+      "author": "janiharju",
+      "id": 67,
+      "author_flair": "ArseFinland Official Member",
+      "content": "Saa nähdä olisko esim. se Kroupi sitten tähtäimessä Tammikuussa",
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-10T12:40:03.334Z"
+    },
+    {
+      "created_at": "2026-10-10T12:40:47.408Z",
+      "id": 68,
+      "badge_color": "#EF4444",
+      "author": "janiharju",
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "content": "No nyt oli lupaavampaa, hienosta Calafiorin katkosta lähtenyt isku"
+    },
+    {
+      "badge_color": "#EF4444",
+      "author": "janiharju",
+      "content": "Voi vittu",
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "created_at": "2026-10-10T12:44:42.470Z",
+      "id": 69
+    },
+    {
+      "content": "Aika huonosti puolustettu",
+      "author": "VilleW",
+      "room": "general",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "id": 70,
+      "created_at": "2026-10-10T12:46:13.721Z"
+    },
+    {
+      "room": "general",
+      "badge_color": "#EF4444",
+      "id": 71,
+      "author": "janiharju",
+      "content": "Rice ei seurannut yhtään miestään siellä laidassa ja boksissa Calafiorilla 2 merkattavaa",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T12:46:58.780Z"
+    },
+    {
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T12:51:59.050Z",
+      "author": "janiharju",
+      "badge_color": "#EF4444",
+      "content": "Caaalaaffffioooriiiiii 🇮🇹🇮🇹",
+      "id": 72
+    },
+    {
+      "author": "janiharju",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "content": "Ai kun slaissasi pahasti Calan vastapallokuti",
+      "id": 73,
+      "created_at": "2026-10-10T12:57:05.993Z"
+    },
+    {
+      "author": "janiharju",
+      "badge_color": "#EF4444",
+      "id": 74,
+      "room": "general",
+      "content": "Brruuunooo!",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T12:59:23.202Z"
+    },
+    {
+      "room": "general",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "author": "VilleW",
+      "id": 75,
+      "content": "Alkoi tapahtumaan!",
+      "created_at": "2026-10-10T13:00:11.340Z"
+    },
+    {
+      "id": 76,
+      "content": "We know who we are, premier league champions, we know who we are",
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "author": "janiharju",
+      "created_at": "2026-10-10T13:01:26.633Z",
+      "badge_color": "#EF4444"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T13:11:05.789Z",
+      "author": "janiharju",
+      "id": 77,
+      "badge_color": "#EF4444",
+      "content": "Hincapie 🍑",
+      "room": "general"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "badge_color": "#EF4444",
+      "id": 78,
+      "created_at": "2026-10-10T13:20:18.830Z",
+      "author": "VilleW",
+      "content": "Meidän pelinopeus kasvoi merkittävästi tuossa yhdessä vaiheessa. Saatiin luotua hyvin sellaisia puolittaisia paikkoja. Tämä loppu menee varmaan klassisesti omaa boksia sumputtaessa ja palloa pois roiskien."
+    },
+    {
+      "id": 79,
+      "content": "Peli vähän niinkuin vaati sen, että Leeds menee johtoo. Siitä me herättiin enemmän omalle tasolle",
+      "author": "janiharju",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T13:23:23.082Z",
+      "room": "general"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "id": 80,
+      "author": "janih",
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-13T05:37:37.792Z",
+      "content": "> _@janiharju: Peli vähän niinkuin vaati sen, että Leeds menee johtoo. Siitä me herättiin enemmän omalle tasolle_\n\nTotta turisen!"
+    },
+    {
+      "room": "general",
+      "content": "> _@janih: > _@janiharju: Peli vähän niinkuin vaati sen, että Leeds menee johtoo. Siitä me herättiin enemmän omalle tasolle_\n\nTotta turisen!_\n\n\n\nddd",
+      "author_flair": "ArseFinland Official Member",
+      "author": "janih",
+      "id": 81,
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-13T05:37:49.957Z"
+    },
+    {
+      "created_at": "2026-10-13T06:07:41.509Z",
+      "author_flair": "Neutral Football Fan",
+      "id": 82,
+      "content": "Netural fan post",
+      "room": "general",
+      "badge_color": "#94A3B8",
+      "author": "janiharju"
+    },
+    {
+      "content": "> _@janiharju: Peli vähän niinkuin vaati sen, että Leeds menee johtoo. Siitä me herättiin enemmän omalle tasolle_\n\nQuotason",
+      "author_flair": "ArseFinland Official Member",
+      "author": "Janih",
+      "badge_color": "#EF4444",
+      "id": 83,
+      "room": "general",
+      "created_at": "2026-10-13T09:41:19.885Z"
+    },
+    {
+      "badge_color": "#EF4444",
+      "created_at": "2026-10-13T19:00:32.487Z",
+      "author": "VilleW",
+      "author_flair": "ArseFinland Official Member",
+      "id": 84,
+      "room": "general",
+      "content": "Tänään olisi Ezellä ja Gyökeresillä näytön paikka"
+    },
+    {
+      "created_at": "2026-10-13T19:01:29.397Z",
+      "id": 85,
+      "badge_color": "#EF4444",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member",
+      "author": "janih",
+      "content": "Lets goooo"
+    },
+    {
+      "badge_color": "#EF4444",
+      "author": "janih",
+      "id": 86,
+      "created_at": "2026-10-13T19:23:16.991Z",
+      "content": "Olipa pari hyvää paikkaa ihan lyhyen ajan sisään, sekä Bruno että Merino olisi voinut pussittaa",
+      "room": "general",
+      "author_flair": "ArseFinland Official Member"
+    },
+    {
+      "room": "general",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "created_at": "2026-10-13T19:01:19.575Z",
+      "author": "sdasd",
+      "id": 87,
+      "content": "ei toimi"
+    },
+    {
+      "id": 88,
+      "content": "df",
+      "room": "general",
+      "created_at": "2026-10-13T19:08:44.949Z",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "author": "sdasd"
+    },
+    {
+      "created_at": "2026-10-13T19:26:12.193Z",
+      "author": "sdasd",
+      "content": "**bold**",
+      "author_flair": "ArseFinland Official Member",
+      "id": 89,
+      "badge_color": "#EF4444",
+      "room": "general"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "id": 90,
+      "created_at": "2026-10-13T19:32:57.279Z",
+      "room": "general",
+      "author": "sdasd",
+      "badge_color": "#EF4444",
+      "content": "> _@sdasd: **bold**_\n\ndd"
+    },
+    {
+      "content": "Ihan hyvä 45. Pari hyvää paikkaa ja liuta sellaisia, ei ehkä puoli- vaan kolmasosapaikkoja. Lille pidettiin käden ulottuvilla ja sitä paitsiota lukuunottaatta täysin poissa paikoilta. Vähän skarppia kakkoseen, niin pisteet jää Lontooseen",
+      "author": "janih",
+      "room": "general",
+      "badge_color": "#EF4444",
+      "author_flair": "ArseFinland Official Member",
+      "id": 91,
+      "created_at": "2026-10-13T19:49:47.772Z"
+    },
+    {
+      "created_at": "2026-10-13T20:18:18.718Z",
+      "content": "Joo eihän toi nyt ikinä pilkku olisi ollut",
+      "id": 92,
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "room": "general",
+      "author": "janih"
+    },
+    {
+      "author_flair": "ArseFinland Official Member",
+      "id": 93,
+      "content": "Aika itkut heitti Lillen pakki pienen Nonin kolhun jälkeen",
+      "created_at": "2026-10-13T20:11:14.560Z",
+      "badge_color": "#EF4444",
+      "author": "sdasd",
+      "room": "general"
+    },
+    {
+      "created_at": "2026-10-13T20:21:45.807Z",
+      "author": "janih",
+      "content": "Tiimmbbeeeeeerrrr!!",
+      "author_flair": "ArseFinland Official Member",
+      "room": "general",
+      "badge_color": "#EF4444",
+      "id": 94
+    },
+    {
+      "id": 95,
+      "room": "general",
+      "author": "sdasd",
+      "author_flair": "ArseFinland Official Member",
+      "badge_color": "#EF4444",
+      "content": "HOla",
+      "created_at": "2026-10-14T04:41:30.718Z",
+      "reactions": {}
     }
   ],
   "sessions": [
@@ -664,6 +1510,375 @@
       "created_at": "2026-10-08T09:39:11.594Z",
       "last_active_at": "2026-10-08T09:39:11.627Z",
       "expires_at": "2026-10-08T11:39:11.627Z"
+    },
+    {
+      "email": "samuli.hellsten@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "expires_at": "2026-10-10T10:41:44.373Z",
+      "id": "049a65c9-7e04-428a-b333-768b81a633d8",
+      "nickname": "Gunnersamulius",
+      "last_active_at": "2026-10-10T08:41:44.373Z",
+      "created_at": "2026-10-10T08:41:44.373Z"
+    },
+    {
+      "id": "10113efb-92a0-4f8a-bb89-ab92464298e5",
+      "expires_at": "2026-10-09T20:41:09.528Z",
+      "last_active_at": "2026-10-09T18:41:09.528Z",
+      "created_at": "2026-10-09T18:41:09.528Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "nickname": "Janih"
+    },
+    {
+      "id": "1a6886de-8e8f-4c77-bf73-653428a3b612",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "last_active_at": "2026-10-09T12:29:55.756Z",
+      "nickname": "Janih",
+      "expires_at": "2026-10-09T14:29:55.756Z",
+      "created_at": "2026-10-09T12:29:55.756Z"
+    },
+    {
+      "created_at": "2026-10-13T06:07:06.152Z",
+      "id": "1d473114-efad-4e0a-b9d5-dde0cf9d5045",
+      "expires_at": "2026-10-13T08:07:06.152Z",
+      "last_active_at": "2026-10-13T06:07:06.152Z",
+      "nickname": "janiharju",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com"
+    },
+    {
+      "email": "kaapo.karvonen@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "last_active_at": "2026-10-10T11:11:55.308Z",
+      "id": "20938db1-636c-4069-8b21-ca2be4fb875b",
+      "nickname": "ForssanGunner",
+      "created_at": "2026-10-10T11:11:55.308Z",
+      "expires_at": "2026-10-10T13:11:55.308Z"
+    },
+    {
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "nickname": "janih",
+      "expires_at": "2026-10-12T07:18:43.349Z",
+      "created_at": "2026-10-12T05:18:43.349Z",
+      "id": "20a8dda1-48a8-4295-971c-12ca1b9dbd87",
+      "last_active_at": "2026-10-12T05:18:43.349Z"
+    },
+    {
+      "last_active_at": "2026-10-10T15:12:51.261Z",
+      "created_at": "2026-10-10T14:06:26.729Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "id": "219f7080-c58e-447f-82c6-98e91f12e3af",
+      "expires_at": "2026-10-10T17:12:51.261Z",
+      "nickname": "janiharju"
+    },
+    {
+      "last_active_at": "2026-10-13T09:41:09.636Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "261921d0-2eda-4256-aad6-942c035d438a",
+      "nickname": "Janih",
+      "created_at": "2026-10-13T09:41:09.636Z",
+      "expires_at": "2026-10-13T11:41:09.636Z"
+    },
+    {
+      "last_active_at": "2026-10-09T12:44:54.330Z",
+      "expires_at": "2026-10-09T14:44:54.330Z",
+      "id": "27b96f89-5776-437d-9add-247c0c270864",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "created_at": "2026-10-09T12:44:54.330Z",
+      "nickname": "janih"
+    },
+    {
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "created_at": "2026-10-13T18:59:07.429Z",
+      "expires_at": "2026-10-13T22:17:05.680Z",
+      "nickname": "sdasd",
+      "last_active_at": "2026-10-13T20:17:05.680Z",
+      "id": "2ca81e80-9472-41c1-853e-738555d4f3b6"
+    },
+    {
+      "created_at": "2026-10-10T10:10:51.322Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "last_active_at": "2026-10-10T10:10:51.322Z",
+      "expires_at": "2026-10-10T12:10:51.322Z",
+      "id": "3c5f0c82-bd24-455c-bfec-37a885fba52b",
+      "nickname": "Janih"
+    },
+    {
+      "last_active_at": "2026-10-10T10:41:28.725Z",
+      "expires_at": "2026-10-10T12:41:28.725Z",
+      "created_at": "2026-10-10T10:41:28.725Z",
+      "nickname": "ForssanGunner",
+      "id": "4b06fec1-dd1d-4ef7-a9ee-dc38ccd8417b",
+      "email": "kaapo.karvonen@gmail.com",
+      "flair": "ArseFinland Official Member"
+    },
+    {
+      "last_active_at": "2026-10-13T17:53:48.596Z",
+      "nickname": "VilleW",
+      "id": "4fe731f4-a778-4809-9070-436d7134df83",
+      "created_at": "2026-10-13T17:53:48.596Z",
+      "expires_at": "2026-10-13T19:53:48.596Z",
+      "email": "wetterstrandv@gmail.com",
+      "flair": "ArseFinland Official Member"
+    },
+    {
+      "expires_at": "2026-10-13T18:46:27.692Z",
+      "id": "50de0b9e-6221-4f68-8493-c8eaccd9682e",
+      "created_at": "2026-10-13T16:46:27.692Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "nickname": "Janih",
+      "last_active_at": "2026-10-13T16:46:27.692Z"
+    },
+    {
+      "expires_at": "2026-10-13T16:18:37.744Z",
+      "created_at": "2026-10-13T14:18:37.744Z",
+      "nickname": "Janih",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "7b325b39-061c-4787-bb30-a7b5d5cb07e8",
+      "last_active_at": "2026-10-13T14:18:37.744Z"
+    },
+    {
+      "created_at": "2026-10-13T05:28:32.189Z",
+      "nickname": "janih",
+      "id": "7bf6257d-675c-4ff5-bf7e-eb035350d117",
+      "expires_at": "2026-10-13T08:04:59.353Z",
+      "last_active_at": "2026-10-13T06:04:59.353Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com"
+    },
+    {
+      "last_active_at": "2026-10-13T10:43:02.770Z",
+      "nickname": "janih",
+      "id": "7ccfff5a-4df6-48ef-b8d5-3a2d4836ea01",
+      "created_at": "2026-10-13T10:27:14.299Z",
+      "expires_at": "2026-10-13T12:43:02.770Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member"
+    },
+    {
+      "email": "samuli.hellsten@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "created_at": "2026-10-10T08:41:15.057Z",
+      "nickname": "Gunnersamulius",
+      "expires_at": "2026-10-10T10:41:15.057Z",
+      "last_active_at": "2026-10-10T08:41:15.057Z",
+      "id": "7d0d5fc1-6ec7-4443-9882-75dc414c5419"
+    },
+    {
+      "last_active_at": "2026-10-08T12:01:54.713Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "created_at": "2026-10-08T12:01:54.713Z",
+      "nickname": "janiharju",
+      "id": "8916d407-f78f-4e3e-94f0-9c3158ab89b9",
+      "expires_at": "2026-10-08T14:01:54.713Z"
+    },
+    {
+      "expires_at": "2026-10-10T16:03:10.380Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "last_active_at": "2026-10-10T14:03:10.380Z",
+      "created_at": "2026-10-10T14:03:10.380Z",
+      "id": "89425355-578b-4a76-a5c4-48714c386b6b",
+      "nickname": "janiharju"
+    },
+    {
+      "nickname": "VilleW",
+      "created_at": "2026-10-10T11:30:46.891Z",
+      "expires_at": "2026-10-10T13:30:46.891Z",
+      "last_active_at": "2026-10-10T11:30:46.891Z",
+      "email": "wetterstrandv@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "8a4c109c-3ac0-49b9-89aa-a28f3ccf8e7e"
+    },
+    {
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "expires_at": "2026-10-10T18:12:03.191Z",
+      "id": "8c79f445-f970-48d6-8a97-299a892b5a2e",
+      "created_at": "2026-10-10T16:12:03.191Z",
+      "last_active_at": "2026-10-10T16:12:03.191Z",
+      "nickname": "Janih"
+    },
+    {
+      "last_active_at": "2026-10-11T15:23:57.116Z",
+      "id": "99b42ae1-3874-4de1-bb91-d4de2bbf3a8c",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "expires_at": "2026-10-11T17:23:57.116Z",
+      "nickname": "Janih",
+      "created_at": "2026-10-11T15:23:57.116Z"
+    },
+    {
+      "expires_at": "2026-10-10T13:23:48.231Z",
+      "id": "a938c63e-9b1e-42ea-8ee9-453509992f86",
+      "created_at": "2026-10-10T11:23:48.231Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "nickname": "janiharju",
+      "last_active_at": "2026-10-10T11:23:48.231Z"
+    },
+    {
+      "id": "abfa8f35-3996-4c7a-b6a7-be2f0d3c78ee",
+      "expires_at": "2026-10-13T21:51:08.079Z",
+      "created_at": "2026-10-13T19:51:08.079Z",
+      "nickname": "Janih",
+      "last_active_at": "2026-10-13T19:51:08.079Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com"
+    },
+    {
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "nickname": "janih",
+      "last_active_at": "2026-10-09T05:53:57.969Z",
+      "id": "b455c573-9cbe-4732-b841-762578c6a554",
+      "created_at": "2026-10-09T05:53:57.969Z",
+      "expires_at": "2026-10-09T07:53:57.969Z"
+    },
+    {
+      "expires_at": "2026-10-08T20:39:33.753Z",
+      "created_at": "2026-10-08T18:39:33.753Z",
+      "last_active_at": "2026-10-08T18:39:33.753Z",
+      "id": "b5384d1e-f600-4cd0-89e4-3b9cc1a941c0",
+      "nickname": "Janih",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member"
+    },
+    {
+      "expires_at": "2026-10-10T12:39:38.001Z",
+      "nickname": "Janih olikin",
+      "id": "b58d570f-0995-4d12-a80e-1f71974b4d76",
+      "created_at": "2026-10-10T10:39:38.001Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "last_active_at": "2026-10-10T10:39:38.001Z"
+    },
+    {
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "c0f365ff-d977-4a12-9f87-8173b1640314",
+      "created_at": "2026-10-13T07:21:34.710Z",
+      "expires_at": "2026-10-13T09:21:34.710Z",
+      "nickname": "Janih",
+      "last_active_at": "2026-10-13T07:21:34.710Z"
+    },
+    {
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "last_active_at": "2026-10-13T17:53:05.161Z",
+      "id": "c3d16ddb-bc10-4849-9d80-50fcea704896",
+      "nickname": "Janih",
+      "expires_at": "2026-10-13T19:53:05.161Z",
+      "created_at": "2026-10-13T17:53:05.161Z"
+    },
+    {
+      "last_active_at": "2026-10-13T08:57:47.466Z",
+      "expires_at": "2026-10-13T10:57:47.466Z",
+      "id": "c44e6ee5-5d7f-47a2-938a-01c25b673e3f",
+      "created_at": "2026-10-13T08:57:47.466Z",
+      "nickname": "janiharju",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member"
+    },
+    {
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "created_at": "2026-10-14T04:34:51.197Z",
+      "nickname": "Janih",
+      "expires_at": "2026-10-14T06:34:51.197Z",
+      "id": "cfd7797a-19cb-4af6-b8d4-16aab4fe9d62",
+      "last_active_at": "2026-10-14T04:34:51.197Z"
+    },
+    {
+      "expires_at": "2026-10-11T17:46:04.529Z",
+      "last_active_at": "2026-10-11T15:46:04.529Z",
+      "nickname": "sdasd",
+      "created_at": "2026-10-11T15:04:17.003Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "d28a39d5-c8f0-4992-a0c4-a36a2268a521"
+    },
+    {
+      "last_active_at": "2026-10-10T08:14:41.270Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "d89b32e1-4d64-492a-bd6d-08d2b72ef598",
+      "nickname": "Janih",
+      "created_at": "2026-10-10T08:14:41.270Z",
+      "expires_at": "2026-10-10T10:14:41.270Z"
+    },
+    {
+      "created_at": "2026-10-09T15:50:26.173Z",
+      "nickname": "VilleW",
+      "last_active_at": "2026-10-09T15:50:26.173Z",
+      "id": "de6e8c4d-9c15-41df-bae0-49cf9c24c30d",
+      "email": "wetterstrandv@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "expires_at": "2026-10-09T17:50:26.173Z"
+    },
+    {
+      "nickname": "Janih",
+      "created_at": "2026-10-11T16:03:31.314Z",
+      "id": "dfc136f1-522d-4b12-9dde-0c46721319cd",
+      "expires_at": "2026-10-11T18:03:31.314Z",
+      "email": "janiharju@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "last_active_at": "2026-10-11T16:03:31.314Z"
+    },
+    {
+      "nickname": "VilleW",
+      "email": "wetterstrandv@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "id": "e57288f6-612e-4a92-b84b-cf82d3560123",
+      "expires_at": "2026-10-09T13:10:49.636Z",
+      "last_active_at": "2026-10-09T11:10:49.636Z",
+      "created_at": "2026-10-09T11:10:49.636Z"
+    },
+    {
+      "last_active_at": "2026-10-13T18:51:35.431Z",
+      "nickname": "janih",
+      "expires_at": "2026-10-13T20:51:35.431Z",
+      "id": "e5845d98-1216-434b-b18e-056e8163ddf6",
+      "created_at": "2026-10-13T18:51:35.431Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com"
+    },
+    {
+      "nickname": "janiharju",
+      "expires_at": "2026-10-09T12:53:22.680Z",
+      "flair": "ArseFinland Official Member",
+      "email": "janiharju@gmail.com",
+      "id": "f585e394-6179-4457-b9ec-44e927e37757",
+      "created_at": "2026-10-09T10:53:22.680Z",
+      "last_active_at": "2026-10-09T10:53:22.680Z"
+    },
+    {
+      "id": "fbff2b0c-3eec-4a15-9ef8-ef7f6c339a60",
+      "last_active_at": "2026-10-08T12:08:11.016Z",
+      "nickname": "mörkö",
+      "email": "boo@gmail.com",
+      "flair": "ArseFinland Official Member",
+      "created_at": "2026-10-08T12:08:11.016Z",
+      "expires_at": "2026-10-08T14:08:11.016Z"
+    },
+    {
+      "id": "e7ab1a9f-7f29-4b45-818b-7ced1c652c56",
+      "nickname": "sdasd",
+      "email": "janiharju@gmail.com",
+      "flair": "Testers",
+      "created_at": "2026-10-14T04:40:57.776Z",
+      "last_active_at": "2026-10-14T04:42:55.228Z",
+      "expires_at": "2026-10-14T06:42:55.228Z"
     }
   ],
   "realms": [
@@ -693,9 +1908,18 @@
       "description": "Community testing and quality assurance realm",
       "is_default": false,
       "created_at": "2026-10-07T00:00:00.000Z"
+    },
+    {
+      "badge_color": "#EF4444",
+      "description": "Suomen Liverpool-kannattajat",
+      "id": "olsc-finland",
+      "is_default": false,
+      "created_at": "2026-10-13T10:02:14.480Z",
+      "name": "OLSC finland",
+      "icon": "🔴"
     }
   ],
-  "nextPostId": 14,
-  "nextCommentId": 15,
-  "nextChatId": 27
+  "nextPostId": 10005,
+  "nextCommentId": 27,
+  "nextChatId": 96
 }

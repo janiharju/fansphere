@@ -142,9 +142,10 @@ export async function persistChatMessageToFirestore(msg: any) {
       author_flair: String(msg.author_flair || 'ArseFinland Official Member').trim(),
       badge_color: String(msg.badge_color || '#EF4444').trim(),
       content: String(msg.content || '').trim(),
-      created_at: String(msg.created_at || new Date().toISOString())
+      created_at: String(msg.created_at || new Date().toISOString()),
+      reactions: (msg.reactions && typeof msg.reactions === 'object' && !Array.isArray(msg.reactions)) ? msg.reactions : {}
     };
-    await setDoc(ref, cleanMsg);
+    await setDoc(ref, cleanMsg, { merge: true });
   } catch (err) {
     console.warn(`[Firestore] Failed to persist chat message ${msg.id}:`, err);
   }

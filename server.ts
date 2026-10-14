@@ -86,6 +86,7 @@ interface ChatMessage {
   badge_color: string;
   content: string;
   created_at: string;
+  reactions?: Record<string, string[]>;
 }
 
 // Initial seed generators
@@ -1448,7 +1449,8 @@ app.post('/api/chat/message', (req, res) => {
     author_flair: session.flair || 'ArseFinland Official Member',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: content.trim(),
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    reactions: {}
   };
 
   chatMessages.push(msg);
@@ -1461,6 +1463,64 @@ app.post('/api/chat/message', (req, res) => {
   });
 
   res.status(201).json(msg);
+});
+
+// 8b. Emoji Reaction on Chat Message
+app.post('/api/chat/message/:id/react', (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) {
+    return res.status(401).json({ detail: 'Session required to react. Please sign in or set your nickname.', session_required: true });
+  }
+
+  const messageId = parseInt(req.params.id, 10);
+  const { emoji } = req.body;
+
+  if (!emoji || typeof emoji !== 'string' || emoji.trim().length === 0) {
+    return res.status(400).json({ detail: 'Emoji required' });
+  }
+
+  const cleanEmoji = emoji.trim();
+  const msg = chatMessages.find(m => m.id === messageId);
+  if (!msg) {
+    return res.status(404).json({ detail: 'Chat message not found' });
+  }
+
+  if (!msg.reactions) {
+    msg.reactions = {};
+  }
+
+  const user = session.nickname;
+  if (!Array.isArray(msg.reactions[cleanEmoji])) {
+    msg.reactions[cleanEmoji] = [];
+  }
+
+  const userIdx = msg.reactions[cleanEmoji].indexOf(user);
+  if (userIdx > -1) {
+    // Toggle off if already reacted
+    msg.reactions[cleanEmoji].splice(userIdx, 1);
+    if (msg.reactions[cleanEmoji].length === 0) {
+      delete msg.reactions[cleanEmoji];
+    }
+  } else {
+    // Add reaction
+    msg.reactions[cleanEmoji].push(user);
+  }
+
+  forceSaveNow();
+  saveChatMessageToFirestore(msg).catch(err => console.error('[Firestore] Reaction save error:', err));
+
+  broadcast({
+    type: 'chat_reaction',
+    data: {
+      message_id: messageId,
+      reactions: msg.reactions
+    }
+  });
+
+  res.json({
+    message_id: messageId,
+    reactions: msg.reactions
+  });
 });
 
 // 9. League Standings

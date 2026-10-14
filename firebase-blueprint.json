@@ -147,8 +147,12 @@
         "content": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 1000,
+          "maxLength": 5000,
           "description": "Chat message text"
+        },
+        "reactions": {
+          "type": "object",
+          "description": "Emoji reactions mapping to usernames"
         },
         "created_at": {
           "type": "string",

@@ -210,7 +210,55 @@ blockquote {
   color: #94A3B8 !important;
 }
 
+#chatMessages blockquote {
+  margin: 0.15rem 0 !important;
+  padding: 0.1rem 0.35rem !important;
+  line-height: 1.3 !important;
+}
+
 em {
   font-style: italic !important;
+}
+
+/* Snug dynamic height for chat message bubble */
+#chatMessages .chat-bubble {
+  height: auto !important;
+  min-height: 0 !important;
+  padding-top: 0.15rem !important;
+  padding-bottom: 0.15rem !important;
+}
+
+#chatMessages .chat-msg-text {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.25 !important;
+}
+
+#chatMessages .chat-reactions-container.hidden {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure message text area fits this div area by default */
+main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nth-of-type(2),
+#chatMessages .chat-msg-row {
+  width: 100% !important;
+  display: flex !important;
+  align-items: stretch !important;
+}
+
+main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nth-of-type(2) > .chat-bubble,
+#chatMessages .chat-msg-row > .chat-bubble {
+  flex: 1 1 0% !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#chatInput {
+  min-height: 34px !important;
+  box-sizing: border-box !important;
 }
 
