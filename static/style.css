@@ -268,31 +268,31 @@ main#mainAppContent > aside#rightSidebar > div > div#chatMessages > div > div:nt
 main#mainAppContent:nth-of-type(1) > aside#rightSidebar:nth-of-type(2) > div:nth-of-type(1) > div#chatMessages:nth-of-type(2) {
   scrollbar-width: thin !important;
   -ms-overflow-style: auto !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   overflow-x: hidden !important;
   touch-action: pan-y !important;
   overscroll-behavior-y: contain !important;
-  height: 100% !important;
+  flex: 1 1 0% !important;
   pointer-events: auto !important;
   -webkit-overflow-scrolling: touch !important;
 }
 
-
-#chatMessages::-webkit-scrollbar {
-  display: block !important;
-  width: 6px !important;
-  height: 6px !important;
+#chatMessages::-webkit-scrollbar,
+main#mainAppContent:nth-of-type(1) > aside#rightSidebar:nth-of-type(2) > div:nth-of-type(1) > div#chatMessages:nth-of-type(2)::-webkit-scrollbar {
+  width: 8px !important;
+  background: #1e293b !important;
 }
-
-#chatMessages::-webkit-scrollbar-track {
-  background: #0B1120 !important;
-}
-
-#chatMessages::-webkit-scrollbar-thumb {
+#chatMessages::-webkit-scrollbar-thumb,
+main#mainAppContent:nth-of-type(1) > aside#rightSidebar:nth-of-type(2) > div:nth-of-type(1) > div#chatMessages:nth-of-type(2)::-webkit-scrollbar-thumb {
   background: #475569 !important;
-  border-radius: 3px !important;
+  border-radius: 4px !important;
 }
 
-#chatMessages::-webkit-scrollbar-thumb:hover {
-  background: #64748B !important;
+
+
+
 }
+
+
+
+

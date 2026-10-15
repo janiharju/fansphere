@@ -275,6 +275,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadPosts(),
       loadChatHistory()
     ]);
+    
+    // Periodic check for WebSocket health and resync if needed
+    setInterval(() => {
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+        console.log('WS unhealthy, resyncing chat history...');
+        loadChatHistory();
+        if (!state.ws || state.ws.readyState === WebSocket.CLOSED) {
+          connectWebSocket();
+        }
+      }
+    }, 60000); // 60 seconds
   } else {
     // Ensure gate is displayed and page contents stay strictly hidden
     updateGateState();
@@ -837,6 +848,7 @@ function connectWebSocket() {
 }
 
 function handleWebSocketMessage(msg) {
+  console.log('WS message received:', msg.type);
   switch (msg.type) {
     case 'presence':
       updateOnlinePresence(msg.online_count, msg.active_nicknames);
@@ -1084,9 +1096,6 @@ function renderPosts() {
 
   // Prevent re-rendering and flickering if the target cards and pagination are already rendered
   const renderKey = `${state.selectedRealm}:${state.currentTag}:${state.currentPage}:${shouldPaginate}:${totalPages}:${postsPerPage}:${pagePosts.map(p => `${p.id}_${p.comment_count || 0}_${p.upvotes || 0}_${p.title}`).join('|')}`;
-  if (container.dataset.lastRenderKey === renderKey) {
-    return;
-  }
   container.dataset.lastRenderKey = renderKey;
 
   requestAnimationFrame(() => {
@@ -1447,16 +1456,16 @@ function renderChatStream() {
 
     filtered.forEach(msg => appendChatMessage(msg, false, false));
     initLucide();
-    scrollChatToBottom();
+    scrollChatToBottom(true);
   });
 }
 
 async function loadChatHistory() {
   try {
-    const res = await fetch('/api/chat/history?room=general&limit=100');
+    const res = await fetch(window.location.origin + '/api/chat/history?room=general&limit=1000');
     if (!res.ok) throw new Error('Failed to load chat');
     const messages = await res.json();
-    state.allChatMessages = Array.isArray(messages) ? messages : [];
+    state.allChatMessages = Array.isArray(messages) ? messages.slice(-1000) : [];
     renderChatStream();
     try {
       localStorage.setItem('fansphere_cached_chat', JSON.stringify(messages.slice(-50)));
@@ -1470,6 +1479,9 @@ function handleIncomingChatMessage(chatData) {
   if (!chatData) return;
   if (!state.allChatMessages.some(m => m.id === chatData.id)) {
     state.allChatMessages.push(chatData);
+    if (state.allChatMessages.length > 1000) {
+      state.allChatMessages.shift();
+    }
   }
   const effective = getEffectiveRealm();
   if (state.selectedRealm === 'All' || matchClubRealm(chatData.author_flair, effective)) {
@@ -1583,13 +1595,15 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
   `;
 
   container.appendChild(msgDiv);
-  if (autoScroll) scrollChatToBottom();
+  if (autoScroll) {
+    requestAnimationFrame(() => scrollChatToBottom());
+  }
 }
 
-function scrollChatToBottom() {
+function scrollChatToBottom(force = false) {
   const container = document.getElementById('chatMessages');
   if (container) {
-    const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 100;
+    const isAtBottom = force || (container.scrollHeight - container.clientHeight <= container.scrollTop + 100);
 
     while (container.children.length > 200) {
       const removed = container.firstElementChild;
@@ -2415,7 +2429,12 @@ function initEventHandlers() {
     }
 
     // If nothing changed to update on server, exit cleanly
-    if (Object.keys(payload).length === 0 && !options.closeOnSuccess) {
+    if (Object.keys(payload).length === 0) {
+      if (options.closeOnSuccess) {
+        if (profileModal && profileModal.open) {
+          profileModal.close();
+        }
+      }
       return true;
     }
 
