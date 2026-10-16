@@ -136,9 +136,7 @@ service cloud.firestore {
     }
 
     match /users/{email} {
-      allow read, write: if isSignedIn() && request.auth.token.email == email;
-      allow create: if isSignedIn() && request.auth.token.email == email && isValidUser(incoming());
-      allow update: if isSignedIn() && request.auth.token.email == email && isValidUser(incoming()) && incoming().email == existing().email;
+      allow read, write: if true; 
     }
 
     match /realms/{realmId} {

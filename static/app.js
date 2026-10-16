@@ -2342,6 +2342,7 @@ function initEventHandlers() {
     const errEl = document.getElementById('profileError');
     const successEl = document.getElementById('profileSuccess');
     const saveBtn = document.getElementById('saveProfileBtn');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!handleDisplay || !emailDisplay) return false;
     const newHandle = handleDisplay.textContent.trim();
@@ -2371,7 +2372,6 @@ function initEventHandlers() {
       payload.flair = newFlair;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     // If nothing changed to update on server, exit cleanly
     if (Object.keys(payload).length === 0) {
