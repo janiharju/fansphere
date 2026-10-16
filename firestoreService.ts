@@ -229,6 +229,36 @@ export async function loadRealmsFromFirestore(): Promise<any[]> {
   }
 }
 
+export async function persistUserToFirestore(user: any) {
+  try {
+    const ref = doc(db, 'users', String(user.email).toLowerCase());
+    const cleanUser = {
+      email: String(user.email || '').toLowerCase().trim(),
+      nickname: String(user.nickname || '').trim(),
+      flair: String(user.flair || 'ArseFinland Official Member').trim(),
+      created_at: String(user.created_at || new Date().toISOString()),
+      last_updated_at: new Date().toISOString()
+    };
+    await setDoc(ref, cleanUser);
+  } catch (err) {
+    console.warn(`[Firestore] Failed to persist user ${user.email}:`, err);
+  }
+}
+
+export async function loadUsersFromFirestore(): Promise<any[]> {
+  try {
+    const snapshot = await getDocs(collection(db, 'users'));
+    const list: any[] = [];
+    snapshot.forEach(docSnap => {
+      list.push(docSnap.data());
+    });
+    return list;
+  } catch (err) {
+    console.warn('[Firestore] Could not load users collection:', err);
+    return [];
+  }
+}
+
 // Aliases for seamless imports
 export const fetchAllPostsFromFirestore = loadPostsFromFirestore;
 export const savePostToFirestore = persistPostToFirestore;
@@ -240,4 +270,7 @@ export const fetchAllSessionsFromFirestore = loadSessionsFromFirestore;
 export const saveSessionToFirestore = persistSessionToFirestore;
 export const fetchAllRealmsFromFirestore = loadRealmsFromFirestore;
 export const saveRealmToFirestore = persistRealmToFirestore;
+export const fetchAllUsersFromFirestore = loadUsersFromFirestore;
+export const saveUserToFirestore = persistUserToFirestore;
+
 

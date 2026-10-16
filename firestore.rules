@@ -86,6 +86,16 @@ service cloud.firestore {
              data.created_at is string && data.created_at.size() <= 100;
     }
 
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'nickname', 'created_at']) &&
+             data.keys().hasOnly(['email', 'nickname', 'flair', 'created_at', 'last_updated_at']) &&
+             data.email is string && data.email.size() <= 255 &&
+             data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 100 &&
+             (!('flair' in data) || (data.flair is string && data.flair.size() <= 100)) &&
+             data.created_at is string && data.created_at.size() <= 100 &&
+             (!('last_updated_at' in data) || (data.last_updated_at is string && data.last_updated_at.size() <= 100));
+    }
+
     match /posts/{postId} {
       allow get, list: if true;
       allow create: if isValidId(postId) && isValidPost(incoming());
@@ -123,6 +133,12 @@ service cloud.firestore {
         incoming().diff(existing()).affectedKeys().hasOnly([])
       );
       allow delete: if isValidId(sessionId);
+    }
+
+    match /users/{email} {
+      allow read, write: if isSignedIn() && request.auth.token.email == email;
+      allow create: if isSignedIn() && request.auth.token.email == email && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.token.email == email && isValidUser(incoming()) && incoming().email == existing().email;
     }
 
     match /realms/{realmId} {

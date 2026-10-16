@@ -630,33 +630,9 @@
 
         <!-- Field 1: Nickname / Fan Handle -->
         <div class="space-y-1">
-          <div class="flex items-center justify-between">
-            <label for="profileHandleInput" class="text-slate-200 font-semibold flex items-center gap-1">
-              <span>Nickname / Fan Handle</span>
-              <span class="text-red-400">*</span>
-            </label>
-            <button 
-              type="button" 
-              id="editHandleBtn" 
-              class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 bg-red-950/40 hover:bg-red-900/40 border border-red-800/40 px-2 py-0.5 rounded-md transition cursor-pointer"
-              title="Click to edit nickname"
-            >
-              <span>✏️ Edit</span>
-            </button>
-          </div>
           <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs select-none">@</span>
-            <input 
-              type="text" 
-              id="profileHandleInput" 
-              class="w-full bg-slate-950 border-2 border-slate-600 hover:border-slate-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white rounded-xl pl-7 pr-3 py-2.5 font-medium text-xs shadow-inner cursor-text transition focus:outline-none"
-              placeholder="e.g. HelsinkiGunner"
-              required
-              minlength="2"
-              maxlength="30"
-              autocomplete="nickname"
-              spellcheck="false"
-            />
+            <span id="profileHandleDisplay" class="block w-full bg-slate-900 border-2 border-slate-700 text-slate-300 rounded-xl pl-7 pr-3 py-2.5 font-medium text-xs"></span>
           </div>
           <p class="text-[10px] text-slate-400">Attached to all your forum posts and live chat messages.</p>
         </div>
@@ -664,32 +640,15 @@
         <!-- Field 2: Email Address -->
         <div class="space-y-1">
           <div class="flex items-center justify-between">
-            <label for="profileEmailInput" class="text-slate-200 font-semibold flex items-center gap-1">
+            <label for="profileEmailDisplay" class="text-slate-200 font-semibold flex items-center gap-1">
               <span>Email Address</span>
-              <span class="text-red-400">*</span>
             </label>
-            <button 
-              type="button" 
-              id="editEmailBtn" 
-              class="text-[10px] text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 bg-red-950/40 hover:bg-red-900/40 border border-red-800/40 px-2 py-0.5 rounded-md transition cursor-pointer"
-              title="Click to edit email address"
-            >
-              <span>✏️ Edit</span>
-            </button>
           </div>
           <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs select-none">✉</span>
-            <input 
-              type="email" 
-              id="profileEmailInput" 
-              class="w-full bg-slate-950 border-2 border-slate-600 hover:border-slate-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 text-white rounded-xl pl-7 pr-3 py-2.5 font-medium text-xs shadow-inner cursor-text transition focus:outline-none"
-              placeholder="e.g. gunner@example.com"
-              required
-              autocomplete="email"
-              spellcheck="false"
-            />
+            <span id="profileEmailDisplay" class="block w-full bg-slate-900 border-2 border-slate-700 text-slate-300 rounded-xl pl-7 pr-3 py-2.5 font-medium text-xs"></span>
           </div>
-          <p class="text-[10px] text-slate-400">Your registered contact email for this session.</p>
+          <p class="text-[10px] text-slate-400">Your registered contact email address.</p>
         </div>
 
         <!-- Field 3: Supporter Flair & Realm Selector -->

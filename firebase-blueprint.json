@@ -202,6 +202,38 @@
       },
       "required": ["id", "nickname", "flair", "created_at", "expires_at"]
     },
+    "User": {
+      "title": "User",
+      "description": "Permanent user profile",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Unique user email identifier"
+        },
+        "nickname": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "User nickname"
+        },
+        "flair": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Selected club realm"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "Profile creation time"
+        },
+        "last_updated_at": {
+          "type": "string",
+          "description": "Profile last update time"
+        }
+      },
+      "required": ["email", "nickname", "created_at"]
+    },
     "ClubRealm": {
       "title": "ClubRealm",
       "description": "Available club realm community",
@@ -260,6 +292,10 @@
     "/sessions/{sessionId}": {
       "schema": "Session",
       "description": "Active session storage for persistence"
+    },
+    "/users/{email}": {
+      "schema": "User",
+      "description": "Persistent user profiles identified by email"
     },
     "/realms/{realmId}": {
       "schema": "ClubRealm",

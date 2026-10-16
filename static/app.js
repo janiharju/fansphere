@@ -421,8 +421,10 @@ function initUserProfile(force = false) {
   // CRITICAL: NEVER overwrite inputs if the modal is currently open, unless explicitly forced on opening
   const isModalOpen = profileModal && profileModal.open;
   if (!isModalOpen || force) {
-    if (inputHandle) inputHandle.value = state.user.handle || '';
-    if (inputEmail) inputEmail.value = state.user.email || '';
+    const handleDisplay = document.getElementById('profileHandleDisplay');
+    const emailDisplay = document.getElementById('profileEmailDisplay');
+    if (handleDisplay) handleDisplay.textContent = state.user.handle || '';
+    if (emailDisplay) emailDisplay.textContent = state.user.email || '';
     if (inputFlair) inputFlair.value = (state.selectedRealm === 'All') ? 'All' : state.user.flair;
   }
 
@@ -2311,56 +2313,10 @@ function initEventHandlers() {
     }
     initUserProfile(true); // Explicitly load current session values on modal open
     profileModal.showModal();
-    // Auto-focus the nickname input so the user can start editing immediately
-    setTimeout(() => {
-      const input = document.getElementById('profileHandleInput');
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }, 50);
   });
+
 
   // Explicit Edit buttons for Nickname and Email
-  document.getElementById('editHandleBtn')?.addEventListener('click', () => {
-    const input = document.getElementById('profileHandleInput');
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  });
-
-  document.getElementById('editEmailBtn')?.addEventListener('click', () => {
-    const input = document.getElementById('profileEmailInput');
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  });
-
-  // Clear feedback banners & sync local user state immediately when user types in inputs
-  document.getElementById('profileHandleInput')?.addEventListener('input', (e) => {
-    const val = e.target.value.trim();
-    if (val.length >= 2 && val.length <= 30) {
-      state.user.handle = val;
-      localStorage.setItem('fansphere_handle', val);
-      const navUser = document.getElementById('navUsername');
-      if (navUser) navUser.textContent = val;
-    }
-    document.getElementById('profileError')?.classList.add('hidden');
-    document.getElementById('profileSuccess')?.classList.add('hidden');
-  });
-
-  document.getElementById('profileEmailInput')?.addEventListener('input', (e) => {
-    const val = e.target.value.trim();
-    if (val.includes('@')) {
-      state.user.email = val;
-      localStorage.setItem('fansphere_email', val);
-    }
-    document.getElementById('profileError')?.classList.add('hidden');
-    document.getElementById('profileSuccess')?.classList.add('hidden');
-  });
-
   document.getElementById('closeProfileModalBtn')?.addEventListener('click', () => {
     profileModal.close();
   });
@@ -2380,31 +2336,18 @@ function initEventHandlers() {
 
   // Unified session persistence function for both blur auto-save and explicit form submit
   async function persistProfileSessionChanges(options = { closeOnSuccess: false, isBlur: false }) {
-    const handleInput = document.getElementById('profileHandleInput');
-    const emailInput = document.getElementById('profileEmailInput');
+    const handleDisplay = document.getElementById('profileHandleDisplay');
+    const emailDisplay = document.getElementById('profileEmailDisplay');
     const flairInput = document.getElementById('profileFlairInput');
     const errEl = document.getElementById('profileError');
     const successEl = document.getElementById('profileSuccess');
     const saveBtn = document.getElementById('saveProfileBtn');
 
-    if (!handleInput || !emailInput) return false;
-    const newHandle = handleInput.value.trim();
-    const newEmail = emailInput.value.trim();
+    if (!handleDisplay || !emailDisplay) return false;
+    const newHandle = handleDisplay.textContent.trim();
+    const newEmail = emailDisplay.textContent.trim();
     const newFlair = flairInput ? normalizeFlair(flairInput.value) : normalizeFlair(state.user.flair);
 
-    // Immediate local state update so user changes are NEVER undone by blur or loss of focus
-    if (newHandle.length >= 2 && newHandle.length <= 30) {
-      state.user.handle = newHandle;
-      localStorage.setItem('fansphere_handle', newHandle);
-      const navUser = document.getElementById('navUsername');
-      if (navUser) navUser.textContent = newHandle;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (emailRegex.test(newEmail)) {
-      state.user.email = newEmail;
-      localStorage.setItem('fansphere_email', newEmail);
-    }
 
     if (newFlair) {
       const prevFlair = state.user.flair;
@@ -2428,6 +2371,8 @@ function initEventHandlers() {
       payload.flair = newFlair;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     // If nothing changed to update on server, exit cleanly
     if (Object.keys(payload).length === 0) {
       if (options.closeOnSuccess) {
@@ -2448,7 +2393,6 @@ function initEventHandlers() {
           errEl.textContent = 'Nickname must be between 2 and 30 characters';
           errEl.classList.remove('hidden');
         }
-        handleInput.focus();
         return false;
       }
 
@@ -2457,9 +2401,9 @@ function initEventHandlers() {
           errEl.textContent = 'Please enter a valid email address';
           errEl.classList.remove('hidden');
         }
-        emailInput.focus();
         return false;
       }
+
 
       if (saveBtn) {
         saveBtn.disabled = true;

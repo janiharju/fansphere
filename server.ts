@@ -15,8 +15,13 @@ import {
   fetchAllSessionsFromFirestore,
   saveSessionToFirestore,
   fetchAllRealmsFromFirestore,
-  saveRealmToFirestore
+  saveRealmToFirestore,
+  saveUserToFirestore,
+  loadUsersFromFirestore,
+  db
 } from './firestoreService.js';
+import { doc, getDoc } from 'firebase/firestore';
+
 
 interface Team {
   id: string;
@@ -731,6 +736,8 @@ const sessions = new Map<string, Session>();
 for (const s of (storedData.sessions || getInitialSessions())) {
   sessions.set(s.id, s);
 }
+const users = new Map<string, any>();
+
 
 let nextPostId = storedData.nextPostId;
 let nextCommentId = storedData.nextCommentId;
@@ -925,7 +932,7 @@ app.post('/api/admin/store-restore', (req, res) => {
 // 0. Session & Authentication Endpoints
 
 // 0a. Create Session (Nickname + Email)
-app.post('/api/auth/session', (req, res) => {
+app.post('/api/auth/session', async (req, res) => {
   if (req.headers['x-session-id']) {
     return handleSessionUpdate(req, res);
   }
@@ -944,6 +951,20 @@ app.post('/api/auth/session', (req, res) => {
   const cleanEmail = email.trim().toLowerCase();
   const cleanFlair = normalizeFlair(flair);
 
+  // Check Email-Nickname Link in Firestore
+  try {
+    const userRef = doc(db, 'users', cleanEmail);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      if (userData.nickname !== cleanNickname) {
+        return res.status(400).json({ detail: 'This email is already associated with a different nickname.' });
+      }
+    }
+  } catch (err) {
+    console.error('[Firestore] User link check error:', err);
+  }
+
   const now = Date.now();
   const sessionId = crypto.randomUUID();
   const session: Session = {
@@ -959,6 +980,13 @@ app.post('/api/auth/session', (req, res) => {
   sessions.set(sessionId, session);
   forceSaveNow();
   saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session save error:', err));
+  saveUserToFirestore({
+    email: session.email,
+    nickname: session.nickname,
+    flair: session.flair,
+    created_at: session.created_at
+  }).catch(err => console.error('[Firestore] User profile save error:', err));
+
   broadcastPresence();
 
   const active = getActiveSessions();
@@ -1010,7 +1038,7 @@ app.get('/api/auth/session', (req, res) => {
 });
 
 // 0c. Update Session (Change Nickname, Email & Flair)
-const handleSessionUpdate = (req: express.Request, res: express.Response) => {
+const handleSessionUpdate = async (req: express.Request, res: express.Response) => {
   const session = getSessionFromReq(req);
   if (!session) {
     return res.status(401).json({ detail: 'Session expired or not found', expired: true, valid: false });
@@ -1030,8 +1058,26 @@ const handleSessionUpdate = (req: express.Request, res: express.Response) => {
     if (typeof email !== 'string' || !emailRegex.test(email.trim())) {
       return res.status(400).json({ detail: 'Please enter a valid email address' });
     }
-    session.email = email.trim().toLowerCase();
+    const newEmail = email.trim().toLowerCase();
+    
+    // Check Email-Nickname link if changing email
+    if (newEmail !== session.email) {
+      try {
+        const userRef = doc(db, 'users', newEmail);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.nickname !== session.nickname) {
+            return res.status(400).json({ detail: 'This email is already associated with a different nickname.' });
+          }
+        }
+      } catch (err) {
+        console.error('[Firestore] User link check error:', err);
+      }
+    }
+    session.email = newEmail;
   }
+
 
   if (flair !== undefined && typeof flair === 'string' && flair.trim().length > 0) {
     session.flair = normalizeFlair(flair);
@@ -1041,6 +1087,12 @@ const handleSessionUpdate = (req: express.Request, res: express.Response) => {
   session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   forceSaveNow();
   saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session update error:', err));
+  saveUserToFirestore({
+    email: session.email,
+    nickname: session.nickname,
+    flair: session.flair,
+    created_at: session.created_at
+  }).catch(err => console.error('[Firestore] User profile update error:', err));
   broadcastPresence();
 
   const active = getActiveSessions();
