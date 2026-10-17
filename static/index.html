@@ -3,10 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FanSphere | Live Sports Fan Community</title>
+  <title>Fansphere | Live Sports Fan Community</title>
   <meta name="description" content="Live sports fan community for Finnish Arsenal and football supporters with real-time match chatter, tactical analysis, and active debate.">
-  <meta property="og:title" content="FanSphere">
+  <meta property="og:title" content="Fansphere">
   <meta property="og:description" content="Live sports fan community for Finnish Arsenal and football supporters with real-time match chatter, tactical analysis, and active debate.">
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#0B1120">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fansphere">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -44,10 +57,7 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-extrabold text-base tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-rose-300 to-amber-300">
-              ArseFinland
-            </span>
-            <span class="bg-red-950 text-red-400 text-[10px] px-2 py-0.5 rounded-full font-semibold border border-red-800/50">
-              FanSphere
+              Fansphere
             </span>
           </div>
           <p class="text-[11px] text-slate-400 hidden sm:block leading-none">The Meeting Place for Football Fans in Finland</p>
@@ -74,6 +84,13 @@
             </ul>
           </div>
         </div>
+
+        <!-- PWA In-App Install Button (Automated detection for Chromium/Android and iOS Safari) -->
+        <button id="pwaInstallBtn" type="button" title="Install Fansphere on your device" class="hidden items-center gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-semibold text-xs px-2.5 py-1 rounded-lg shadow-sm shadow-red-600/30 transition cursor-pointer select-none">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Install App</span>
+          <span class="sm:hidden">Install</span>
+        </button>
 
         <!-- Sound Toggle -->
         <button id="soundToggleBtn" title="Toggle audio alerts" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
@@ -119,7 +136,7 @@
         <div class="w-14 h-14 mx-auto rounded-2xl bg-red-600/10 border border-red-600/20 text-red-500 flex items-center justify-center text-3xl shadow-inner mb-3">
           ⚽
         </div>
-        <h1 id="gateTitle" class="text-xl sm:text-2xl font-black tracking-tight text-white">Join ArseFinland FanSphere</h1>
+        <h1 id="gateTitle" class="text-xl sm:text-2xl font-black tracking-tight text-white">Join Fansphere</h1>
         <p id="gateSubtitle" class="text-xs text-slate-400 leading-relaxed">
           Please enter your nickname, email, and choose your club realm to enter the community and view discussions.
         </p>
@@ -181,7 +198,7 @@
           id="gateSubmitBtn"
           class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer text-sm"
         >
-          <span>Enter FanSphere</span>
+          <span>Enter Fansphere</span>
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
       </form>
@@ -686,7 +703,7 @@
         ⚽
       </div>
       <div>
-        <h3 id="sessionPromptTitle" class="text-base font-bold text-slate-100">Welcome to FanSphere</h3>
+        <h3 id="sessionPromptTitle" class="text-base font-bold text-slate-100">Welcome to Fansphere</h3>
         <p class="text-[11px] text-slate-400">ArseFinland Official Supporters Community</p>
       </div>
     </div>
@@ -743,7 +760,7 @@
 
       <div class="pt-2">
         <button type="submit" id="submitSessionBtn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl transition shadow-md flex items-center justify-center gap-2">
-          <span>Enter FanSphere</span>
+          <span>Enter Fansphere</span>
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
       </div>
@@ -763,6 +780,57 @@
 
   <!-- Sound Audio synthesized or chime -->
   <audio id="chimeAudio" preload="auto"></audio>
+
+  <!-- PWA Offline Connectivity Indicator -->
+  <div id="offlineIndicator" class="hidden fixed bottom-4 left-4 z-50 flex items-center gap-2 bg-amber-600/95 text-white px-3.5 py-2 rounded-xl text-xs font-medium shadow-2xl backdrop-blur-md border border-amber-500/50">
+    <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+    <span>Offline Mode — Cached data is being used</span>
+  </div>
+
+  <!-- iOS Safari PWA Install Instructions Modal -->
+  <dialog id="pwaIosModal" class="bg-slate-900 text-slate-100 p-6 rounded-3xl border border-slate-700 shadow-2xl w-full max-w-sm backdrop:bg-slate-950/85 backdrop:backdrop-blur-md">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-sm font-bold shadow-md shadow-red-600/40">⚽</div>
+        <h3 class="font-bold text-sm text-slate-100">Install on iPhone / iPad</h3>
+      </div>
+      <button id="closePwaIosModalBtn" type="button" class="text-slate-400 hover:text-white text-base font-bold p-1 cursor-pointer" title="Close">✕</button>
+    </div>
+    <div class="space-y-3 pt-4 text-xs text-slate-300">
+      <div class="flex items-start gap-3 bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+        <div class="p-1.5 bg-slate-700 rounded-lg text-red-400 shrink-0">
+          <i data-lucide="share" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-slate-100">1. Tap the Share button</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Located at the bottom of the Safari toolbar on your iPhone or top-right on iPad.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+        <div class="p-1.5 bg-slate-700 rounded-lg text-emerald-400 shrink-0">
+          <i data-lucide="plus-square" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-slate-100">2. Select "Add to Home Screen"</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Scroll down in the share sheet and tap <strong>Add to Home Screen</strong>.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+        <div class="p-1.5 bg-slate-700 rounded-lg text-amber-400 shrink-0">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-slate-100">3. Launch Fullscreen</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Tap the Fansphere icon on your home screen for full standalone app immersion.</p>
+        </div>
+      </div>
+    </div>
+    <div class="pt-4">
+      <button id="dismissPwaIosModalBtn" type="button" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 rounded-xl text-xs transition cursor-pointer">
+        Got it!
+      </button>
+    </div>
+  </dialog>
 
   <!-- Application Script -->
   <script src="/static/app.js?v=20261011_01"></script>

@@ -1,4 +1,4 @@
-// ArseFinland FanSphere - Real-time Sports Fan Community Client
+// Fansphere - Real-time Sports Fan Community Client
 
 let currentRealms = [];
 
@@ -257,6 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSessionAutoRefresh();
   initEventHandlers();
   loadPresence();
+  initPWA();
 
   // Immediately enforce gate: hide page contents until verified active session & selected realm
   updateGateState();
@@ -603,7 +604,7 @@ function openSessionPromptModal(reason = 'new') {
     if (gateTitle) gateTitle.textContent = 'Session Expired';
     if (gateSubtitle) gateSubtitle.textContent = 'Your previous session has expired. Please confirm your nickname, email, and club realm to reactivate.';
   } else {
-    if (gateTitle) gateTitle.textContent = 'Welcome to FanSphere';
+    if (gateTitle) gateTitle.textContent = 'Welcome to Fansphere';
     if (gateSubtitle) gateSubtitle.textContent = 'Please enter your nickname, email, and choose your club realm to enter the community and view discussions.';
   }
 
@@ -633,7 +634,7 @@ function openSessionPromptModal(reason = 'new') {
       noticeEl.className = 'mt-3.5 p-3 rounded-xl bg-amber-950/70 border border-amber-800/70 text-xs text-amber-200 leading-relaxed';
     }
   } else {
-    if (titleEl) titleEl.textContent = 'Welcome to FanSphere';
+    if (titleEl) titleEl.textContent = 'Welcome to Fansphere';
     if (noticeEl) {
       noticeEl.innerHTML = `Please enter your <strong>Nickname</strong> and <strong>Email address</strong> to join the live discussions. Your session refreshes automatically while you are active.`;
       noticeEl.className = 'mt-3.5 p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300 leading-relaxed';
@@ -819,7 +820,7 @@ function connectWebSocket() {
   state.ws = new WebSocket(wsUrl);
 
   state.ws.onopen = () => {
-    console.log('FanSphere WebSocket connected');
+    console.log('Fansphere WebSocket connected');
     // Authenticate socket with active session if available
     if (state.sessionId && state.lastWsAuthSessionId !== state.sessionId) {
       state.lastWsAuthSessionId = state.sessionId;
@@ -844,7 +845,7 @@ function connectWebSocket() {
   };
 
   state.ws.onclose = () => {
-    console.warn('FanSphere WebSocket disconnected. Reconnecting in 3s...');
+    console.warn('Fansphere WebSocket disconnected. Reconnecting in 3s...');
     setTimeout(connectWebSocket, 3000);
   };
 }
@@ -2579,7 +2580,7 @@ function initEventHandlers() {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>Enter FanSphere</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        submitBtn.innerHTML = `<span>Enter Fansphere</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
         initLucide();
       }
     }
@@ -2629,7 +2630,7 @@ function initEventHandlers() {
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>Entering FanSphere...</span>';
+      submitBtn.innerHTML = '<span>Entering Fansphere...</span>';
     }
 
     try {
@@ -2664,7 +2665,7 @@ function initEventHandlers() {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>Enter FanSphere</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        submitBtn.innerHTML = `<span>Enter Fansphere</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
         initLucide();
       }
     }
@@ -2888,3 +2889,148 @@ if (typeof ResizeObserver !== 'undefined') {
     ro.observe(centerForum);
   }
 }
+
+// ==================== PWA INSTALL & SERVICE WORKER ====================
+let deferredInstallPrompt = null;
+
+function initPWA() {
+  const installBtn = document.getElementById('pwaInstallBtn');
+  const offlineIndicator = document.getElementById('offlineIndicator');
+  const iosModal = document.getElementById('pwaIosModal');
+  const closeIosBtn = document.getElementById('closePwaIosModalBtn');
+  const dismissIosBtn = document.getElementById('dismissPwaIosModalBtn');
+
+  // Detect standalone mode (already running as installed app on home screen or desktop window)
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes('android-app://');
+
+  // Detect iOS Safari device
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(userAgent) && !window.MSStream;
+
+  // 1. Service Worker Registration
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+          console.log('[PWA] Service Worker registered with scope:', reg.scope);
+          
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[PWA] New version ready.');
+                }
+              });
+            }
+          });
+        })
+        .catch((err) => {
+          console.warn('[PWA] Service Worker registration failed:', err);
+        });
+    });
+  }
+
+  // 2. In-App Install Prompt logic
+  if (isStandalone) {
+    // Already running in standalone / installed mode -> hide install button
+    if (installBtn) installBtn.classList.add('hidden');
+    console.log('[PWA] Running in standalone mode.');
+  } else {
+    // Listen for Chromium / Android / Desktop beforeinstallprompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (installBtn) {
+        installBtn.classList.remove('hidden');
+        installBtn.classList.add('flex');
+        initLucide();
+      }
+    });
+
+    // iOS Safari Flow: Show button with iOS guidance
+    if (isIOS) {
+      if (installBtn) {
+        const textSpan = installBtn.querySelector('span');
+        if (textSpan) textSpan.textContent = 'Install (iOS)';
+        installBtn.classList.remove('hidden');
+        installBtn.classList.add('flex');
+        initLucide();
+      }
+    }
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+          // Standard Chromium / Android flow
+          try {
+            deferredInstallPrompt.prompt();
+            const choiceResult = await deferredInstallPrompt.userChoice;
+            if (choiceResult.outcome === 'accepted') {
+              console.log('[PWA] User accepted the install prompt');
+              installBtn.classList.add('hidden');
+              installBtn.classList.remove('flex');
+            } else {
+              console.log('[PWA] User dismissed the install prompt');
+            }
+            deferredInstallPrompt = null;
+          } catch (err) {
+            console.warn('[PWA] Install error:', err);
+          }
+        } else if (isIOS && iosModal) {
+          // iOS Safari modal
+          iosModal.showModal();
+          initLucide();
+        } else {
+          // Fallback if triggered on desktop browser before prompt fires
+          alert('To install Fansphere, click the install icon in your browser address bar or menu.');
+        }
+      });
+    }
+
+    // App Installed event
+    window.addEventListener('appinstalled', () => {
+      console.log('[PWA] App was successfully installed!');
+      if (installBtn) {
+        installBtn.classList.add('hidden');
+        installBtn.classList.remove('flex');
+      }
+      deferredInstallPrompt = null;
+    });
+
+    // iOS modal close handlers
+    closeIosBtn?.addEventListener('click', () => iosModal?.close());
+    dismissIosBtn?.addEventListener('click', () => iosModal?.close());
+  }
+
+  // 3. Connectivity status & Offline Banner
+  function handleConnectivityChange() {
+    const isOnline = navigator.onLine;
+    if (offlineIndicator) {
+      if (isOnline) {
+        offlineIndicator.classList.add('hidden');
+        // Reconnect WebSocket if needed
+        if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+          console.log('[PWA] Reconnected to internet, reviving WebSocket...');
+          connectWebSocket();
+          loadPosts();
+          loadChatHistory();
+        }
+      } else {
+        offlineIndicator.classList.remove('hidden');
+      }
+    }
+  }
+
+  window.addEventListener('online', handleConnectivityChange);
+  window.addEventListener('offline', handleConnectivityChange);
+
+  // Initial check
+  if (!navigator.onLine && offlineIndicator) {
+    offlineIndicator.classList.remove('hidden');
+  }
+}
+

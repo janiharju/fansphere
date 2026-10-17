@@ -1,0 +1,73 @@
+{
+  "id": "/",
+  "name": "Fansphere",
+  "short_name": "Fansphere",
+  "description": "Live sports fan community for Finnish Arsenal and football supporters with real-time match chatter, tactical analysis, and active debate.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0B1120",
+  "background_color": "#0B1120",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "sports",
+    "social",
+    "news"
+  ],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Fan Chat",
+      "short_name": "Chat",
+      "description": "Jump into real-time live match chatter",
+      "url": "/?tab=chat",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Forum Feed",
+      "short_name": "Forum",
+      "description": "Read active fan discussions and match threads",
+      "url": "/?tab=forum",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

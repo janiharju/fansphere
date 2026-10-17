@@ -1,4 +1,4 @@
-# ArseFinland FanSphere ⚽
+# Fansphere ⚽
 
 An interactive, real-time web service and meeting place for sports fans. Tailored for Finnish football supporters ("ArseFinland: The Official Finnish Gunners Hub") with multi-club support, featuring real-time live chat, a Reddit-style threaded forum with upvoting, and an interactive live league table.
 

@@ -326,7 +326,7 @@ function getInitialComments(): Comment[] {
 function getInitialChatMessages(): ChatMessage[] {
   const now = Date.now();
   return [
-    { id: 1, room: 'general', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Welcome to ArseFinland FanSphere everyone! Tervetuloa!', created_at: new Date(now - 25 * 60 * 1000).toISOString() },
+    { id: 1, room: 'general', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Welcome to Fansphere everyone! Tervetuloa!', created_at: new Date(now - 25 * 60 * 1000).toISOString() },
     { id: 2, room: 'general', author: 'TurkuGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'What a match so far! Saka is on fire today 🔥', created_at: new Date(now - 20 * 60 * 1000).toISOString() },
     { id: 3, room: 'general', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'Watching live at Ravintola Hook with 15 other Finnish gooners 🍻', created_at: new Date(now - 15 * 60 * 1000).toISOString() },
     { id: 4, room: 'general', author: 'CityFan_99', author_flair: 'Man City', badge_color: '#06B6D4', content: 'City just equalized at St James Park! Haaland ⚽', created_at: new Date(now - 10 * 60 * 1000).toISOString() },
@@ -1835,6 +1835,36 @@ app.use('/static', express.static(staticDir, {
   }
 }));
 
+// PWA Manifest Routes
+app.get(['/manifest.json', '/manifest.webmanifest'], (_req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.sendFile(path.join(staticDir, 'manifest.json'));
+});
+
+// PWA Service Worker Route (Scoped to root '/')
+app.get('/sw.js', (_req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(staticDir, 'sw.js'));
+});
+
+// Root PWA Icons & Favicon
+app.get(['/pwa-192x192.png', '/pwa-512x512.png', '/pwa-maskable-512x512.png', '/apple-touch-icon.png', '/favicon.png'], (req, res) => {
+  const fileName = path.basename(req.path);
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(path.join(staticDir, fileName));
+});
+
+app.get(['/favicon.ico', '/icon.svg'], (req, res) => {
+  const fileName = req.path.endsWith('.svg') ? 'icon.svg' : 'favicon.png';
+  res.setHeader('Content-Type', req.path.endsWith('.svg') ? 'image/svg+xml' : 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(path.join(staticDir, fileName));
+});
+
 // Admin Page Route
 app.get('/admin', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -2139,11 +2169,23 @@ async function syncWithFirestore() {
     if (fsChats.status === 'fulfilled' && Array.isArray(fsChats.value) && fsChats.value.length > 0) {
       const existingChatIds = new Set(chatMessages.map(m => m.id));
       for (const m of fsChats.value) {
+        if (m && m.content && m.content.includes('ArseFinland FanSphere')) {
+          m.content = m.content.replace(/ArseFinland FanSphere/g, 'Fansphere');
+          saveChatMessageToFirestore(m).catch(() => {});
+        }
         if (!existingChatIds.has(m.id)) {
           chatMessages.push(m);
           existingChatIds.add(m.id);
           updated = true;
         }
+      }
+    }
+    // Ensure all existing in-memory chat messages are sanitized
+    for (const m of chatMessages) {
+      if (m && m.content && m.content.includes('ArseFinland FanSphere')) {
+        m.content = m.content.replace(/ArseFinland FanSphere/g, 'Fansphere');
+        updated = true;
+        saveChatMessageToFirestore(m).catch(() => {});
       }
     }
     const firestoreChatIds = new Set(

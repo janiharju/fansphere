@@ -1,4 +1,4 @@
-// FanSphere Admin Console Client Logic
+// Fansphere Admin Console Client Logic
 
 const adminState = {
   token: localStorage.getItem('fansphere_admin_token') || sessionStorage.getItem('fansphere_admin_token') || null,
@@ -241,7 +241,7 @@ function renderRealmsList() {
           href="/?realm=${encodeURIComponent(realm.name)}" 
           target="_blank" 
           class="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-750 p-2 rounded-xl border border-slate-700 transition"
-          title="Open this realm in FanSphere main view"
+          title="Open this realm in Fansphere main view"
         >
           <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
         </a>
