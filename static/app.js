@@ -250,7 +250,6 @@ function updateRealmSelectDropdowns() {
 document.addEventListener('DOMContentLoaded', async () => {
   initUserProfile();
   initLucide();
-  initAudio();
   initModalLightDismiss();
   initMobileTabs();
   initOnlineFansPopup();
