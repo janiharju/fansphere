@@ -56,125 +56,190 @@ function encodePng(width, height, rgbaBuffer) {
   return Buffer.concat([signature, ihdrChunk, idatChunk, iendChunk]);
 }
 
-// Draw a themed icon for FanSphere (ArseFinland)
-// Palette:
-// Dark Navy: #0B1120 (11, 17, 32)
-// Arsenal Red: #DC2626 (220, 38, 38)
-// Deep Crimson: #991B1B (153, 27, 27)
-// Arsenal Gold: #F59E0B (245, 158, 11)
-// White: #FFFFFF (255, 255, 255)
-function renderIconRgba(size, isMaskable = false) {
+// Check if (x, y) is inside tournament shield
+// Normalized coordinates: center = (0, 0), top = -1, bottom = 1, width roughly -0.8 to 0.8
+function inShield(nx, ny, scale = 1.0) {
+  const x = Math.abs(nx) / scale;
+  const y = (ny + 0.1) / scale; // shift slightly
+
+  // Top edge chevron / dip
+  const topEdge = -0.78 + (x * 0.14);
+  if (y < topEdge) return false;
+
+  // Bottom tapering curve
+  if (y > 0.88) return false;
+  if (y > 0.05) {
+    const bottomWidth = 0.65 * Math.pow(Math.max(0, 1 - ((y - 0.05) / 0.83)), 0.62);
+    if (x > bottomWidth) return false;
+  } else {
+    // Upper flank
+    if (x > 0.66) return false;
+  }
+
+  return true;
+}
+
+function renderCrestRgba(size, isMaskable = false) {
   const buf = Buffer.alloc(size * size * 4);
   const center = size / 2;
-  const radius = isMaskable ? size * 0.38 : size * 0.44;
-  const cornerRadius = size * 0.22;
+  const scale = isMaskable ? 0.72 : 0.88;
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const idx = (y * size + x) * 4;
-      const dx = x - center;
-      const dy = y - center;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const nx = (x - center) / (size * 0.5);
+      const ny = (y - center) / (size * 0.5);
 
-      // Background color:
-      // For maskable, entire canvas is deep navy-red gradient
-      // For any, rounded squircle or circle
-      let inCard = true;
-      if (!isMaskable) {
-        // Squircle shape
-        const absX = Math.abs(dx);
-        const absY = Math.abs(dy);
-        const half = size * 0.46;
-        if (absX > half || absY > half) {
-          inCard = false;
-        } else if (absX > half - cornerRadius && absY > half - cornerRadius) {
-          const cornerDist = Math.sqrt(
-            Math.pow(absX - (half - cornerRadius), 2) +
-            Math.pow(absY - (half - cornerRadius), 2)
-          );
-          if (cornerDist > cornerRadius) {
-            inCard = false;
-          }
-        }
+      // Default background for maskable: Dark Slate navy fill
+      if (isMaskable) {
+        buf[idx] = 11;
+        buf[idx + 1] = 17;
+        buf[idx + 2] = 32;
+        buf[idx + 3] = 255;
       }
 
-      if (!inCard) {
-        buf[idx] = 0;
-        buf[idx + 1] = 0;
-        buf[idx + 2] = 0;
-        buf[idx + 3] = 0;
+      // Check outer shield rim
+      const inOuter = inShield(nx, ny, scale);
+      if (!inOuter) {
         continue;
       }
 
-      // Base gradient: Deep Slate to Dark Navy
-      const gradRatio = (y / size);
-      let r = Math.round(15 + gradRatio * 8);
-      let g = Math.round(23 + gradRatio * 5);
-      let b = Math.round(42 - gradRatio * 15);
-      let a = 255;
+      // Check inner layers
+      const inNavyFrame = inShield(nx, ny, scale * 0.94);
+      const inWhiteLine = inShield(nx, ny, scale * 0.90);
+      const inInnerField = inShield(nx, ny, scale * 0.87);
 
-      // Outer Crest Shield / Circle (Arsenal Red & Gold)
-      const crestR = radius;
-      if (dist <= crestR) {
-        // Red crest disc
-        const redRatio = 1 - (dist / crestR);
-        r = Math.round(185 + redRatio * 45); // 185 to 230
-        g = Math.round(25 + redRatio * 20);
-        b = Math.round(25 + redRatio * 20);
+      let r = 245, g = 158, b = 11, a = 255; // Gold default
 
-        // Gold border ring
-        if (dist >= crestR - (size * 0.035) && dist <= crestR) {
+      if (!inNavyFrame) {
+        // Outer Gold Bevel
+        const grad = (ny + 1) / 2;
+        r = Math.round(252 - grad * 35);
+        g = Math.round(211 - grad * 70);
+        b = Math.round(77 - grad * 60);
+      } else if (!inWhiteLine) {
+        // Dark Navy border frame
+        r = 15;
+        g = 23;
+        b = 42;
+      } else if (!inInnerField) {
+        // White border line
+        r = 255;
+        g = 255;
+        b = 255;
+      } else {
+        // Inside Shield Field
+        const isLeft = nx < 0;
+        if (isLeft) {
+          // Left Half: Navy Blue (#1E293B to #0F172A)
+          const navyGrad = (ny + 1) / 2;
+          r = Math.round(30 - navyGrad * 15);
+          g = Math.round(41 - navyGrad * 18);
+          b = Math.round(59 - navyGrad * 20);
+        } else {
+          // Right Half: Crimson Red (#EF4444 to #991B1B)
+          const redGrad = (ny + 1) / 2;
+          r = Math.round(220 - redGrad * 40);
+          g = Math.round(38 - redGrad * 15);
+          b = Math.round(38 - redGrad * 15);
+        }
+
+        // Top Three Stars
+        // Center Star: nx ~ 0, ny ~ -0.42
+        const starDistCenter = Math.hypot(nx, ny + 0.42);
+        const starDistLeft = Math.hypot(nx + 0.22, ny + 0.38);
+        const starDistRight = Math.hypot(nx - 0.22, ny + 0.38);
+
+        if (starDistCenter < 0.055 || starDistLeft < 0.042 || starDistRight < 0.042) {
+          r = 253;
+          g = 230;
+          b = 138;
+        }
+
+        // Cheering Supporter Scarf Held Overhead
+        // Horizontal curve at ny ~ -0.28 to -0.20, nx from -0.42 to 0.42
+        const scarfY = -0.24 + Math.sin(Math.abs(nx) * Math.PI) * 0.06;
+        if (Math.abs(nx) < 0.42 && Math.abs(ny - scarfY) < 0.045) {
+          r = 254;
+          g = 240;
+          b = 138; // Gold scarf
+        }
+        // Scarf fringe tails
+        if (nx < -0.38 && nx > -0.48 && ny > -0.25 && ny < -0.10) {
+          r = 245; g = 158; b = 11;
+        }
+        if (nx > 0.38 && nx < 0.48 && ny > -0.25 && ny < -0.10) {
+          r = 245; g = 158; b = 11;
+        }
+
+        // Cheering Supporter Head: center at (0, -0.06)
+        const headDist = Math.hypot(nx, ny + 0.06);
+        if (headDist < 0.08) {
           r = 245;
           g = 158;
           b = 11;
-        } else if (dist >= crestR - (size * 0.045) && dist < crestR - (size * 0.035)) {
-          r = 251;
-          g = 191;
-          b = 36;
-        }
-      }
-
-      // Inner Football Motif / Cannon Shield
-      const ballR = radius * 0.58;
-      if (dist <= ballR) {
-        // Football white base
-        const ballGrad = (dy + ballR) / (2 * ballR);
-        r = Math.round(240 + (1 - ballGrad) * 15);
-        g = Math.round(242 + (1 - ballGrad) * 13);
-        b = Math.round(245 + (1 - ballGrad) * 10);
-
-        // Gold border for football
-        if (dist >= ballR - (size * 0.02) && dist <= ballR) {
-          r = 217;
-          g = 119;
-          b = 6;
         }
 
-        // Central dark pentagon
-        if (dist <= ballR * 0.38) {
-          r = 15;
-          g = 23;
-          b = 42;
-        } else {
-          // Seams / pentagon lines at angles
-          const angle = Math.atan2(dy, dx);
-          const angleNorm = (angle + 2 * Math.PI) % ((2 * Math.PI) / 5);
-          const seamDist = Math.abs(angleNorm - (Math.PI / 5));
-          if (dist > ballR * 0.38 && seamDist < 0.09) {
-            r = 30;
-            g = 41;
-            b = 59;
+        // Cheering Supporter Raised Arms (V-shape towards scarf)
+        const armLeftDist = Math.abs((ny - 0.05) - (nx * 0.85 + 0.1));
+        const armRightDist = Math.abs((ny - 0.05) - (-nx * 0.85 + 0.1));
+        if (ny > -0.24 && ny < 0.08) {
+          if (nx < -0.05 && nx > -0.35 && armLeftDist < 0.045) {
+            r = 245; g = 158; b = 11;
+          }
+          if (nx > 0.05 && nx < 0.35 && armRightDist < 0.045) {
+            r = 245; g = 158; b = 11;
           }
         }
-      }
 
-      // Small Red Star / Accent at top
-      const starY = center - radius * 0.76;
-      const starDist = Math.hypot(dx, y - starY);
-      if (starDist <= size * 0.032) {
-        r = 251;
-        g = 191;
-        b = 36;
+        // Cheering Supporter Torso: nx between -0.12 and 0.12, ny from 0.0 to 0.45
+        if (Math.abs(nx) < 0.10 && ny >= 0.0 && ny <= 0.45) {
+          r = 245;
+          g = 158;
+          b = 11;
+        }
+
+        // Football on Lower Right: center at (0.34, 0.30), radius ~ 0.20
+        const ballDist = Math.hypot(nx - 0.34, ny - 0.30);
+        if (ballDist < 0.20) {
+          // Ball Base: White
+          r = 255;
+          g = 255;
+          b = 255;
+
+          // Ball Red Center Pentagon
+          if (ballDist < 0.075) {
+            r = 220; g = 38; b = 38;
+          } else if (ballDist > 0.185) {
+            // Ball Red Rim
+            r = 185; g = 28; b = 28;
+          } else {
+            // Seams and patches
+            const bdx = nx - 0.34;
+            const bdy = ny - 0.30;
+            const bAngle = Math.atan2(bdy, bdx);
+            const bAngleNorm = (bAngle + 2 * Math.PI) % ((2 * Math.PI) / 5);
+            if (Math.abs(bAngleNorm - 0.62) < 0.12 && ballDist > 0.09 && ballDist < 0.17) {
+              r = 220; g = 38; b = 38;
+            }
+          }
+        }
+
+        // Lower Left Dynamic Swooshes (White and Gold ribbons)
+        const swoosh1 = (ny - 0.35) - (nx * 0.7);
+        if (nx < 0.15 && nx > -0.55 && Math.abs(swoosh1) < 0.035 && ballDist >= 0.20) {
+          r = 255; g = 255; b = 255; // White swoosh
+        }
+        const swoosh2 = (ny - 0.44) - (nx * 0.65);
+        if (nx < 0.25 && nx > -0.50 && Math.abs(swoosh2) < 0.045 && ballDist >= 0.20) {
+          r = 245; g = 158; b = 11; // Gold swoosh
+        }
+
+        // Bottom Star: center at (0, 0.66)
+        const starDistBottom = Math.hypot(nx, ny - 0.66);
+        if (starDistBottom < 0.038) {
+          r = 253; g = 230; b = 138;
+        }
       }
 
       buf[idx] = r;
@@ -189,27 +254,27 @@ function renderIconRgba(size, isMaskable = false) {
 
 const staticDir = path.resolve(process.cwd(), 'static');
 
-// 1. Generate 192x192
-const buf192 = renderIconRgba(192, false);
+// 1. Generate 192x192 PNG
+const buf192 = renderCrestRgba(192, false);
 fs.writeFileSync(path.join(staticDir, 'pwa-192x192.png'), encodePng(192, 192, buf192));
 console.log('Generated pwa-192x192.png');
 
-// 2. Generate 512x512
-const buf512 = renderIconRgba(512, false);
+// 2. Generate 512x512 PNG
+const buf512 = renderCrestRgba(512, false);
 fs.writeFileSync(path.join(staticDir, 'pwa-512x512.png'), encodePng(512, 512, buf512));
 console.log('Generated pwa-512x512.png');
 
-// 3. Generate 512x512 Maskable (with safe zone margin)
-const bufMaskable = renderIconRgba(512, true);
+// 3. Generate 512x512 Maskable PNG
+const bufMaskable = renderCrestRgba(512, true);
 fs.writeFileSync(path.join(staticDir, 'pwa-maskable-512x512.png'), encodePng(512, 512, bufMaskable));
 console.log('Generated pwa-maskable-512x512.png');
 
-// 4. Generate 180x180 Apple Touch Icon
-const buf180 = renderIconRgba(180, false);
+// 4. Generate 180x180 Apple Touch Icon PNG
+const buf180 = renderCrestRgba(180, false);
 fs.writeFileSync(path.join(staticDir, 'apple-touch-icon.png'), encodePng(180, 180, buf180));
 console.log('Generated apple-touch-icon.png');
 
-// 5. Generate 64x64 favicon
-const buf64 = renderIconRgba(64, false);
+// 5. Generate 64x64 favicon PNG
+const buf64 = renderCrestRgba(64, false);
 fs.writeFileSync(path.join(staticDir, 'favicon.png'), encodePng(64, 64, buf64));
 console.log('Generated favicon.png');
