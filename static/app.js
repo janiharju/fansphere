@@ -136,7 +136,7 @@ function updateGateState() {
   const mainApp = document.getElementById('mainAppContent');
   const gateView = document.getElementById('sessionGateView');
   const mobileNav = document.getElementById('mobileNavTabs');
-  const navUserControls = document.getElementById('navUserControls');
+  const navUserControls = document.getElementById('navUserControls') || document.getElementById('openProfileModalBtn');
   const modal = document.getElementById('sessionPromptModal');
 
   if (isAuthed) {
@@ -321,28 +321,6 @@ function initLucide() {
   if (window.lucide) {
     window.lucide.createIcons();
   }
-}
-
-// Web Audio API chime (synthesized zero-dependency sound)
-let audioCtx = null;
-function initAudio() {
-  const updateSoundIcon = () => {
-    const btn = document.getElementById('soundToggleBtn');
-    if (btn) {
-      btn.innerHTML = state.soundEnabled 
-        ? '<i data-lucide="volume-2" class="w-5 h-5"></i>' 
-        : '<i data-lucide="volume-x" class="w-5 h-5 text-slate-500"></i>';
-      initLucide();
-    }
-  };
-  updateSoundIcon();
-
-  document.getElementById('soundToggleBtn')?.addEventListener('click', () => {
-    state.soundEnabled = !state.soundEnabled;
-    localStorage.setItem('fansphere_sound', state.soundEnabled);
-    updateSoundIcon();
-    if (state.soundEnabled) playChime(660, 0.08);
-  });
 }
 
 function playChime(freq = 587.33, duration = 0.12) {
