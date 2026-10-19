@@ -274,6 +274,34 @@
         }
       },
       "required": ["id", "name", "created_at"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User mention notification",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique notification ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Recipient user nickname"
+        },
+        "messageId": {
+          "type": "number",
+          "description": "Reference to chat message ID"
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Read status"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp"
+        }
+      },
+      "required": ["id", "userId", "messageId", "read", "created_at"]
     }
   },
   "firestore": {
@@ -300,6 +328,10 @@
     "/realms/{realmId}": {
       "schema": "ClubRealm",
       "description": "Club realms available on the platform"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User mention notifications"
     }
   }
 }

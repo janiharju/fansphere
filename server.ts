@@ -18,6 +18,9 @@ import {
   saveRealmToFirestore,
   saveUserToFirestore,
   loadUsersFromFirestore,
+  saveNotificationToFirestore,
+  updateNotificationReadStatusInFirestore,
+  loadNotificationsFromFirestore,
   db
 } from './firestoreService.js';
 import { doc, getDoc } from 'firebase/firestore';
@@ -92,6 +95,29 @@ interface ChatMessage {
   content: string;
   created_at: string;
   reactions?: Record<string, string[]>;
+  realm?: string;
+  mentions?: string[];
+}
+
+interface Notification {
+  id: string;
+  userId: string;
+  messageId: number;
+  read: boolean;
+  created_at: string;
+}
+
+function extractMentions(text: string): string[] {
+  const matches = text.match(/(?:^|\s)@([a-zA-Z0-9_\-\.\u00C0-\u017F]+)/g);
+  if (!matches) return [];
+  const list: string[] = [];
+  for (const m of matches) {
+    const clean = m.trim().replace(/^@/, '');
+    if (clean && !list.includes(clean)) {
+      list.push(clean);
+    }
+  }
+  return list;
 }
 
 // Initial seed generators
@@ -824,7 +850,8 @@ function broadcastPresence() {
   broadcast({
     type: 'presence',
     online_count: active.length,
-    active_nicknames: active.map(s => s.nickname)
+    active_nicknames: active.map(s => s.nickname),
+    active_users: active.map(s => ({ nickname: s.nickname, flair: s.flair }))
   });
 }
 
@@ -1151,7 +1178,8 @@ app.get('/api/presence', (_req, res) => {
   const active = getActiveSessions();
   res.json({
     online_count: active.length,
-    active_nicknames: active.map(s => s.nickname)
+    active_nicknames: active.map(s => s.nickname),
+    active_users: active.map(s => ({ nickname: s.nickname, flair: s.flair }))
   });
 });
 
@@ -1495,20 +1523,38 @@ app.post('/api/chat/message', (req, res) => {
 
   const assignedChatId = Math.max(nextChatId++, ...chatMessages.map(m => m.id + 1), 1);
   nextChatId = assignedChatId + 1;
+  const trimmedContent = content.trim();
+  const extractedMentions: string[] = extractMentions(trimmedContent);
+
   const msg: ChatMessage = {
     id: assignedChatId,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
     author_flair: session.flair || 'ArseFinland Official Member',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
-    content: content.trim(),
+    content: trimmedContent,
     created_at: new Date().toISOString(),
-    reactions: {}
+    reactions: {},
+    realm: session.flair || 'ArseFinland Official Member',
+    mentions: extractedMentions
   };
 
   chatMessages.push(msg);
   forceSaveNow();
   saveChatMessageToFirestore(msg).catch(err => console.error('[Firestore] Chat save error:', err));
+  
+  if (extractedMentions.length > 0) {
+    for (const mentionNick of extractedMentions) {
+      const notification: Notification = {
+        id: crypto.randomUUID(),
+        userId: mentionNick,
+        messageId: assignedChatId,
+        read: false,
+        created_at: new Date().toISOString()
+      };
+      saveNotificationToFirestore(notification).catch(err => console.error('[Firestore] Notification save error:', err));
+    }
+  }
 
   broadcast({
     type: 'chat_message',
@@ -1516,6 +1562,23 @@ app.post('/api/chat/message', (req, res) => {
   });
 
   res.status(201).json(msg);
+});
+
+// Notifications API
+app.get('/api/notifications', async (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) return res.status(401).json({ detail: 'Session required' });
+  
+  const notifications = await loadNotificationsFromFirestore(session.nickname);
+  res.json(notifications);
+});
+
+app.post('/api/notifications/:id/read', async (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) return res.status(401).json({ detail: 'Session required' });
+  
+  await updateNotificationReadStatusInFirestore(req.params.id, true);
+  res.status(204).send();
 });
 
 // 8b. Emoji Reaction on Chat Message
@@ -1962,6 +2025,8 @@ wss.on('connection', (ws: WebSocket) => {
         const payload = msg.payload || {};
         const content = (payload.content || '').trim();
         if (content) {
+          const extractedMentions: string[] = extractMentions(content);
+
           const newChat: ChatMessage = {
             id: nextChatId++,
             room: payload.room || 'general',
@@ -1969,11 +2034,28 @@ wss.on('connection', (ws: WebSocket) => {
             author_flair: session.flair || 'ArseFinland Official Member',
             badge_color: payload.badge_color || '#EF4444',
             content,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            reactions: {},
+            realm: session.flair || 'ArseFinland Official Member',
+            mentions: extractedMentions
           };
           chatMessages.push(newChat);
           scheduleSave();
           saveChatMessageToFirestore(newChat).catch(err => console.error('[Firestore] WS chat save error:', err));
+          
+          if (extractedMentions.length > 0) {
+            for (const mentionNick of extractedMentions) {
+              const notification: Notification = {
+                id: crypto.randomUUID(),
+                userId: mentionNick,
+                messageId: newChat.id,
+                read: false,
+                created_at: new Date().toISOString()
+              };
+              saveNotificationToFirestore(notification).catch(err => console.error('[Firestore] Notification save error:', err));
+            }
+          }
+
           broadcast({
             type: 'chat_message',
             data: newChat

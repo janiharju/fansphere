@@ -55,6 +55,7 @@ const state = {
   allChatMessages: [],
   renderedChatIds: new Set(),
   activeNicknames: [],
+  activeUsers: [],
   lastRenderedPagination: {},
   lastRenderedPostIds: []
 };
@@ -255,6 +256,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initOnlineFansPopup();
   initSessionAutoRefresh();
   initEventHandlers();
+  initChatMentions();
+  initNotifications();
   loadPresence();
   initPWA();
 
@@ -321,6 +324,9 @@ function initLucide() {
     window.lucide.createIcons();
   }
 }
+
+// Web Audio API chime (synthesized zero-dependency sound)
+let audioCtx = null;
 
 function playChime(freq = 587.33, duration = 0.12) {
   if (!state.soundEnabled) return;
@@ -625,13 +631,16 @@ function openSessionPromptModal(reason = 'new') {
   }
 }
 
-function updateOnlinePresence(count, nicknames = []) {
+function updateOnlinePresence(count, nicknames = [], activeUsers = []) {
   const countEl = document.getElementById('onlineCountBadge');
   const tooltipCount = document.getElementById('tooltipActiveCount');
   const listEl = document.getElementById('onlineFansList');
 
   if (Array.isArray(nicknames) && nicknames.length > 0) {
     state.activeNicknames = nicknames;
+  }
+  if (Array.isArray(activeUsers) && activeUsers.length > 0) {
+    state.activeUsers = activeUsers;
   }
 
   const fansCount = count !== undefined
@@ -737,7 +746,7 @@ async function loadPresence() {
     const res = await fetch('/api/presence');
     if (res.ok) {
       const data = await res.json();
-      updateOnlinePresence(data.online_count, data.active_nicknames);
+      updateOnlinePresence(data.online_count, data.active_nicknames, data.active_users);
     }
   } catch (err) {
     console.debug('Failed to load initial presence', err);
@@ -756,7 +765,7 @@ function initSessionAutoRefresh() {
         });
         if (res.ok) {
           const data = await res.json();
-          updateOnlinePresence(data.online_count, data.active_nicknames);
+          updateOnlinePresence(data.online_count, data.active_nicknames, data.active_users);
         } else if (res.status === 401) {
           state.sessionId = null;
           state.session = null;
@@ -831,7 +840,7 @@ function handleWebSocketMessage(msg) {
   console.log('WS message received:', msg.type);
   switch (msg.type) {
     case 'presence':
-      updateOnlinePresence(msg.online_count, msg.active_nicknames);
+      updateOnlinePresence(msg.online_count, msg.active_nicknames, msg.active_users);
       break;
 
     case 'auth_success':
@@ -1467,7 +1476,9 @@ function handleIncomingChatMessage(chatData) {
   if (state.selectedRealm === 'All' || matchClubRealm(chatData.author_flair, effective)) {
     appendChatMessage(chatData, true, true);
     initLucide();
-    playChime(523.25, 0.1);
+    if (!chatData._isMentionHighlight) {
+      playChime(523.25, 0.1);
+    }
   }
 }
 
@@ -1533,20 +1544,50 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
   const reactions = msg.reactions || {};
   const hasReactions = Object.values(reactions).some(arr => Array.isArray(arr) && arr.length > 0);
 
+  // Mention validation: ONLY inside selected club realm!
+  const effectiveRealm = getEffectiveRealm();
+  const isSenderInRealm = matchClubRealm(msg.author_flair, effectiveRealm);
+  const isUserInRealm = matchClubRealm(state.user?.flair, effectiveRealm);
+  const currentNick = state.user?.handle;
+  let isMentioned = false;
+
+  if (!isSelf && currentNick && msg.content && isSenderInRealm && isUserInRealm) {
+    const escapedNick = currentNick.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const mentionRegex = new RegExp(`(^|\\s)@${escapedNick}(\\b|\\s|$)`, 'i');
+    isMentioned = mentionRegex.test(msg.content);
+  }
+
+  msg._isMentionHighlight = isMentioned;
+
   const msgDiv = document.createElement('div');
-  msgDiv.className = `${isNew ? 'chat-msg-enter ' : ''}flex flex-col space-y-0.5 shrink-0 group/msg relative`;
+  msgDiv.className = `${isNew ? 'chat-msg-enter ' : ''}flex flex-col space-y-0.5 shrink-0 group/msg relative transition-all duration-300 ${
+    isMentioned 
+      ? 'p-2 rounded-xl border-2 border-amber-500/90 bg-gradient-to-r from-amber-950/60 via-slate-900 to-amber-950/30 shadow-lg shadow-amber-500/15 ring-1 ring-amber-400/50' 
+      : ''
+  }`;
   if (msg.id) msgDiv.dataset.chatId = msg.id;
+  if (isMentioned) msgDiv.dataset.mentioned = 'true';
+
   msgDiv.innerHTML = `
+    ${isMentioned ? `
+      <div class="mention-indicator flex items-center gap-1.5 mb-1 text-[10px] font-extrabold text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded-full w-fit shadow-sm select-none">
+        <i data-lucide="at-sign" class="w-3 h-3 text-amber-400 shrink-0"></i>
+        <span>Mentioned you in <span class="text-amber-200 underline">${escapeHtml(getRealmDisplayName(effectiveRealm))}</span></span>
+      </div>
+    ` : ''}
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
-      <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : ''}">${escapeHtml(msg.author)}</span>
+      <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : (isMentioned ? 'text-amber-300' : '')}">${escapeHtml(msg.author)}</span>
       <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'ArseFinland Official Member')}</span>
       <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
 
     <!-- Message Bubble with Right-Hand Action Buttons -->
     <div class="chat-msg-row flex items-stretch gap-1 relative w-full">
-      <div class="chat-bubble flex-1 min-w-0 w-full bg-slate-900/90 text-slate-100 px-2 py-0.5 rounded-lg border border-slate-700/60 leading-snug break-words shadow-sm text-xs h-auto min-h-full flex flex-col justify-center"><div class="chat-msg-text whitespace-pre-wrap break-words leading-snug">${formatLightweightMarkdown(msg.content)}</div><div class="chat-reactions-container flex flex-wrap items-center gap-1 mt-0.5 ${hasReactions ? '' : 'hidden'}" data-msg-id="${msg.id}">${renderReactionsHtml(msg.id, reactions)}</div></div>
+      <div class="chat-bubble flex-1 min-w-0 w-full ${isMentioned ? 'bg-slate-900/95 border-amber-500/60' : 'bg-slate-900/90 border-slate-700/60'} text-slate-100 px-2 py-0.5 rounded-lg border leading-snug break-words shadow-sm text-xs h-auto min-h-full flex flex-col justify-center">
+        <div class="chat-msg-text whitespace-pre-wrap break-words leading-snug">${formatLightweightMarkdown(msg.content)}</div>
+        <div class="chat-reactions-container flex flex-wrap items-center gap-1 mt-0.5 ${hasReactions ? '' : 'hidden'}" data-msg-id="${msg.id}">${renderReactionsHtml(msg.id, reactions)}</div>
+      </div>
 
       <!-- Action Buttons on the Right Side of the Message Div (Vertically Aligned) -->
       <div class="flex flex-col items-center justify-center gap-0.5 shrink-0 self-stretch opacity-90 sm:opacity-40 group-hover/msg:opacity-100 focus-within:opacity-100 transition">
@@ -1575,8 +1616,20 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
   `;
 
   container.appendChild(msgDiv);
-  if (autoScroll) {
-    requestAnimationFrame(() => scrollChatToBottom());
+
+  if (isMentioned && isNew) {
+    playChime(659.25, 0.2);
+    setTimeout(() => playChime(880, 0.2), 120);
+
+    const origTitle = document.title;
+    if (!origTitle.startsWith('(@')) {
+      document.title = `(@ Mention) ${origTitle}`;
+      setTimeout(() => { document.title = origTitle; }, 4000);
+    }
+  }
+
+  if (autoScroll || isMentioned) {
+    requestAnimationFrame(() => scrollChatToBottom(Boolean(isMentioned)));
   }
 }
 
@@ -2661,6 +2714,14 @@ function initEventHandlers() {
   chatInput?.addEventListener('input', autoResizeChatInput);
 
   chatInput?.addEventListener('keydown', (e) => {
+    // If mention popup is active, allow arrow/enter/tab navigation without submitting the form
+    const mentionPopup = document.getElementById('mentionAutocompletePopup');
+    if (mentionPopup && !mentionPopup.classList.contains('hidden')) {
+      if (['Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'Escape'].includes(e.key)) {
+        return;
+      }
+    }
+
     // Enter sends message directly without creating a new line; Shift+Enter creates a new line
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -2677,6 +2738,8 @@ function initEventHandlers() {
 
   chatForm?.addEventListener('submit', (e) => {
     e.preventDefault();
+    const mentionPopup = document.getElementById('mentionAutocompletePopup');
+    if (mentionPopup) mentionPopup.classList.add('hidden');
     const text = chatInput.value.trim();
     if (text) {
       sendChatMessage(text);
@@ -2805,6 +2868,11 @@ function formatLightweightMarkdown(rawText) {
 
   // 7. Auto-link URLs
   formatted = formatted.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-red-400 hover:text-red-300 underline underline-offset-2 break-all">$1</a>');
+
+  // 8. Mentions: @Username
+  formatted = formatted.replace(/(^|\s)@([a-zA-Z0-9_\-\.\u00C0-\u017F]+)/g, (match, prefix, username) => {
+    return `${prefix}<span class="chat-mention inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md font-bold text-amber-300 bg-amber-950/60 border border-amber-800/60 hover:bg-amber-900/60 transition cursor-pointer select-none" data-mention="${username}" title="Mention: @${username}">@${username}</span>`;
+  });
 
   return formatted;
 }
@@ -3009,5 +3077,310 @@ function initPWA() {
   if (!navigator.onLine && offlineIndicator) {
     offlineIndicator.classList.remove('hidden');
   }
+}
+
+// ==================== CHAT MENTIONS IN SELECTED CLUB REALM ====================
+
+function getFansInSelectedRealm() {
+  const effective = getEffectiveRealm();
+  const fanMap = new Map(); // lowercase username -> { nickname, flair, isOnline }
+
+  // 1. Add users from activeUsers if available
+  if (Array.isArray(state.activeUsers)) {
+    for (const u of state.activeUsers) {
+      if (u && u.nickname && matchClubRealm(u.flair, effective)) {
+        fanMap.set(u.nickname.toLowerCase(), {
+          nickname: u.nickname,
+          flair: u.flair || effective,
+          isOnline: true
+        });
+      }
+    }
+  }
+
+  // 2. Add users from activeNicknames
+  if (Array.isArray(state.activeNicknames)) {
+    for (const nick of state.activeNicknames) {
+      if (nick && !fanMap.has(nick.toLowerCase())) {
+        const msg = state.allChatMessages.find(m => m.author.toLowerCase() === nick.toLowerCase());
+        const flair = msg ? msg.author_flair : effective;
+        if (matchClubRealm(flair, effective)) {
+          fanMap.set(nick.toLowerCase(), {
+            nickname: nick,
+            flair: flair,
+            isOnline: true
+          });
+        }
+      }
+    }
+  }
+
+  // 3. Add users from recent chat messages in this realm
+  if (Array.isArray(state.allChatMessages)) {
+    for (const m of state.allChatMessages) {
+      if (m && m.author && matchClubRealm(m.author_flair, effective)) {
+        const key = m.author.toLowerCase();
+        if (!fanMap.has(key)) {
+          fanMap.set(key, {
+            nickname: m.author,
+            flair: m.author_flair,
+            isOnline: state.activeNicknames?.some(n => n.toLowerCase() === key) || false
+          });
+        }
+      }
+    }
+  }
+
+  // 4. Add users from forum posts/comments in this realm
+  if (Array.isArray(state.posts)) {
+    for (const p of state.posts) {
+      if (p && p.author && matchClubRealm(p.author_flair, effective)) {
+        const key = p.author.toLowerCase();
+        if (!fanMap.has(key)) {
+          fanMap.set(key, {
+            nickname: p.author,
+            flair: p.author_flair,
+            isOnline: state.activeNicknames?.some(n => n.toLowerCase() === key) || false
+          });
+        }
+      }
+    }
+  }
+
+  // Exclude current user from mention candidates
+  const currentHandle = (state.user?.handle || '').toLowerCase();
+  fanMap.delete(currentHandle);
+
+  // Return sorted list: online fans first, then alphabetical
+  return Array.from(fanMap.values()).sort((a, b) => {
+    if (a.isOnline && !b.isOnline) return -1;
+    if (!a.isOnline && b.isOnline) return 1;
+    return a.nickname.localeCompare(b.nickname);
+  });
+}
+
+function initChatMentions() {
+  const chatInput = document.getElementById('chatInput');
+  const popup = document.getElementById('mentionAutocompletePopup');
+  const list = document.getElementById('mentionSuggestionsList');
+  const realmLabel = document.getElementById('mentionRealmName');
+  if (!chatInput || !popup || !list) return;
+
+  let activeIndex = 0;
+  let currentCandidates = [];
+  let tokenMatch = null;
+
+  function hidePopup() {
+    popup.classList.add('hidden');
+    currentCandidates = [];
+    tokenMatch = null;
+    activeIndex = 0;
+  }
+
+  function renderSuggestions() {
+    const effectiveRealm = getEffectiveRealm();
+    if (realmLabel) {
+      realmLabel.textContent = getRealmDisplayName(effectiveRealm);
+    }
+
+    if (currentCandidates.length === 0) {
+      list.innerHTML = `
+        <div class="p-3 text-center text-slate-400 text-xs">
+          <p class="font-medium text-slate-300">No matching fans in <span class="text-amber-400 font-bold">${escapeHtml(getRealmDisplayName(effectiveRealm))}</span> realm.</p>
+          <p class="text-[10px] text-slate-500 mt-1">Mentions only work between supporters of the same club realm.</p>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = currentCandidates.map((fan, idx) => {
+      const isSelected = idx === activeIndex;
+      const badgeColor = getFlairBadgeColor(fan.flair);
+      return `
+        <div 
+          class="mention-item flex items-center gap-2 p-1.5 rounded-xl cursor-pointer transition select-none ${
+            isSelected 
+              ? 'bg-amber-500/20 border border-amber-500/60 text-white' 
+              : 'hover:bg-slate-800 text-slate-200'
+          }"
+          data-index="${idx}"
+        >
+          <div class="relative shrink-0">
+            <div class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-sm" style="background-color: ${badgeColor}">
+              ${escapeHtml((fan.nickname || 'F').slice(0, 1).toUpperCase())}
+            </div>
+            ${fan.isOnline ? '<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-slate-900"></span>' : ''}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-xs truncate ${isSelected ? 'text-amber-300' : 'text-slate-100'}">@${escapeHtml(fan.nickname)}</span>
+              ${fan.isOnline ? '<span class="text-[9px] text-emerald-400 font-semibold bg-emerald-950/80 px-1 py-0.2 rounded border border-emerald-800/60">online</span>' : ''}
+            </div>
+            <div class="text-[10px] text-slate-400 truncate">${escapeHtml(getRealmDisplayName(fan.flair))}</div>
+          </div>
+          <div class="text-[10px] text-slate-500 shrink-0 hidden sm:block">↵ Select</div>
+        </div>
+      `;
+    }).join('');
+    initLucide();
+  }
+
+  function applyMention(fan) {
+    if (!fan || !tokenMatch) return;
+    const text = chatInput.value;
+    const beforeToken = text.slice(0, tokenMatch.tokenStart);
+    const afterToken = text.slice(tokenMatch.tokenEnd);
+    const replacement = `@${fan.nickname} `;
+    chatInput.value = beforeToken + replacement + afterToken;
+    const newPos = beforeToken.length + replacement.length;
+    chatInput.selectionStart = newPos;
+    chatInput.selectionEnd = newPos;
+    chatInput.focus();
+    hidePopup();
+  }
+
+  function checkTrigger() {
+    const text = chatInput.value;
+    const caret = chatInput.selectionStart;
+    const textBefore = text.slice(0, caret);
+
+    // Look for @query immediately preceding cursor
+    const match = textBefore.match(/(?:^|\s)@([a-zA-Z0-9_\-\.\u00C0-\u017F]*)$/);
+    if (!match) {
+      hidePopup();
+      return;
+    }
+
+    const query = match[1].toLowerCase();
+    const tokenStart = caret - match[1].length - 1; // index of '@'
+    const tokenEnd = caret;
+    tokenMatch = { tokenStart, tokenEnd, query };
+
+    const realmFans = getFansInSelectedRealm();
+    currentCandidates = realmFans.filter(f => f.nickname.toLowerCase().includes(query));
+
+    activeIndex = 0;
+    renderSuggestions();
+    popup.classList.remove('hidden');
+  }
+
+  chatInput.addEventListener('input', checkTrigger);
+  chatInput.addEventListener('click', checkTrigger);
+  chatInput.addEventListener('keyup', (e) => {
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) return;
+    checkTrigger();
+  });
+
+  chatInput.addEventListener('keydown', (e) => {
+    if (popup.classList.contains('hidden') || currentCandidates.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % currentCandidates.length;
+      renderSuggestions();
+      const el = list.children[activeIndex];
+      el?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + currentCandidates.length) % currentCandidates.length;
+      renderSuggestions();
+      const el = list.children[activeIndex];
+      el?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      if (currentCandidates.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyMention(currentCandidates[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      hidePopup();
+    }
+  });
+
+  // Clicking a suggestion item
+  list.addEventListener('click', (e) => {
+    const item = e.target.closest('.mention-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.index, 10);
+    if (!isNaN(idx) && currentCandidates[idx]) {
+      applyMention(currentCandidates[idx]);
+    }
+  });
+
+  // Close popup if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!popup.contains(e.target) && e.target !== chatInput) {
+      hidePopup();
+    }
+  });
+
+  // Clicking on any @mention chip in messages inserts reply mention
+  document.addEventListener('click', (e) => {
+    const tag = e.target.closest('.chat-mention');
+    if (!tag) return;
+    const targetMention = tag.dataset.mention;
+    if (targetMention) {
+      const input = document.getElementById('chatInput');
+      if (input) {
+        const val = input.value.trim();
+        input.value = val ? `${val} @${targetMention} ` : `@${targetMention} `;
+        input.focus();
+        input.selectionStart = input.value.length;
+        input.selectionEnd = input.value.length;
+      }
+    }
+  });
+}
+
+function initNotifications() {
+  const bell = document.getElementById('notificationsBell');
+  const popup = document.getElementById('notificationsPopup');
+  const list = document.getElementById('notificationsList');
+  const badge = document.getElementById('unreadNotificationsBadge');
+  if (!bell || !popup || !list) return;
+
+  function togglePopup() {
+    popup.classList.toggle('hidden');
+  }
+
+  bell.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePopup();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!popup.contains(e.target) && e.target !== bell) {
+      popup.classList.add('hidden');
+    }
+  });
+
+  async function fetchNotifications() {
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: { 'x-session-id': state.sessionId || '' }
+      });
+      if (!res.ok) return;
+      const notifications = await res.json();
+      
+      if (notifications.length > 0) {
+        badge.classList.remove('hidden');
+        list.innerHTML = notifications.map(n => `
+          <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}">
+            <div class="font-semibold text-slate-100">Mentioned in chat</div>
+            <div class="text-[10px] text-slate-400">${formatRelativeTime(n.created_at)}</div>
+          </div>
+        `).join('');
+      } else {
+        badge.classList.add('hidden');
+        list.innerHTML = '<div class="text-slate-500 text-center py-4 italic">No new notifications</div>';
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications', err);
+    }
+  }
+
+  fetchNotifications();
+  setInterval(fetchNotifications, 60000); // Check every minute
 }
 

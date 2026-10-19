@@ -7,6 +7,7 @@ import {
   updateDoc,
   collection,
   query,
+  where,
   orderBy,
   limit,
   Firestore
@@ -259,6 +260,46 @@ export async function loadUsersFromFirestore(): Promise<any[]> {
   }
 }
 
+export async function persistNotificationToFirestore(notification: any) {
+  try {
+    const ref = doc(db, 'notifications', String(notification.id));
+    const cleanNotification = {
+      id: String(notification.id),
+      userId: String(notification.userId || '').trim(),
+      messageId: Number(notification.messageId),
+      read: Boolean(notification.read),
+      created_at: String(notification.created_at || new Date().toISOString())
+    };
+    await setDoc(ref, cleanNotification);
+  } catch (err) {
+    console.warn(`[Firestore] Failed to persist notification ${notification.id}:`, err);
+  }
+}
+
+export async function updateNotificationReadStatusInFirestore(notificationId: string, read: boolean) {
+  try {
+    const ref = doc(db, 'notifications', String(notificationId));
+    await updateDoc(ref, { read: Boolean(read) });
+  } catch (err) {
+    console.warn(`[Firestore] Failed to update notification ${notificationId}:`, err);
+  }
+}
+
+export async function loadNotificationsFromFirestore(userId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'notifications'), where('userId', '==', userId), orderBy('created_at', 'desc'));
+    const snapshot = await getDocs(q);
+    const list: any[] = [];
+    snapshot.forEach(docSnap => {
+      list.push(docSnap.data());
+    });
+    return list;
+  } catch (err) {
+    console.warn('[Firestore] Could not load notifications collection:', err);
+    return [];
+  }
+}
+
 // Aliases for seamless imports
 export const fetchAllPostsFromFirestore = loadPostsFromFirestore;
 export const savePostToFirestore = persistPostToFirestore;
@@ -272,5 +313,7 @@ export const fetchAllRealmsFromFirestore = loadRealmsFromFirestore;
 export const saveRealmToFirestore = persistRealmToFirestore;
 export const fetchAllUsersFromFirestore = loadUsersFromFirestore;
 export const saveUserToFirestore = persistUserToFirestore;
+export const saveNotificationToFirestore = persistNotificationToFirestore;
+
 
 

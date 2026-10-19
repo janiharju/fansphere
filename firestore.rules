@@ -96,6 +96,16 @@ service cloud.firestore {
              (!('last_updated_at' in data) || (data.last_updated_at is string && data.last_updated_at.size() <= 100));
     }
 
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'userId', 'messageId', 'read', 'created_at']) &&
+             data.keys().hasOnly(['id', 'userId', 'messageId', 'read', 'created_at']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 100 &&
+             data.messageId is number &&
+             data.read is bool &&
+             data.created_at is string && data.created_at.size() <= 100;
+    }
+
     match /posts/{postId} {
       allow get, list: if true;
       allow create: if isValidId(postId) && isValidPost(incoming());
@@ -143,6 +153,14 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isValidId(realmId) && isValidRealm(incoming());
       allow update: if isValidId(realmId) && isValidRealm(incoming()) && incoming().id == existing().id;
+      allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() && resource.data.userId == request.auth.token.nickname;
+      allow create: if isValidId(notificationId) && isValidNotification(incoming());
+      allow update: if isValidId(notificationId) && isValidNotification(incoming()) && incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['read']);
       allow delete: if false;
     }
   }
