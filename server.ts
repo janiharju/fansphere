@@ -1492,13 +1492,14 @@ app.post('/api/comments/:id/vote', (req, res) => {
 });
 
 // 7. Chat History (Filterable by room and club realm)
-app.get('/api/chat/history', (req, res) => {
+app.get('/api/chat/history', async (req, res) => {
   console.log('API Request: /api/chat/history', req.query);
   const room = (req.query.room as string) || 'general';
   const realm = req.query.realm as string | undefined;
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
-  let roomMessages = chatMessages.filter(m => m.room === room);
+  const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore();
+  let roomMessages = chatMessagesFromFirestore.filter(m => m.room === room);
   if (realm && realm.toLowerCase() !== 'all') {
     roomMessages = roomMessages.filter(m => matchClubRealm(m.author_flair, realm));
   }

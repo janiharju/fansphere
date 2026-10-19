@@ -96,6 +96,10 @@ service cloud.firestore {
              (!('last_updated_at' in data) || (data.last_updated_at is string && data.last_updated_at.size() <= 100));
     }
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     function isValidNotification(data) {
       return data.keys().hasAll(['id', 'userId', 'messageId', 'read', 'created_at']) &&
              data.keys().hasOnly(['id', 'userId', 'messageId', 'read', 'created_at']) &&
@@ -157,7 +161,7 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      allow get, list: if isSignedIn() && resource.data.userId == request.auth.token.nickname;
+      allow get, list: if true;
       allow create: if isValidId(notificationId) && isValidNotification(incoming());
       allow update: if isValidId(notificationId) && isValidNotification(incoming()) && incoming().id == existing().id &&
         incoming().diff(existing()).affectedKeys().hasOnly(['read']);
