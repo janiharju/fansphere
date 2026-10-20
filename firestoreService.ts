@@ -285,6 +285,20 @@ export async function updateNotificationReadStatusInFirestore(notificationId: st
   }
 }
 
+export async function updateAllNotificationsReadStatusInFirestore(userId: string) {
+  try {
+    const q = query(collection(db, 'notifications'), where('userId', '==', userId), where('read', '==', false));
+    const snapshot = await getDocs(q);
+    const batch: Promise<void>[] = [];
+    snapshot.forEach(docSnap => {
+      batch.push(updateDoc(docSnap.ref, { read: true }));
+    });
+    await Promise.all(batch);
+  } catch (err) {
+    console.warn(`[Firestore] Failed to update all notifications for ${userId}:`, err);
+  }
+}
+
 export async function loadNotificationsFromFirestore(userId: string): Promise<any[]> {
   try {
     const q = query(collection(db, 'notifications'), where('userId', '==', userId), orderBy('created_at', 'desc'));

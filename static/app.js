@@ -3344,17 +3344,48 @@ function initNotifications() {
     popup.classList.toggle('hidden');
   }
 
+  async function markAsRead(notificationId) {
+    try {
+      await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: { 'x-session-id': state.sessionId || '' }
+      });
+      fetchNotifications();
+    } catch (err) {
+      console.error('Failed to mark notification as read', err);
+    }
+  }
+
   bell.addEventListener('click', (e) => {
     e.stopPropagation();
     togglePopup();
   });
 
-  list.addEventListener('click', (e) => {
+  list.addEventListener('click', async (e) => {
     const item = e.target.closest('[data-message-id]');
+    const isClearAll = e.target.closest('#clearAllNotificationsBtn');
+    
+    if (isClearAll) {
+      try {
+        await fetch('/api/notifications/read-all', {
+          method: 'POST',
+          headers: { 'x-session-id': state.sessionId || '' }
+        });
+        fetchNotifications();
+      } catch (err) {
+        console.error('Failed to clear all notifications', err);
+      }
+      return;
+    }
+
     if (!item) return;
     
+    const notificationId = item.getAttribute('data-id');
     const messageId = item.getAttribute('data-message-id');
     if (!messageId) return;
+
+    // Mark as read
+    if (notificationId) await markAsRead(notificationId);
 
     const chatContainer = document.getElementById('chatMessages');
     const targetMsg = chatContainer?.querySelector(`[data-chat-id="${messageId}"]`);
@@ -3383,12 +3414,21 @@ function initNotifications() {
       
       if (notifications.length > 0) {
         badge.classList.remove('hidden');
-        list.innerHTML = notifications.map(n => `
+        const recentNotifications = notifications.slice(0, 20);
+        list.innerHTML = `
+          <div class="flex justify-between items-center p-2 border-b border-slate-700">
+            <span class="text-xs font-semibold text-slate-400">Notifications</span>
+            <button id="clearAllNotificationsBtn" class="text-[10px] text-blue-400 hover:text-blue-300">Mark all read</button>
+          </div>
+          ${recentNotifications.map(n => `
           <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}" data-message-id="${n.messageId}">
             <div class="font-semibold text-slate-100">Mentioned in chat</div>
             <div class="text-[10px] text-slate-400">${formatRelativeTime(n.created_at)}</div>
           </div>
-        `).join('');
+        `).join('')}`;
+        if (!recentNotifications.some(n => !n.read)) {
+          badge.classList.add('hidden');
+        }
       } else {
         badge.classList.add('hidden');
         list.innerHTML = '<div class="text-slate-500 text-center py-4 italic">No new notifications</div>';

@@ -20,6 +20,7 @@ import {
   loadUsersFromFirestore,
   saveNotificationToFirestore,
   updateNotificationReadStatusInFirestore,
+  updateAllNotificationsReadStatusInFirestore,
   loadNotificationsFromFirestore,
   db
 } from './firestoreService.js';
@@ -1580,6 +1581,14 @@ app.post('/api/notifications/:id/read', async (req, res) => {
   if (!session) return res.status(401).json({ detail: 'Session required' });
   
   await updateNotificationReadStatusInFirestore(req.params.id, true);
+  res.status(204).send();
+});
+
+app.post('/api/notifications/read-all', async (req, res) => {
+  const session = getSessionFromReq(req);
+  if (!session) return res.status(401).json({ detail: 'Session required' });
+  
+  await updateAllNotificationsReadStatusInFirestore(session.nickname);
   res.status(204).send();
 });
 
