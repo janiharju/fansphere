@@ -121,6 +121,20 @@ function extractMentions(text: string): string[] {
   return list;
 }
 
+function extractQuotedAuthors(text: string): string[] {
+  // Matches _@author:
+  const matches = text.match(/_@([a-zA-Z0-9_\-\.\u00C0-\u017F]+):/g);
+  if (!matches) return [];
+  const list: string[] = [];
+  for (const m of matches) {
+    const clean = m.trim().replace(/^_@/, '').replace(/:$/, '');
+    if (clean && !list.includes(clean)) {
+      list.push(clean);
+    }
+  }
+  return list;
+}
+
 // Initial seed generators
 function getInitialTeams(): Team[] {
   return [
@@ -2037,6 +2051,8 @@ wss.on('connection', (ws: WebSocket) => {
         const content = (payload.content || '').trim();
         if (content) {
           const extractedMentions: string[] = extractMentions(content);
+          const extractedQuotes: string[] = extractQuotedAuthors(content);
+          const allUsersToNotify = Array.from(new Set([...extractedMentions, ...extractedQuotes]));
 
           const newChat: ChatMessage = {
             id: nextChatId++,
@@ -2054,11 +2070,11 @@ wss.on('connection', (ws: WebSocket) => {
           scheduleSave();
           saveChatMessageToFirestore(newChat).catch(err => console.error('[Firestore] WS chat save error:', err));
           
-          if (extractedMentions.length > 0) {
-            for (const mentionNick of extractedMentions) {
+          if (allUsersToNotify.length > 0) {
+            for (const notifyNick of allUsersToNotify) {
               const notification: Notification = {
                 id: crypto.randomUUID(),
-                userId: mentionNick,
+                userId: notifyNick,
                 messageId: newChat.id,
                 read: false,
                 created_at: new Date().toISOString()

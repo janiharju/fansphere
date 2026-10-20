@@ -1,10 +1,10 @@
 # Fansphere ⚽
 
-An interactive, real-time web service and meeting place for sports fans. Tailored for Finnish football supporters ("ArseFinland: The Official Finnish Gunners Hub") with multi-club support, featuring real-time live chat, a Reddit-style threaded forum with upvoting, and an interactive live league table.
+An interactive, real-time web service and meeting place for sports fans. Tailored for sports fans with multi-club support, featuring real-time live chat, a Reddit-style threaded forum with upvoting, and an interactive live league table.
 
 ## Features
 
-- **🔴⚪ ArseFinland Community Hub**: Dedicated fan space with Finnish watch party locations (Sports Academy Helsinki, Ravintola Hook Tampere, Pikku-Torre Turku), fan flairs, and active discussion.
+- **Fansphere**: Dedicated fan space with Finnish watch party locations (Sports Academy Helsinki, Ravintola Hook Tampere, Pikku-Torre Turku), fan flairs, and active discussion.
 - **💬 Real-time Matchday Chat**: WebSocket-powered live chat stream with instant broadcasts, active online presence indicator, user flairs, quick emoji reactions, and synthesized audio chimes.
 - **📰 Reddit-like Forum Feed**:
   - Hot / New / Top sorting algorithms (including time-decay ranking).
