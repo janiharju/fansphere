@@ -2355,7 +2355,18 @@ function initEventHandlers() {
   document.getElementById('closeProfileModalBtn')?.addEventListener('click', () => {
     profileModal.close();
   });
-  document.getElementById('switchSessionBtn')?.addEventListener('click', () => {
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    if (state.sessionId) {
+      try {
+        await fetch('/api/auth/session/logout', {
+          method: 'POST',
+          headers: { 'x-session-id': state.sessionId }
+        });
+      } catch (err) {
+        console.error('Logout error', err);
+      }
+    }
+    
     profileModal.close();
     state.sessionId = null;
     state.session = null;
@@ -2367,6 +2378,7 @@ function initEventHandlers() {
       state.ws = null;
     }
     updateGateState();
+    window.location.reload(); // Ensure full reset
   });
 
   // Unified session persistence function for both blur auto-save and explicit form submit

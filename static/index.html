@@ -72,7 +72,7 @@
             <i data-lucide="bell" class="w-4 h-4"></i>
             <span id="unreadNotificationsBadge" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 shadow-sm"></span>
           </button>
-          <div id="notificationsPopup" class="hidden absolute top-full right-2 sm:right-0 mt-2 w-[calc(100vw-1rem)] sm:w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 p-3 text-xs text-slate-300">
+          <div id="notificationsPopup" class="hidden fixed inset-x-0 mx-auto mt-16 w-[90vw] sm:absolute sm:top-full sm:right-0 sm:mt-2 sm:w-72 sm:inset-x-auto bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 p-3 text-xs text-slate-300">
              <div class="font-bold text-slate-100 pb-2 border-b border-slate-800 mb-2">Notifications</div>
              <div id="notificationsList" class="space-y-2 max-h-64 overflow-y-auto">
                <div class="text-slate-500 text-center py-4 italic">No new notifications</div>
@@ -698,8 +698,8 @@
         </div>
 
         <div class="flex items-center justify-between pt-2">
-          <button type="button" id="switchSessionBtn" class="text-xs text-red-400 hover:text-red-300 underline font-medium cursor-pointer">
-            New Session
+          <button type="button" id="logoutBtn" class="text-xs text-red-400 hover:text-red-300 underline font-medium cursor-pointer">
+            Logout
           </button>
           <button type="submit" id="saveProfileBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-red-600/30 flex items-center gap-1.5 cursor-pointer">
             <span>💾 Save Changes</span>
