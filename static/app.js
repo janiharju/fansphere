@@ -3349,6 +3349,24 @@ function initNotifications() {
     togglePopup();
   });
 
+  list.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-message-id]');
+    if (!item) return;
+    
+    const messageId = item.getAttribute('data-message-id');
+    if (!messageId) return;
+
+    const chatContainer = document.getElementById('chatMessages');
+    const targetMsg = chatContainer?.querySelector(`[data-chat-id="${messageId}"]`);
+    
+    if (targetMsg) {
+      targetMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetMsg.classList.add('ring-2', 'ring-amber-400');
+      setTimeout(() => targetMsg.classList.remove('ring-2', 'ring-amber-400'), 2000);
+      togglePopup(); // Close popup
+    }
+  });
+
   document.addEventListener('click', (e) => {
     if (!popup.contains(e.target) && e.target !== bell) {
       popup.classList.add('hidden');
@@ -3366,7 +3384,7 @@ function initNotifications() {
       if (notifications.length > 0) {
         badge.classList.remove('hidden');
         list.innerHTML = notifications.map(n => `
-          <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}">
+          <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}" data-message-id="${n.messageId}">
             <div class="font-semibold text-slate-100">Mentioned in chat</div>
             <div class="text-[10px] text-slate-400">${formatRelativeTime(n.created_at)}</div>
           </div>
