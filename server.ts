@@ -1299,6 +1299,28 @@ app.post('/api/posts', (req, res) => {
   posts.unshift(newPost);
   forceSaveNow();
   savePostToFirestore(newPost).catch(err => console.error('[Firestore] Post save error:', err));
+  
+  const extractedMentions = Array.from(new Set([...extractMentions(newPost.title), ...extractMentions(newPost.content)]));
+  if (extractedMentions.length > 0) {
+    for (const mentionNick of extractedMentions) {
+      const notification: Notification = {
+        id: crypto.randomUUID(),
+        userId: mentionNick,
+        messageId: newPost.id,
+        read: false,
+        created_at: nowIso
+      };
+      saveNotificationToFirestore(notification).catch(err => console.error('[Firestore] Post mention notification error:', err));
+      
+      // Broadcast to specific user if connected
+      for (const [ws, sessionId] of socketSessions.entries()) {
+        const sess = sessions.get(sessionId);
+        if (sess && sess.nickname === mentionNick && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'new_notification', data: notification }));
+        }
+      }
+    }
+  }
 
   broadcast({
     type: 'new_post',
