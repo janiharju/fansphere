@@ -3443,7 +3443,7 @@ async function fetchNotifications() {
         </div>
         ${recentNotifications.map(n => `
         <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}" data-message-id="${n.messageId}">
-          <div class="font-semibold text-slate-100">Mentioned in chat</div>
+          <div class="font-semibold text-slate-100">${n.type === 'chat' ? 'Mentioned in chat' : n.type === 'post' ? 'Mentioned in post' : 'Mentioned in comment'}</div>
           <div class="text-[10px] text-slate-400">${formatRelativeTime(n.created_at)}</div>
         </div>
       `).join('')}`;

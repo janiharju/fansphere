@@ -101,11 +101,12 @@ service cloud.firestore {
     }
 
     function isValidNotification(data) {
-      return data.keys().hasAll(['id', 'userId', 'messageId', 'read', 'created_at']) &&
-             data.keys().hasOnly(['id', 'userId', 'messageId', 'read', 'created_at']) &&
+      return data.keys().hasAll(['id', 'userId', 'messageId', 'type', 'read', 'created_at']) &&
+             data.keys().hasOnly(['id', 'userId', 'messageId', 'type', 'read', 'created_at']) &&
              data.id is string && data.id.size() <= 128 &&
              data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 100 &&
              data.messageId is number &&
+             data.type in ['chat', 'post', 'comment'] &&
              data.read is bool &&
              data.created_at is string && data.created_at.size() <= 100;
     }

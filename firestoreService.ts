@@ -267,6 +267,7 @@ export async function persistNotificationToFirestore(notification: any) {
       id: String(notification.id),
       userId: String(notification.userId || '').trim(),
       messageId: Number(notification.messageId),
+      type: String(notification.type || 'chat'),
       read: Boolean(notification.read),
       created_at: String(notification.created_at || new Date().toISOString())
     };

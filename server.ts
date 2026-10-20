@@ -104,6 +104,7 @@ interface Notification {
   id: string;
   userId: string;
   messageId: number;
+  type: 'chat' | 'post' | 'comment';
   read: boolean;
   created_at: string;
 }
@@ -1307,6 +1308,7 @@ app.post('/api/posts', (req, res) => {
         id: crypto.randomUUID(),
         userId: mentionNick,
         messageId: newPost.id,
+        type: 'post',
         read: false,
         created_at: nowIso
       };
@@ -1491,6 +1493,29 @@ app.post('/api/posts/:id/comments', (req, res) => {
   forceSaveNow();
   saveCommentToFirestore(comment).catch(err => console.error('[Firestore] Comment save error:', err));
   savePostToFirestore(post).catch(err => console.error('[Firestore] Post comment count save error:', err));
+  
+  const extractedMentions = extractMentions(comment.content);
+  if (extractedMentions.length > 0) {
+    for (const mentionNick of extractedMentions) {
+      const notification: Notification = {
+        id: crypto.randomUUID(),
+        userId: mentionNick,
+        messageId: comment.id,
+        type: 'comment',
+        read: false,
+        created_at: nowIso
+      };
+      saveNotificationToFirestore(notification).catch(err => console.error('[Firestore] Comment mention notification error:', err));
+      
+      // Broadcast to specific user if connected
+      for (const [ws, sessionId] of socketSessions.entries()) {
+        const sess = sessions.get(sessionId);
+        if (sess && sess.nickname === mentionNick && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'new_notification', data: notification }));
+        }
+      }
+    }
+  }
 
   broadcast({
     type: 'new_comment',
@@ -1588,6 +1613,7 @@ app.post('/api/chat/message', (req, res) => {
         id: crypto.randomUUID(),
         userId: mentionNick,
         messageId: assignedChatId,
+        type: 'chat',
         read: false,
         created_at: new Date().toISOString()
       };
@@ -2098,6 +2124,7 @@ wss.on('connection', (ws: WebSocket) => {
                 id: crypto.randomUUID(),
                 userId: notifyNick,
                 messageId: newChat.id,
+                type: 'chat',
                 read: false,
                 created_at: new Date().toISOString()
               };
