@@ -2080,6 +2080,14 @@ wss.on('connection', (ws: WebSocket) => {
                 created_at: new Date().toISOString()
               };
               saveNotificationToFirestore(notification).catch(err => console.error('[Firestore] Notification save error:', err));
+              
+              // Broadcast to specific user if connected
+              for (const [ws, sessionId] of socketSessions.entries()) {
+                const sess = sessions.get(sessionId);
+                if (sess && sess.nickname === notifyNick && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ type: 'new_notification', data: notification }));
+                }
+              }
             }
           }
 

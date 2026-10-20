@@ -856,6 +856,10 @@ function handleWebSocketMessage(msg) {
       }
       break;
 
+    case 'new_notification':
+      fetchNotifications();
+      break;
+
     case 'chat_message':
       handleIncomingChatMessage(msg.data);
       break;
@@ -3336,9 +3340,9 @@ function initChatMentions() {
 function initNotifications() {
   const bell = document.getElementById('notificationsBell');
   const popup = document.getElementById('notificationsPopup');
-  const list = document.getElementById('notificationsList');
-  const badge = document.getElementById('unreadNotificationsBadge');
-  if (!bell || !popup || !list) return;
+  state.notificationsList = document.getElementById('notificationsList');
+  state.notificationsBadge = document.getElementById('unreadNotificationsBadge');
+  if (!bell || !popup || !state.notificationsList) return;
 
   function togglePopup() {
     popup.classList.toggle('hidden');
@@ -3361,7 +3365,7 @@ function initNotifications() {
     togglePopup();
   });
 
-  list.addEventListener('click', async (e) => {
+  state.notificationsList.addEventListener('click', async (e) => {
     const item = e.target.closest('[data-message-id]');
     const isClearAll = e.target.closest('#clearAllNotificationsBtn');
     
@@ -3404,41 +3408,42 @@ function initNotifications() {
     }
   });
 
-  async function fetchNotifications() {
-    try {
-      const res = await fetch('/api/notifications', {
-        headers: { 'x-session-id': state.sessionId || '' }
-      });
-      if (!res.ok) return;
-      const notifications = await res.json();
-      
-      if (notifications.length > 0) {
-        badge.classList.remove('hidden');
-        const recentNotifications = notifications.slice(0, 20);
-        list.innerHTML = `
-          <div class="flex justify-between items-center p-2 border-b border-slate-700">
-            <span class="text-xs font-semibold text-slate-400">Notifications</span>
-            <button id="clearAllNotificationsBtn" class="text-[10px] text-blue-400 hover:text-blue-300">Mark all read</button>
-          </div>
-          ${recentNotifications.map(n => `
-          <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}" data-message-id="${n.messageId}">
-            <div class="font-semibold text-slate-100">Mentioned in chat</div>
-            <div class="text-[10px] text-slate-400">${formatRelativeTime(n.created_at)}</div>
-          </div>
-        `).join('')}`;
-        if (!recentNotifications.some(n => !n.read)) {
-          badge.classList.add('hidden');
-        }
-      } else {
-        badge.classList.add('hidden');
-        list.innerHTML = '<div class="text-slate-500 text-center py-4 italic">No new notifications</div>';
-      }
-    } catch (err) {
-      console.error('Failed to fetch notifications', err);
-    }
-  }
-
   fetchNotifications();
   setInterval(fetchNotifications, 60000); // Check every minute
+}
+
+async function fetchNotifications() {
+  if (!state.notificationsList || !state.notificationsBadge) return;
+  try {
+    const res = await fetch('/api/notifications', {
+      headers: { 'x-session-id': state.sessionId || '' }
+    });
+    if (!res.ok) return;
+    const notifications = await res.json();
+    
+    if (notifications.length > 0) {
+      state.notificationsBadge.classList.remove('hidden');
+      const recentNotifications = notifications.slice(0, 20);
+      state.notificationsList.innerHTML = `
+        <div class="flex justify-between items-center p-2 border-b border-slate-700">
+          <span class="text-xs font-semibold text-slate-400">Notifications</span>
+          <button id="clearAllNotificationsBtn" class="text-[10px] text-blue-400 hover:text-blue-300">Mark all read</button>
+        </div>
+        ${recentNotifications.map(n => `
+        <div class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 cursor-pointer ${n.read ? 'opacity-70' : ''}" data-id="${n.id}" data-message-id="${n.messageId}">
+          <div class="font-semibold text-slate-100">Mentioned in chat</div>
+          <div class="text-[10px] text-slate-400">${formatRelativeTime(n.created_at)}</div>
+        </div>
+      `).join('')}`;
+      if (!recentNotifications.some(n => !n.read)) {
+        state.notificationsBadge.classList.add('hidden');
+      }
+    } else {
+      state.notificationsBadge.classList.add('hidden');
+      state.notificationsList.innerHTML = '<div class="text-slate-500 text-center py-4 italic">No new notifications</div>';
+    }
+  } catch (err) {
+    console.error('Failed to fetch notifications', err);
+  }
 }
 
