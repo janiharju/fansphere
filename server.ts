@@ -777,6 +777,24 @@ let comments: Comment[] = storedData.comments;
 let chatMessages: ChatMessage[] = storedData.chatMessages;
 let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : getInitialRealms();
 
+// Sanitize defunct ephemeral upload URLs that no longer exist on container disk
+for (const p of posts) {
+  if (p.image_url && p.image_url.startsWith('/static/uploads/')) {
+    const localPath = path.resolve(process.cwd(), p.image_url.replace(/^\//, ''));
+    if (!fs.existsSync(localPath)) {
+      p.image_url = '';
+    }
+  }
+}
+for (const c of comments) {
+  if (c.image_url && c.image_url.startsWith('/static/uploads/')) {
+    const localPath = path.resolve(process.cwd(), c.image_url.replace(/^\//, ''));
+    if (!fs.existsSync(localPath)) {
+      c.image_url = '';
+    }
+  }
+}
+
 const sessions = new Map<string, Session>();
 for (const s of (storedData.sessions || getInitialSessions())) {
   sessions.set(s.id, s);
@@ -1282,6 +1300,11 @@ app.post('/api/posts', (req, res) => {
     return res.status(400).json({ detail: 'Content must be at least 5 characters' });
   }
 
+  const cleanImageUrl = image_url ? String(image_url).trim() : '';
+  if (cleanImageUrl.startsWith('data:image/') || cleanImageUrl.length > 2048) {
+    return res.status(400).json({ detail: 'Direct Base64 images are not supported. Please upload images via the upload endpoint.' });
+  }
+
   const nowIso = new Date().toISOString();
   const assignedPostId = Math.max(nextPostId++, ...posts.map(p => p.id + 1), 1);
   nextPostId = assignedPostId + 1;
@@ -1295,7 +1318,7 @@ app.post('/api/posts', (req, res) => {
     upvotes: 1,
     downvotes: 0,
     comment_count: 0,
-    image_url: image_url ? String(image_url).trim() : '',
+    image_url: cleanImageUrl,
     created_at: nowIso,
     last_activity_at: nowIso
   };
@@ -1355,14 +1378,18 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   }
 
   try {
-    const filename = `images/${crypto.randomUUID()}-${file.originalname}`;
+    const sanitizedOriginal = (file.originalname || 'image.jpg').replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filename = `images/${crypto.randomUUID()}-${sanitizedOriginal}`;
     const storageRef = ref(storage, filename);
-    await uploadBytes(storageRef, file.buffer, { contentType: file.mimetype });
+    await uploadBytes(storageRef, file.buffer, { contentType: file.mimetype || 'image/jpeg' });
     const downloadURL = await getDownloadURL(storageRef);
     res.json({ url: downloadURL });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
+    res.status(500).json({ 
+      error: 'Failed to upload image to Firebase Storage', 
+      detail: error instanceof Error ? error.message : String(error) 
+    });
   }
 });
 
@@ -1450,6 +1477,11 @@ app.post('/api/posts/:id/comments', (req, res) => {
     return res.status(400).json({ detail: 'Comment content cannot be empty' });
   }
 
+  const cleanCommentImageUrl = image_url ? String(image_url).trim() : '';
+  if (cleanCommentImageUrl.startsWith('data:image/') || cleanCommentImageUrl.length > 2048) {
+    return res.status(400).json({ detail: 'Direct Base64 images are not supported. Please upload images via the upload endpoint.' });
+  }
+
   const assignedCommentId = Math.max(nextCommentId++, ...comments.map(c => c.id + 1), 1);
   nextCommentId = assignedCommentId + 1;
   const comment: Comment = {
@@ -1460,7 +1492,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     author_flair: session.flair || 'ArseFinland Official Member',
     content: content.trim(),
     upvotes: 1,
-    image_url: image_url ? String(image_url).trim() : '',
+    image_url: cleanCommentImageUrl,
     created_at: new Date().toISOString()
   };
 

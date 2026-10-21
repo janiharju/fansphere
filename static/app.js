@@ -1183,7 +1183,7 @@ function renderPostCardHtml(post) {
             ${formatLightweightMarkdown(post.content)}
           </p>
           ${post.image_url ? `
-            <div class="shrink-0 relative group/thumb cursor-pointer" onclick="event.stopPropagation(); openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
+            <div class="shrink-0 relative group/thumb cursor-pointer" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(post.image_url)}', '${escapeJsString(post.title)}')">
               <img 
                 src="${escapeHtml(post.image_url)}" 
                 alt="Post thumbnail" 
@@ -1206,7 +1206,7 @@ function renderPostCardHtml(post) {
           </button>
           
           ${post.image_url ? `
-            <button class="view-post-image-btn flex items-center gap-1 text-slate-400 hover:text-red-400 transition py-0.5" onclick="event.stopPropagation(); openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
+            <button class="view-post-image-btn flex items-center gap-1 text-slate-400 hover:text-red-400 transition py-0.5" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(post.image_url)}', '${escapeJsString(post.title)}')">
               <i data-lucide="image" class="w-3 h-3 text-red-400"></i>
               <span>Photo</span>
             </button>
@@ -1293,7 +1293,7 @@ async function openPostDetailModal(postId) {
       <h2 class="text-base sm:text-lg font-bold text-slate-100">${escapeHtml(post.title)}</h2>
       <div class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed">${formatLightweightMarkdown(post.content)}</div>
       ${post.image_url ? `
-        <div class="mt-3 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950/60 max-h-72 flex items-center justify-center relative group cursor-pointer" onclick="openImageLightbox('${escapeHtml(post.image_url)}', '${escapeHtml(post.title)}')">
+        <div class="mt-3 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950/60 max-h-72 flex items-center justify-center relative group cursor-pointer" onclick="openImageLightbox('${escapeJsString(post.image_url)}', '${escapeJsString(post.title)}')">
           <img 
             src="${escapeHtml(post.image_url)}" 
             alt="Attached image" 
@@ -1336,7 +1336,7 @@ function renderCommentHtml(comment) {
       </div>
       <div class="text-slate-300 leading-relaxed text-xs whitespace-pre-wrap">${formatLightweightMarkdown(comment.content)}</div>
       ${comment.image_url ? `
-        <div class="relative group/cimg inline-block max-w-[280px] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer mt-1" onclick="openImageLightbox('${escapeHtml(comment.image_url)}', 'Comment by ${escapeHtml(comment.author)}')">
+        <div class="relative group/cimg inline-block max-w-[280px] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer mt-1" onclick="openImageLightbox('${escapeJsString(comment.image_url)}', 'Comment by ${escapeJsString(comment.author)}')">
           <img 
             src="${escapeHtml(comment.image_url)}" 
             alt="Comment attachment" 
@@ -2103,14 +2103,21 @@ function initEventHandlers() {
             },
             body: formData
           });
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json();
-            if (uploadData && uploadData.url) {
-              finalImageUrl = uploadData.url;
-            }
+          if (!uploadRes.ok) {
+            const errData = await uploadRes.json().catch(() => ({}));
+            alert(errData.error || errData.detail || 'Image upload failed. Please ensure the image is under 1MB and try again.');
+            return;
           }
+          const uploadData = await uploadRes.json();
+          if (!uploadData || !uploadData.url) {
+            alert('Image upload failed. Please try again.');
+            return;
+          }
+          finalImageUrl = uploadData.url;
         } catch (uploadErr) {
-          console.warn('Image upload to local server failed, continuing with direct data URI:', uploadErr);
+          console.error('Image upload failed:', uploadErr);
+          alert('Failed to upload image. Please check your network connection and try again.');
+          return;
         }
       }
 
@@ -2303,16 +2310,21 @@ function initEventHandlers() {
               body: formData
             });
 
-            if (uploadRes.ok) {
-              const uploadData = await uploadRes.json();
-              if (uploadData && uploadData.url) {
-                finalCommentImg = uploadData.url;
-              }
-            } else {
-              console.warn('Comment image upload failed');
+            if (!uploadRes.ok) {
+              const errData = await uploadRes.json().catch(() => ({}));
+              alert(errData.error || errData.detail || 'Comment image upload failed. Please ensure the image is under 1MB and try again.');
+              return;
             }
+            const uploadData = await uploadRes.json();
+            if (!uploadData || !uploadData.url) {
+              alert('Comment image upload failed. Please try again.');
+              return;
+            }
+            finalCommentImg = uploadData.url;
           } catch (uploadErr) {
-            console.warn('Comment image upload to server failed:', uploadErr);
+            console.error('Comment image upload to server failed:', uploadErr);
+            alert('Failed to upload comment image. Please try again.');
+            return;
           }
         }
 
@@ -2834,6 +2846,16 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function escapeJsString(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '');
 }
 
 /**

@@ -20,8 +20,8 @@
   <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png">
   <link rel="shortcut icon" href="/favicon.png">
 
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS (Served locally to prevent cloud CORS issues) -->
+  <script src="/static/tailwind.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',

@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /images/{imageId} {
+      // Allow public read access to all forum and comment images
+      allow read: if true;
+
+      // Allow image uploads under 1MB (1,048,576 bytes) with valid image content types
+      allow write: if request.resource.size < 1048576
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
