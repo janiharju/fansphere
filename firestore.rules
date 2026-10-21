@@ -20,7 +20,7 @@ service cloud.firestore {
 
     function isValidPost(data) {
       return data.keys().hasAll(['id', 'title', 'content', 'author', 'created_at']) &&
-             data.keys().hasOnly(['id', 'title', 'content', 'author', 'author_flair', 'tag', 'upvotes', 'downvotes', 'comment_count', 'image_url', 'created_at', 'last_activity_at']) &&
+             data.keys().hasOnly(['id', 'title', 'content', 'author', 'author_flair', 'tag', 'upvotes', 'downvotes', 'image_url', 'created_at', 'last_activity_at']) &&
              data.id is number &&
              data.title is string && data.title.size() >= 3 && data.title.size() <= 300 &&
              data.content is string && data.content.size() >= 5 && data.content.size() <= 10000 &&
@@ -29,7 +29,6 @@ service cloud.firestore {
              (!('tag' in data) || (data.tag is string && data.tag.size() <= 50)) &&
              (!('upvotes' in data) || data.upvotes is number) &&
              (!('downvotes' in data) || data.downvotes is number) &&
-             (!('comment_count' in data) || data.comment_count is number) &&
              (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 2048)) &&
              data.created_at is string && data.created_at.size() <= 100 &&
              (!('last_activity_at' in data) || (data.last_activity_at is string && data.last_activity_at.size() <= 100));
@@ -115,7 +114,7 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isValidId(postId) && isValidPost(incoming());
       allow update: if isValidId(postId) && isValidPost(incoming()) && incoming().id == existing().id && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'downvotes', 'comment_count', 'last_activity_at']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'downvotes', 'last_activity_at']) ||
         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'image_url', 'tag', 'last_activity_at']) ||
         incoming().diff(existing()).affectedKeys().hasOnly([])
       );

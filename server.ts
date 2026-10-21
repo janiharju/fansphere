@@ -24,6 +24,7 @@ import {
   updateNotificationReadStatusInFirestore,
   updateAllNotificationsReadStatusInFirestore,
   loadNotificationsFromFirestore,
+  updatePostCommentCountInFirestore,
   db,
   storage
 } from './firestoreService.js';
@@ -72,7 +73,7 @@ interface Post {
   tag: string;
   upvotes: number;
   downvotes: number;
-  comment_count: number;
+  comment_count?: number;
   image_url: string;
   created_at: string;
   last_activity_at?: string;
@@ -940,6 +941,11 @@ function getPostLatestActivityTime(post: Post): number {
   return latestTime;
 }
 
+// Helper to compute comment count dynamically from comments
+function getDynamicCommentCount(postId: number): number {
+  return comments.filter(c => c.post_id === postId).length;
+}
+
 // ==================== REST APIS ====================
 
 // -1. Persistent Store Backup & Export API (Used by Cloud Build & Publishing pipeline)
@@ -1274,6 +1280,7 @@ app.get('/api/posts', (req, res) => {
     const latestActivityTime = getPostLatestActivityTime(p);
     return {
       ...p,
+      comment_count: getDynamicCommentCount(p.id),
       latest_activity_at: new Date(latestActivityTime).toISOString(),
       latest_activity_time: latestActivityTime
     };
@@ -1317,7 +1324,6 @@ app.post('/api/posts', (req, res) => {
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
-    comment_count: 0,
     image_url: cleanImageUrl,
     created_at: nowIso,
     last_activity_at: nowIso
@@ -1354,6 +1360,7 @@ app.post('/api/posts', (req, res) => {
     type: 'new_post',
     data: {
       ...newPost,
+      comment_count: 0,
       latest_activity_at: nowIso,
       score: 1
     }
@@ -1361,6 +1368,7 @@ app.post('/api/posts', (req, res) => {
 
   res.status(201).json({
     ...newPost,
+    comment_count: 0,
     latest_activity_at: nowIso,
     score: 1
   });
@@ -1414,6 +1422,7 @@ app.get('/api/posts/:id', (req, res) => {
   res.json({
     post: {
       ...post,
+      comment_count: postComments.length,
       score: post.upvotes - post.downvotes
     },
     comments: postComments
@@ -1497,12 +1506,12 @@ app.post('/api/posts/:id/comments', (req, res) => {
   };
 
   comments.push(comment);
-  post.comment_count += 1;
   const nowIso = comment.created_at;
   post.last_activity_at = nowIso;
+  const currentCommentCount = getDynamicCommentCount(postId);
   forceSaveNow();
-  saveCommentToFirestore(comment).catch(err => console.error('[Firestore] Comment save error:', err));
-  savePostToFirestore(post).catch(err => console.error('[Firestore] Post comment count save error:', err));
+  saveCommentToFirestore(comment).catch((err: unknown) => console.error('[Firestore] Comment save error:', err));
+  updatePostCommentCountInFirestore(postId, currentCommentCount, nowIso).catch((err: unknown) => console.error('[Firestore] Post activity update error:', err));
   
   const extractedMentions = extractMentions(comment.content);
   if (extractedMentions.length > 0) {
@@ -1531,7 +1540,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     type: 'new_comment',
     data: comment,
     post_id: postId,
-    comment_count: post.comment_count,
+    comment_count: currentCommentCount,
     latest_activity_at: nowIso
   });
 
@@ -2302,7 +2311,7 @@ async function syncWithFirestore() {
             const local = posts[localIndex];
             const localTime = new Date(local.last_activity_at || local.created_at).getTime();
             const remoteTime = new Date(p.last_activity_at || p.created_at).getTime();
-            if (remoteTime > localTime || p.upvotes > local.upvotes || p.comment_count > local.comment_count) {
+            if (remoteTime > localTime || p.upvotes > local.upvotes) {
               posts[localIndex] = p;
               updated = true;
             }

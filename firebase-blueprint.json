@@ -45,10 +45,6 @@
           "type": "number",
           "description": "Downvote count"
         },
-        "comment_count": {
-          "type": "number",
-          "description": "Number of comments on the post"
-        },
         "image_url": {
           "type": "string",
           "maxLength": 2048,

@@ -40,7 +40,6 @@ export async function persistPostToFirestore(post: any) {
       tag: String(post.tag || 'Discussion').trim(),
       upvotes: Number(post.upvotes || 0),
       downvotes: Number(post.downvotes || 0),
-      comment_count: Number(post.comment_count || 0),
       image_url: String(post.image_url || '').trim(),
       created_at: String(post.created_at || new Date().toISOString()),
       last_activity_at: String(post.last_activity_at || post.created_at || new Date().toISOString())
@@ -68,19 +67,16 @@ export async function updatePostVoteInFirestore(postId: number, upvotes: number,
   }
 }
 
-export async function updatePostCommentCountInFirestore(postId: number, count: number, lastActivityAt?: string) {
+export async function updatePostCommentCountInFirestore(postId: number, _count: number, lastActivityAt?: string) {
   const postPath = `posts/${postId}`;
   try {
+    if (!lastActivityAt) return;
     const postRef = doc(db, 'posts', String(postId));
-    const updateData: Record<string, any> = {
-      comment_count: Number(count)
-    };
-    if (lastActivityAt) {
-      updateData.last_activity_at = String(lastActivityAt);
-    }
-    await updateDoc(postRef, updateData);
+    await updateDoc(postRef, {
+      last_activity_at: String(lastActivityAt)
+    });
   } catch (err) {
-    console.warn(`[Firestore] Failed to update comment count for post ${postId}:`, err);
+    console.warn(`[Firestore] Failed to update post activity for post ${postId}:`, err);
   }
 }
 
