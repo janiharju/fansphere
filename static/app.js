@@ -2090,16 +2090,18 @@ function initEventHandlers() {
       // If user uploaded a local file (base64 Data URI), upload to server to get permanent URL
       if (currentPostImageUrl && currentPostImageUrl.startsWith('data:image/')) {
         try {
+          // Convert Data URI to Blob
+          const response = await fetch(currentPostImageUrl);
+          const blob = await response.blob();
+          const formData = new FormData();
+          formData.append('image', blob, 'post.jpg');
+
           const uploadRes = await fetch('/api/upload', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
               'x-session-id': state.sessionId
             },
-            body: JSON.stringify({
-              data: currentPostImageUrl,
-              session_id: state.sessionId
-            })
+            body: formData
           });
           if (uploadRes.ok) {
             const uploadData = await uploadRes.json();
@@ -2287,22 +2289,27 @@ function initEventHandlers() {
         // If local data URI was chosen, upload to server first
         if (currentCommentImageUrl && currentCommentImageUrl.startsWith('data:image/')) {
           try {
+            // Convert Data URI to Blob
+            const response = await fetch(currentCommentImageUrl);
+            const blob = await response.blob();
+            const formData = new FormData();
+            formData.append('image', blob, 'comment.jpg');
+
             const uploadRes = await fetch('/api/upload', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
                 'x-session-id': state.sessionId
               },
-              body: JSON.stringify({
-                data: currentCommentImageUrl,
-                session_id: state.sessionId
-              })
+              body: formData
             });
+
             if (uploadRes.ok) {
               const uploadData = await uploadRes.json();
               if (uploadData && uploadData.url) {
                 finalCommentImg = uploadData.url;
               }
+            } else {
+              console.warn('Comment image upload failed');
             }
           } catch (uploadErr) {
             console.warn('Comment image upload to server failed:', uploadErr);
