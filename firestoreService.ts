@@ -15,13 +15,14 @@ import {
 import {
   db,
   auth,
+  storage,
   OperationType,
   handleFirestoreError,
   testConnection
 } from './firebase.js';
 import type { FirestoreErrorInfo } from './firebase.js';
 
-export { db, auth, OperationType, handleFirestoreError, testConnection };
+export { db, auth, storage, OperationType, handleFirestoreError, testConnection };
 export type { FirestoreErrorInfo };
 
 // Firestore Database Operations for Permanent Storage

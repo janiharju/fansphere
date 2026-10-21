@@ -11,6 +11,7 @@ import {
   deleteDoc,
   updateDoc
 } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -67,6 +68,7 @@ export const firebaseConfig = {
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
+export const storage = getStorage(app, 'gs://fansphere-509814.firebasestorage.app');
 
 export enum OperationType {
   CREATE = 'create',

@@ -5,6 +5,8 @@ import crypto from 'node:crypto';
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
+import multer from 'multer';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   fetchAllPostsFromFirestore,
   savePostToFirestore,
@@ -22,7 +24,8 @@ import {
   updateNotificationReadStatusInFirestore,
   updateAllNotificationsReadStatusInFirestore,
   loadNotificationsFromFirestore,
-  db
+  db,
+  storage
 } from './firestoreService.js';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -990,7 +993,7 @@ app.post('/api/auth/session', async (req, res) => {
     return res.status(400).json({ detail: 'Please enter a valid email address' });
   }
 
-  const cleanNickname = nickname.trim();
+  const cleanNickname = nickname.trim().toLowerCase();
   const cleanEmail = email.trim().toLowerCase();
   const cleanFlair = normalizeFlair(flair);
 
@@ -1000,7 +1003,7 @@ app.post('/api/auth/session', async (req, res) => {
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
       const userData = userSnap.data();
-      if (userData.nickname !== cleanNickname) {
+      if (userData.nickname.toLowerCase() !== cleanNickname) {
         return res.status(400).json({ detail: 'This email is already associated with a different nickname.' });
       }
     }
@@ -1093,7 +1096,7 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
     if (typeof nickname !== 'string' || nickname.trim().length < 2 || nickname.trim().length > 30) {
       return res.status(400).json({ detail: 'Nickname must be between 2 and 30 characters' });
     }
-    session.nickname = nickname.trim();
+    session.nickname = nickname.trim().toLowerCase();
   }
 
   if (email !== undefined) {
@@ -1110,7 +1113,7 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          if (userData.nickname !== session.nickname) {
+          if (userData.nickname.toLowerCase() !== session.nickname.toLowerCase()) {
             return res.status(400).json({ detail: 'This email is already associated with a different nickname.' });
           }
         }
@@ -1340,56 +1343,31 @@ app.post('/api/posts', (req, res) => {
   });
 });
 
-// Upload image endpoint (supports base64 image data or URL verification)
-app.post('/api/upload', (req, res) => {
-  const session = getSessionFromReq(req);
-  if (!session) {
-    return res.status(401).json({ detail: 'Session required to upload images' });
+// Upload image endpoint
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1048576 } 
+});
+app.post('/api/upload', upload.single('image'), async (req, res) => {
+  const file = (req as any).file;
+  if (!file) {
+    return res.status(400).json({ error: 'No file uploaded or file exceeds 1MB limit' });
   }
-
-  const { data, filename } = req.body;
-  if (!data || typeof data !== 'string') {
-    return res.status(400).json({ detail: 'Missing image data' });
-  }
-
-  // If already a valid web URL (http/https), return it directly
-  if (data.startsWith('http://') || data.startsWith('https://')) {
-    return res.json({ url: data });
-  }
-
-  // Handle Base64 Data URI: data:image/png;base64,xxxx
-  const matches = data.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-  if (!matches) {
-    return res.status(400).json({ detail: 'Invalid image format. Expected JPEG, PNG, WEBP, or GIF' });
-  }
-
-  const ext = matches[1].toLowerCase().replace('jpeg', 'jpg');
-  const allowedExts = ['jpg', 'png', 'webp', 'gif', 'svg+xml'];
-  if (!allowedExts.includes(ext) && ext !== 'svg') {
-    return res.status(400).json({ detail: 'Unsupported image type' });
-  }
-
-  const base64Data = matches[2];
-  const buffer = Buffer.from(base64Data, 'base64');
-
-  // Limit size to 5MB
-  if (buffer.length > 5 * 1024 * 1024) {
-    return res.status(400).json({ detail: 'Image too large (max 5MB)' });
-  }
-
-  const safeExt = ext.includes('svg') ? 'svg' : ext;
-  const uniqueName = `post_${Date.now()}_${crypto.randomBytes(6).toString('hex')}.${safeExt}`;
-  const filePath = path.join(uploadsDir, uniqueName);
 
   try {
-    fs.writeFileSync(filePath, buffer);
-    const imageUrl = `/static/uploads/${uniqueName}`;
-    res.json({ url: imageUrl });
-  } catch (err) {
-    console.error('Failed to write uploaded image:', err);
-    res.status(500).json({ detail: 'Failed to save image' });
+    const filename = `images/${crypto.randomUUID()}-${file.originalname}`;
+    const storageRef = ref(storage, filename);
+    await uploadBytes(storageRef, file.buffer, { contentType: file.mimetype });
+    const downloadURL = await getDownloadURL(storageRef);
+    res.json({ url: downloadURL });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
   }
 });
+
+
+
 
 app.get('/api/posts/:id', (req, res) => {
   const postId = parseInt(req.params.id, 10);

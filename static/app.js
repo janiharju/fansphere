@@ -2005,8 +2005,8 @@ function initEventHandlers() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Selected image exceeds the 5MB size limit.');
+    if (file.size > 1048576) {
+      alert('Selected image exceeds the 1MB size limit.');
       e.target.value = '';
       return;
     }
@@ -2223,8 +2223,8 @@ function initEventHandlers() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Selected image exceeds the 5MB size limit.');
+      if (file.size > 1048576) {
+        alert('Selected image exceeds the 1MB size limit.');
         e.target.value = '';
         return;
       }
