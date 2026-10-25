@@ -2013,6 +2013,21 @@ app.use('/static', express.static(staticDir, {
   }
 }));
 
+const PLATFORM_VERSION = '1.3.0';
+const PLATFORM_BUILD_TIMESTAMP = new Date().toISOString();
+
+// Platform Version API for PWA update detection
+app.get('/api/version', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.json({
+    version: PLATFORM_VERSION,
+    buildTime: PLATFORM_BUILD_TIMESTAMP,
+    timestamp: Date.now()
+  });
+});
+
 // PWA Manifest Routes
 app.get(['/manifest.json', '/manifest.webmanifest'], (_req, res) => {
   res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');

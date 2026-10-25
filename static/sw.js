@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fansphere-cache-v2';
+const CACHE_NAME = 'fansphere-cache-v3';
 const PRECACHE_ASSETS = [
   '/',
   '/static/index.html',
@@ -27,7 +27,12 @@ self.addEventListener('install', (event) => {
           })
         )
       );
-    }).then(() => self.skipWaiting())
+    }).then(() => {
+      // If there is no existing controller, activate immediately on first install
+      if (!self.registration.active) {
+        return self.skipWaiting();
+      }
+    })
   );
 });
 

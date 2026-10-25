@@ -3424,19 +3424,98 @@ function initPWA() {
   const userAgent = window.navigator.userAgent.toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(userAgent) && !window.MSStream;
 
-  // 1. Service Worker Registration
+  // 1. Service Worker Registration & Platform Update Lifecycle
+  let swRegistration = null;
+  let refreshing = false;
+  let initialBuildTime = null;
+
+  const updateBanner = document.getElementById('pwaUpdateBanner');
+  const updateNowBtn = document.getElementById('pwaUpdateNowBtn');
+  const dismissUpdateBtn = document.getElementById('pwaDismissUpdateBtn');
+
+  function showUpdateBanner(worker) {
+    if (!updateBanner) return;
+    if (sessionStorage.getItem('fansphere_update_dismissed') === 'true') {
+      return;
+    }
+    updateBanner.classList.remove('hidden');
+    updateBanner.classList.add('flex');
+    initLucide();
+
+    if (updateNowBtn) {
+      updateNowBtn.onclick = () => {
+        updateNowBtn.disabled = true;
+        updateNowBtn.innerHTML = `
+          <div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <span>Updating...</span>
+        `;
+        if (worker) {
+          worker.postMessage({ type: 'SKIP_WAITING' });
+        } else if (swRegistration && swRegistration.waiting) {
+          swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else {
+          window.location.reload();
+        }
+      };
+    }
+  }
+
+  dismissUpdateBtn?.addEventListener('click', () => {
+    if (updateBanner) {
+      updateBanner.classList.add('hidden');
+      updateBanner.classList.remove('flex');
+    }
+    sessionStorage.setItem('fansphere_update_dismissed', 'true');
+  });
+
+  async function checkPlatformVersion() {
+    try {
+      const res = await fetch('/api/version', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!initialBuildTime) {
+        initialBuildTime = data.buildTime;
+      } else if (data.buildTime && data.buildTime !== initialBuildTime) {
+        console.log('[PWA] Platform updated! New build detected:', data.buildTime);
+        if (swRegistration) {
+          swRegistration.update().catch(() => {});
+        }
+      }
+    } catch {}
+  }
+
   if ('serviceWorker' in navigator) {
+    // Reload page when new service worker activates and claims clients
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js', { scope: '/' })
         .then((reg) => {
+          swRegistration = reg;
           console.log('[PWA] Service Worker registered with scope:', reg.scope);
-          
+
+          // Initial version check
+          checkPlatformVersion();
+
+          // Check if an updated worker is already installed and waiting
+          if (reg.waiting && navigator.serviceWorker.controller) {
+            console.log('[PWA] Found waiting worker on load.');
+            showUpdateBanner(reg.waiting);
+          }
+
+          // Listen for new updates discovered
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[PWA] New version ready.');
+                  console.log('[PWA] New platform version installed and waiting.');
+                  showUpdateBanner(newWorker);
                 }
               });
             }
@@ -3445,6 +3524,32 @@ function initPWA() {
         .catch((err) => {
           console.warn('[PWA] Service Worker registration failed:', err);
         });
+
+      // Background periodic check every 15 minutes
+      setInterval(() => {
+        if (swRegistration) {
+          swRegistration.update().catch(() => {});
+        }
+        checkPlatformVersion();
+      }, 15 * 60 * 1000);
+
+      // Check on window focus
+      window.addEventListener('focus', () => {
+        if (swRegistration) {
+          swRegistration.update().catch(() => {});
+        }
+        checkPlatformVersion();
+      });
+
+      // Check when tab visibility returns
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          if (swRegistration) {
+            swRegistration.update().catch(() => {});
+          }
+          checkPlatformVersion();
+        }
+      });
     });
   }
 
