@@ -2000,29 +2000,240 @@ function initEventHandlers() {
   document.getElementById('imgModeUploadBtn')?.addEventListener('click', () => setImageUploadMode('upload'));
   document.getElementById('imgModeUrlBtn')?.addEventListener('click', () => setImageUploadMode('url'));
 
-  // File picker handler: read file as Base64 data URL
-  document.getElementById('postImageFileInput')?.addEventListener('change', (e) => {
+  // ==================== IMAGE RESIZE & COMPRESSION HELPERS ====================
+
+  function askUserToResize(file) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('resizeConfirmModal');
+      const sizeText = document.getElementById('resizeModalFileSizeText');
+      const confirmBtn = document.getElementById('confirmResizeBtn');
+      const cancelBtn = document.getElementById('cancelResizeBtn');
+
+      const sizeFormatted = (file.size / (1024 * 1024)).toFixed(2);
+
+      if (!modal) {
+        const ok = confirm(`The selected image is ${sizeFormatted} MB, exceeding the 1MB limit. Would you like to automatically resize and scale it to fit under 1MB?`);
+        resolve(ok);
+        return;
+      }
+
+      if (sizeText) {
+        sizeText.textContent = `Selected file size: ${sizeFormatted} MB`;
+      }
+
+      let settled = false;
+
+      function cleanup() {
+        settled = true;
+        confirmBtn?.removeEventListener('click', onConfirm);
+        cancelBtn?.removeEventListener('click', onCancel);
+        modal.removeEventListener('close', onClose);
+        if (modal.open) {
+          modal.close();
+        }
+      }
+
+      function onConfirm(e) {
+        e.preventDefault();
+        if (settled) return;
+        cleanup();
+        resolve(true);
+      }
+
+      function onCancel(e) {
+        e.preventDefault();
+        if (settled) return;
+        cleanup();
+        resolve(false);
+      }
+
+      function onClose() {
+        if (settled) return;
+        cleanup();
+        resolve(false);
+      }
+
+      confirmBtn?.addEventListener('click', onConfirm, { once: true });
+      cancelBtn?.addEventListener('click', onCancel, { once: true });
+      modal.addEventListener('close', onClose, { once: true });
+
+      initLucide();
+      modal.showModal();
+    });
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(img);
+      };
+      img.onerror = (err) => {
+        URL.revokeObjectURL(objectUrl);
+        reject(err);
+      };
+      img.src = objectUrl;
+    });
+  }
+
+  async function scaleImageTo1MB(file) {
+    const MAX_TARGET_BYTES = 1000000; // Target comfortably below 1,048,576 bytes
+    const img = await loadImageFromFile(file);
+
+    let width = img.naturalWidth || img.width;
+    let height = img.naturalHeight || img.height;
+
+    const maxDim = 2560;
+    if (width > maxDim || height > maxDim) {
+      const ratio = Math.min(maxDim / width, maxDim / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentScale = 1.0;
+    let bestBlob = null;
+    const qualitySteps = [0.92, 0.85, 0.78, 0.70, 0.60];
+
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const currentW = Math.max(320, Math.round(width * currentScale));
+      const currentH = Math.max(240, Math.round(height * currentScale));
+      canvas.width = currentW;
+      canvas.height = currentH;
+      ctx.clearRect(0, 0, currentW, currentH);
+      ctx.drawImage(img, 0, 0, currentW, currentH);
+
+      for (const q of qualitySteps) {
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', q));
+        if (blob && blob.size <= MAX_TARGET_BYTES) {
+          bestBlob = blob;
+          break;
+        }
+      }
+
+      if (bestBlob) break;
+      currentScale *= 0.75;
+    }
+
+    if (!bestBlob || bestBlob.size > MAX_TARGET_BYTES) {
+      canvas.width = Math.max(320, Math.round(width * 0.4));
+      canvas.height = Math.max(240, Math.round(height * 0.4));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      bestBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.55));
+    }
+
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(bestBlob);
+    });
+
+    return {
+      dataUrl,
+      blob: bestBlob,
+      size: bestBlob.size
+    };
+  }
+
+  // File picker handler: read file as Base64 data URL with auto-resize prompt for > 1MB
+  document.getElementById('postImageFileInput')?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    let finalDataUrl = '';
     if (file.size > 1048576) {
-      alert('Selected image exceeds the 1MB size limit.');
-      e.target.value = '';
-      return;
+      const userAgreed = await askUserToResize(file);
+      if (!userAgreed) {
+        e.target.value = '';
+        return;
+      }
+      try {
+        const scaled = await scaleImageTo1MB(file);
+        finalDataUrl = scaled.dataUrl;
+      } catch (err) {
+        console.error('Resize failed:', err);
+        alert('Could not resize image. Please try a different image.');
+        e.target.value = '';
+        return;
+      }
+    } else {
+      finalDataUrl = await readFileAsDataUrl(file);
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      currentPostImageUrl = event.target.result;
+    currentPostImageUrl = finalDataUrl;
+    const previewContainer = document.getElementById('postImagePreviewContainer');
+    const previewImg = document.getElementById('postImagePreview');
+    if (previewContainer && previewImg) {
+      previewImg.src = currentPostImageUrl;
+      previewContainer.classList.remove('hidden');
+    }
+  });
+
+  // Drag and drop support for post image upload
+  const postDropzone = document.getElementById('imageUploadWrapper');
+  if (postDropzone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      postDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        postDropzone.classList.add('border-red-500', 'bg-slate-900/90');
+      });
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+      postDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        postDropzone.classList.remove('border-red-500', 'bg-slate-900/90');
+      });
+    });
+    postDropzone.addEventListener('drop', async (e) => {
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      if (!file.type.startsWith('image/')) {
+        alert('Please choose an image file (PNG, JPG, WebP, GIF).');
+        return;
+      }
+
+      let finalDataUrl = '';
+      if (file.size > 1048576) {
+        const userAgreed = await askUserToResize(file);
+        if (!userAgreed) return;
+        try {
+          const scaled = await scaleImageTo1MB(file);
+          finalDataUrl = scaled.dataUrl;
+        } catch (err) {
+          console.error('Resize failed:', err);
+          alert('Could not resize image. Please try a different image.');
+          return;
+        }
+      } else {
+        finalDataUrl = await readFileAsDataUrl(file);
+      }
+
+      currentPostImageUrl = finalDataUrl;
       const previewContainer = document.getElementById('postImagePreviewContainer');
       const previewImg = document.getElementById('postImagePreview');
       if (previewContainer && previewImg) {
         previewImg.src = currentPostImageUrl;
         previewContainer.classList.remove('hidden');
       }
-    };
-    reader.readAsDataURL(file);
-  });
+    });
+  }
 
   // URL input handler with debounce
   document.getElementById('postImageUrlInput')?.addEventListener('input', (e) => {
@@ -2227,28 +2438,38 @@ function initEventHandlers() {
       }
     });
 
-    // Handle Comment Image File Input
-    document.getElementById('commentImageFileInput')?.addEventListener('change', (e) => {
+    // Handle Comment Image File Input with auto-resize prompt for > 1MB
+    document.getElementById('commentImageFileInput')?.addEventListener('change', async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
+      let finalDataUrl = '';
       if (file.size > 1048576) {
-        alert('Selected image exceeds the 1MB size limit.');
-        e.target.value = '';
-        return;
+        const userAgreed = await askUserToResize(file);
+        if (!userAgreed) {
+          e.target.value = '';
+          return;
+        }
+        try {
+          const scaled = await scaleImageTo1MB(file);
+          finalDataUrl = scaled.dataUrl;
+        } catch (err) {
+          console.error('Resize failed:', err);
+          alert('Could not resize image. Please try a different image.');
+          e.target.value = '';
+          return;
+        }
+      } else {
+        finalDataUrl = await readFileAsDataUrl(file);
       }
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        currentCommentImageUrl = event.target.result;
-        const previewWrapper = document.getElementById('commentImagePreviewWrapper');
-        const previewImg = document.getElementById('commentImagePreview');
-        if (previewWrapper && previewImg) {
-          previewImg.src = currentCommentImageUrl;
-          previewWrapper.classList.remove('hidden');
-        }
-      };
-      reader.readAsDataURL(file);
+      currentCommentImageUrl = finalDataUrl;
+      const previewWrapper = document.getElementById('commentImagePreviewWrapper');
+      const previewImg = document.getElementById('commentImagePreview');
+      if (previewWrapper && previewImg) {
+        previewImg.src = currentCommentImageUrl;
+        previewWrapper.classList.remove('hidden');
+      }
     });
 
     // Handle Comment Image URL Input

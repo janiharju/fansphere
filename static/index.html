@@ -847,6 +847,35 @@
     </div>
   </dialog>
 
+  <!-- Image Resize Confirmation Modal -->
+  <dialog id="resizeConfirmModal" class="bg-slate-900 border border-slate-700 text-slate-100 rounded-2xl p-5 max-w-sm w-full shadow-2xl backdrop:bg-black/80 m-auto z-50">
+    <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+      <div class="p-2 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20 shrink-0">
+        <i data-lucide="image-down" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-sm text-slate-100">Image Exceeds 1MB</h3>
+        <p class="text-[11px] text-slate-400" id="resizeModalFileSizeText">Selected file size: 2.4 MB</p>
+      </div>
+    </div>
+    <div class="py-4 text-xs text-slate-300 leading-relaxed space-y-2">
+      <p>The image exceeds the maximum 1MB upload limit. Would you like to automatically resize and scale it to fit under 1MB?</p>
+      <div class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+        <span>Image will be scaled to 1 megabyte size with optimized clarity.</span>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+      <button id="cancelResizeBtn" type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition cursor-pointer">
+        Cancel
+      </button>
+      <button id="confirmResizeBtn" type="button" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-red-600 hover:bg-red-500 transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-red-900/30">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+        <span>Resize to 1MB</span>
+      </button>
+    </div>
+  </dialog>
+
   <!-- Application Script -->
   <script src="/static/app.js?v=20261011_01"></script>
 </body>
