@@ -42,6 +42,7 @@ const state = {
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
   currentTag: 'All',
+  searchQuery: '',
   selectedRealm: localStorage.getItem('fansphere_realm') || null,
   currentPage: 1,
   postsPerPage: 3,
@@ -192,7 +193,7 @@ function setRealmFilter(realm) {
     postsContainer.dataset.lastRenderKey = '';
   }
   state.renderedChatIds.clear();
-  renderPosts();
+  loadPosts();
   renderChatStream();
 }
 
@@ -917,6 +918,13 @@ async function loadPosts() {
     if (state.currentTag && state.currentTag !== 'All') {
       url.searchParams.set('tag', state.currentTag);
     }
+    const effective = getEffectiveRealm();
+    if (state.selectedRealm && state.selectedRealm !== 'All') {
+      url.searchParams.set('realm', effective);
+    }
+    if (state.searchQuery && state.searchQuery.trim()) {
+      url.searchParams.set('q', state.searchQuery.trim());
+    }
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load posts');
@@ -948,9 +956,11 @@ async function loadPosts() {
     } catch {}
 
     state.posts = sortPostsByLatestActivity(merged);
-    try {
-      localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
-    } catch {}
+    if (!state.searchQuery || !state.searchQuery.trim()) {
+      try {
+        localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
+      } catch {}
+    }
 
     const countAllEl = document.getElementById('tagCountAll');
     if (countAllEl && state.currentTag === 'All') {
@@ -979,6 +989,15 @@ function getFilteredPosts() {
   if (state.selectedRealm !== 'All') {
     list = list.filter(p => matchClubRealm(p.author_flair, effective));
   }
+  const q = (state.searchQuery || '').trim().toLowerCase();
+  if (q) {
+    list = list.filter(p => {
+      const titleMatch = (p.title || '').toLowerCase().includes(q);
+      const contentMatch = (p.content || '').toLowerCase().includes(q);
+      const commentMatch = Array.isArray(p.matched_comments) && p.matched_comments.length > 0;
+      return titleMatch || contentMatch || commentMatch;
+    });
+  }
   return list;
 }
 
@@ -1004,14 +1023,17 @@ function calculateFeedCapacity(totalVisibleCount) {
 
   const topCta = centerForum?.firstElementChild;
   const topCtaHeight = (topCta && topCta.offsetHeight > 20) ? topCta.offsetHeight : 48;
+  const searchBar = document.getElementById('forumSearchBarWrapper');
+  const searchBarHeight = (searchBar && searchBar.offsetHeight > 10) ? searchBar.offsetHeight : 44;
   const gap = 8; // Tailwind gap-2 = 8px
+  const topHeadersHeight = topCtaHeight + searchBarHeight + gap;
 
   // Deterministic stable card height to guarantee zero pagination oscillations in mobile portrait
   const cardHeight = isMobile ? 116 : 108;
   const cardSlot = cardHeight + gap;
 
   // Available height WITHOUT pagination controls:
-  const spaceWithoutPag = Math.max(0, forumHeight - topCtaHeight - gap);
+  const spaceWithoutPag = Math.max(0, forumHeight - topHeadersHeight - gap);
   const maxPostsWithoutPag = Math.max(1, Math.floor((spaceWithoutPag + gap) / cardSlot));
 
   // If ALL visible posts fit without needing pagination:
@@ -1025,7 +1047,7 @@ function calculateFeedCapacity(totalVisibleCount) {
 
   // Not enough room for all posts: paginate and fill each page to capacity
   const paginationHeight = 36;
-  const spaceWithPag = Math.max(0, forumHeight - topCtaHeight - paginationHeight - (gap * 2));
+  const spaceWithPag = Math.max(0, forumHeight - topHeadersHeight - paginationHeight - (gap * 2));
   const maxPostsWithPag = Math.max(1, Math.floor((spaceWithPag + gap) / cardSlot));
   const totalPages = Math.max(1, Math.ceil(totalVisibleCount / maxPostsWithPag));
 
@@ -1036,37 +1058,131 @@ function calculateFeedCapacity(totalVisibleCount) {
   };
 }
 
+function syncSearchTypeSelectUI(activeTag) {
+  const searchSelect = document.getElementById('forumSearchTypeSelect');
+  if (searchSelect && searchSelect.value !== (activeTag || 'All')) {
+    searchSelect.value = activeTag || 'All';
+  }
+}
+
+function updateSearchStatsUI(visibleCount) {
+  const statsWrapper = document.getElementById('forumSearchStats');
+  const statsText = document.getElementById('forumSearchStatsText');
+  const clearBtn = document.getElementById('clearForumSearchBtn');
+
+  syncSearchTypeSelectUI(state.currentTag);
+
+  const query = (state.searchQuery || '').trim();
+  const hasTag = state.currentTag && state.currentTag !== 'All';
+
+  if (query) {
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  } else {
+    if (clearBtn) clearBtn.classList.add('hidden');
+  }
+
+  if (query || hasTag) {
+    if (statsWrapper && statsText) {
+      const effective = getEffectiveRealm();
+      const realmName = getRealmDisplayName(effective);
+      if (query && hasTag) {
+        statsText.textContent = `Found ${visibleCount} [${state.currentTag}] match${visibleCount === 1 ? '' : 'es'} for "${query}" in ${realmName}`;
+      } else if (query) {
+        statsText.textContent = `Found ${visibleCount} match${visibleCount === 1 ? '' : 'es'} for "${query}" in ${realmName}`;
+      } else {
+        statsText.textContent = `Showing ${visibleCount} [${state.currentTag}] discussion${visibleCount === 1 ? '' : 's'} in ${realmName}`;
+      }
+      statsWrapper.classList.remove('hidden');
+      statsWrapper.classList.add('flex');
+    }
+  } else {
+    if (statsWrapper) {
+      statsWrapper.classList.add('hidden');
+      statsWrapper.classList.remove('flex');
+    }
+  }
+}
+
+function clearForumSearch() {
+  state.searchQuery = '';
+  state.currentTag = 'All';
+
+  const input = document.getElementById('forumSearchInput');
+  if (input) input.value = '';
+
+  const searchSelect = document.getElementById('forumSearchTypeSelect');
+  if (searchSelect) searchSelect.value = 'All';
+
+  const threadFilterSelect = document.getElementById('threadFilterSelect');
+  if (threadFilterSelect) threadFilterSelect.value = 'All';
+
+  const indicator = document.getElementById('activeTagIndicator');
+  if (indicator) indicator.classList.add('hidden');
+
+  syncSearchTypeSelectUI('All');
+  updateSearchStatsUI(0);
+  state.currentPage = 1;
+  loadPosts();
+}
+
 function renderPosts() {
   const container = document.getElementById('postsList');
   if (!container) return;
 
   const visiblePosts = getFilteredPosts();
+  updateSearchStatsUI(visiblePosts.length);
 
   if (visiblePosts.length === 0) {
     container.dataset.lastRenderKey = 'empty';
     const effective = getEffectiveRealm();
     const realmName = getRealmDisplayName(effective);
     requestAnimationFrame(() => {
-      container.innerHTML = `
-        <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
-          <p class="text-xs font-semibold mb-1">No posts found in the <span class="text-red-400">${escapeHtml(realmName)}</span> realm.</p>
-          <p class="text-[10px] text-slate-500 mb-2.5">Be the first to share thoughts in this club realm, or switch realm in your profile!</p>
-          <div class="flex items-center justify-center gap-2">
-            <button id="emptyStateResetRealmBtn" class="text-[10px] bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
-              🌐 Show All Posts
-            </button>
-            <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
-              👤 Profile Realm
-            </button>
+      const hasActiveFilters = (state.searchQuery && state.searchQuery.trim()) || (state.currentTag && state.currentTag !== 'All');
+      if (hasActiveFilters) {
+        const queryPart = state.searchQuery && state.searchQuery.trim() ? `"${escapeHtml(state.searchQuery)}"` : '';
+        const tagPart = state.currentTag && state.currentTag !== 'All' ? `[${escapeHtml(state.currentTag)}]` : '';
+        const filterLabel = [tagPart, queryPart].filter(Boolean).join(' ');
+
+        container.innerHTML = `
+          <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
+            <div class="w-9 h-9 rounded-xl bg-slate-800 text-red-400 mx-auto flex items-center justify-center mb-2 border border-slate-700">
+              <i data-lucide="search-x" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs font-semibold text-slate-200 mb-1">No results matching ${filterLabel}</p>
+            <p class="text-[10px] text-slate-500 mb-2.5">No discussions or comments found in the <span class="text-red-400 font-medium">${escapeHtml(realmName)}</span> realm.</p>
+            <div class="flex items-center justify-center gap-2">
+              <button id="emptyStateClearSearchBtn" class="text-[10px] bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
+                Reset All Filters
+              </button>
+            </div>
           </div>
-        </div>
-      `;
-      document.getElementById('emptyStateResetRealmBtn')?.addEventListener('click', () => {
-        setRealmFilter('All');
-      });
-      document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
-        document.getElementById('openProfileModalBtn')?.click();
-      });
+        `;
+        document.getElementById('emptyStateClearSearchBtn')?.addEventListener('click', () => {
+          clearForumSearch();
+        });
+        initLucide();
+      } else {
+        container.innerHTML = `
+          <div class="text-center py-6 bg-slate-850 rounded-2xl border border-slate-700/60 p-4 text-slate-400 my-auto">
+            <p class="text-xs font-semibold mb-1">No posts found in the <span class="text-red-400">${escapeHtml(realmName)}</span> realm.</p>
+            <p class="text-[10px] text-slate-500 mb-2.5">Be the first to share thoughts in this club realm, or switch realm in your profile!</p>
+            <div class="flex items-center justify-center gap-2">
+              <button id="emptyStateResetRealmBtn" class="text-[10px] bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-lg transition cursor-pointer">
+                🌐 Show All Posts
+              </button>
+              <button id="emptyStateProfileBtn" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
+                👤 Profile Realm
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('emptyStateResetRealmBtn')?.addEventListener('click', () => {
+          setRealmFilter('All');
+        });
+        document.getElementById('emptyStateProfileBtn')?.addEventListener('click', () => {
+          document.getElementById('openProfileModalBtn')?.click();
+        });
+      }
       updatePaginationControls(1, 1, false);
     });
     return;
@@ -1088,7 +1204,7 @@ function renderPosts() {
   }
 
   // Prevent re-rendering and flickering if the target cards and pagination are already rendered
-  const renderKey = `${state.selectedRealm}:${state.currentTag}:${state.currentPage}:${shouldPaginate}:${totalPages}:${postsPerPage}:${pagePosts.map(p => `${p.id}_${p.comment_count || 0}_${p.upvotes || 0}_${p.title}`).join('|')}`;
+  const renderKey = `${state.selectedRealm}:${state.currentTag}:${state.searchQuery || ''}:${state.currentPage}:${shouldPaginate}:${totalPages}:${postsPerPage}:${pagePosts.map(p => `${p.id}_${p.comment_count || 0}_${p.upvotes || 0}_${p.title}`).join('|')}`;
   container.dataset.lastRenderKey = renderKey;
 
   requestAnimationFrame(() => {
@@ -1148,9 +1264,20 @@ function formatRelativeTime(isoString) {
   }
 }
 
+function highlightSearchMatches(htmlStr, query) {
+  if (!htmlStr || !query || !query.trim()) return htmlStr;
+  const q = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(?![^<]*>)(${q})`, 'gi');
+  return htmlStr.replace(regex, '<mark class="bg-amber-400/25 text-amber-200 px-0.5 rounded font-medium">$1</mark>');
+}
+
 function renderPostCardHtml(post) {
   const tagClass = getTagClass(post.tag);
   const hasNewComments = post.latest_activity_at && post.comment_count > 0 && new Date(post.latest_activity_at).getTime() > new Date(post.created_at).getTime() + 1000;
+  const q = (state.searchQuery || '').trim();
+
+  const renderedTitle = q ? highlightSearchMatches(escapeHtml(post.title), q) : escapeHtml(post.title);
+  const renderedContent = q ? highlightSearchMatches(formatLightweightMarkdown(post.content), q) : formatLightweightMarkdown(post.content);
 
   return `
     <article 
@@ -1174,13 +1301,13 @@ function renderPostCardHtml(post) {
 
         <!-- Post Title -->
         <h2 class="post-title-link font-bold text-slate-100 text-xs leading-snug hover:text-red-400 transition cursor-pointer truncate mb-0.5" data-post-id="${post.id}">
-          ${escapeHtml(post.title)}
+          ${renderedTitle}
         </h2>
 
         <!-- Post Body & Optional Image Thumbnail -->
         <div class="flex items-start gap-2.5 mb-1.5">
           <p class="post-title-link text-[11px] text-slate-300 leading-snug line-clamp-2 cursor-pointer flex-1 min-w-0" data-post-id="${post.id}">
-            ${formatLightweightMarkdown(post.content)}
+            ${renderedContent}
           </p>
           ${post.image_url ? `
             <div class="shrink-0 relative group/thumb cursor-pointer" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(post.image_url)}', '${escapeJsString(post.title)}')">
@@ -1197,6 +1324,18 @@ function renderPostCardHtml(post) {
             </div>
           ` : ''}
         </div>
+
+        ${(post.matched_comments && post.matched_comments.length > 0 && q) ? `
+          <div class="mb-1.5 p-2 rounded-lg bg-slate-900/90 border border-slate-700/70 text-[10px] space-y-0.5">
+            <div class="flex items-center gap-1 text-red-400 font-semibold">
+              <i data-lucide="message-square-quote" class="w-3 h-3"></i>
+              <span>Matched comment (@${escapeHtml(post.matched_comments[0].author)}):</span>
+            </div>
+            <p class="text-slate-300 italic line-clamp-1">
+              "${highlightSearchMatches(escapeHtml(post.matched_comments[0].content), q)}"
+            </p>
+          </div>
+        ` : ''}
 
         <!-- Post Actions Footer -->
         <div class="flex items-center gap-3 text-[10px] text-slate-400 pt-1 border-t border-slate-700/40">
@@ -1885,13 +2024,77 @@ function initEventHandlers() {
         if (tagName) tagName.textContent = tag;
       }
 
+      syncSearchTypeSelectUI(tag);
       loadPosts();
     });
   });
   document.getElementById('threadFilterSelect')?.addEventListener('change', (e) => {
     state.currentTag = e.target.value;
     state.currentPage = 1;
+    syncSearchTypeSelectUI(e.target.value);
     loadPosts();
+  });
+
+  // Post Type dropdown inside search bar
+  document.getElementById('forumSearchTypeSelect')?.addEventListener('change', (e) => {
+    const selectedTag = e.target.value;
+    state.currentTag = selectedTag;
+    state.currentPage = 1;
+
+    // Sync sidebar dropdown and tag indicator
+    const threadFilterSelect = document.getElementById('threadFilterSelect');
+    if (threadFilterSelect) threadFilterSelect.value = selectedTag;
+
+    const indicator = document.getElementById('activeTagIndicator');
+    const tagName = document.getElementById('activeTagName');
+    if (selectedTag === 'All') {
+      indicator?.classList.add('hidden');
+    } else {
+      indicator?.classList.remove('hidden');
+      if (tagName) tagName.textContent = selectedTag;
+    }
+
+    syncSearchTypeSelectUI(selectedTag);
+    loadPosts();
+  });
+
+  // Forum Search Input handler with 250ms debounce
+  let searchDebounceTimer = null;
+  const forumSearchInput = document.getElementById('forumSearchInput');
+  const clearForumSearchBtn = document.getElementById('clearForumSearchBtn');
+  const resetForumSearchLink = document.getElementById('resetForumSearchLink');
+
+  forumSearchInput?.addEventListener('input', (e) => {
+    const val = e.target.value;
+    state.searchQuery = val;
+    state.currentPage = 1;
+
+    if (clearForumSearchBtn) {
+      if (val.trim()) {
+        clearForumSearchBtn.classList.remove('hidden');
+      } else {
+        clearForumSearchBtn.classList.add('hidden');
+      }
+    }
+
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      loadPosts();
+    }, 250);
+  });
+
+  forumSearchInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      clearForumSearch();
+    }
+  });
+
+  clearForumSearchBtn?.addEventListener('click', () => {
+    clearForumSearch();
+  });
+
+  resetForumSearchLink?.addEventListener('click', () => {
+    clearForumSearch();
   });
 
   // Chat message action delegation: Quote, React, and Reaction Chips

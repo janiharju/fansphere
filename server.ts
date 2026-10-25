@@ -1262,10 +1262,11 @@ export function matchClubRealm(authorFlair: string | undefined, selectedRealm: s
   return a.includes(b) || b.includes(a);
 }
 
-// 1. Posts List (Always sorted by latest changes including comments, filterable by tag and club realm)
+// 1. Posts List (Always sorted by latest changes including comments, filterable by tag, club realm, and search query)
 app.get('/api/posts', (req, res) => {
   const tag = req.query.tag as string | undefined;
   const realm = req.query.realm as string | undefined;
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
 
   let filtered = [...posts];
   if (tag && tag.toLowerCase() !== 'all') {
@@ -1275,14 +1276,36 @@ app.get('/api/posts', (req, res) => {
     filtered = filtered.filter(p => matchClubRealm(p.author_flair, realm));
   }
 
+  // Filter posts and comments by search keywords within the selected realm
+  const matchingCommentsMap = new Map<number, Comment[]>();
+  if (q) {
+    filtered = filtered.filter(p => {
+      const titleMatch = p.title.toLowerCase().includes(q);
+      const contentMatch = p.content.toLowerCase().includes(q);
+      const postComments = comments.filter(c => c.post_id === p.id && c.content.toLowerCase().includes(q));
+      if (postComments.length > 0) {
+        matchingCommentsMap.set(p.id, postComments);
+      }
+      return titleMatch || contentMatch || postComments.length > 0;
+    });
+  }
+
   // Always sort forum feed by latest changes, taking comments into account
   const mapped = filtered.map(p => {
     const latestActivityTime = getPostLatestActivityTime(p);
+    const matchedComments = matchingCommentsMap.get(p.id) || [];
     return {
       ...p,
       comment_count: getDynamicCommentCount(p.id),
       latest_activity_at: new Date(latestActivityTime).toISOString(),
-      latest_activity_time: latestActivityTime
+      latest_activity_time: latestActivityTime,
+      matched_comments: matchedComments.map(c => ({
+        id: c.id,
+        author: c.author,
+        author_flair: c.author_flair,
+        content: c.content,
+        created_at: c.created_at
+      }))
     };
   });
 

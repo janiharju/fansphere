@@ -324,6 +324,49 @@
         </div>
       </div>
 
+      <!-- Forum Search Bar: Filter posts & comments in current realm with type filters -->
+      <div id="forumSearchBarWrapper" class="bg-slate-800/95 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm shrink-0 flex flex-col gap-2">
+        <!-- Top Search Row: Input + Type Dropdown -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 flex items-center">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none"></i>
+            <input 
+              type="text" 
+              id="forumSearchInput" 
+              placeholder="Search posts & comments in this realm..." 
+              class="w-full bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 rounded-xl pl-8 pr-8 py-1.5 text-xs focus:outline-none focus:border-red-500 transition shadow-inner"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button 
+              type="button" 
+              id="clearForumSearchBtn" 
+              class="hidden absolute right-2 text-slate-400 hover:text-white p-1 rounded-md text-xs transition cursor-pointer" 
+              title="Clear text search"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="shrink-0 flex items-center">
+            <select id="forumSearchTypeSelect" class="bg-slate-900 border border-slate-700/80 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-red-500 cursor-pointer font-medium transition shadow-inner" title="Filter by post type">
+              <option value="All">All Types</option>
+              <option value="Match Thread">🔥 Match Thread</option>
+              <option value="Discussion">💬 Discussion</option>
+              <option value="Tactics">📋 Tactics</option>
+              <option value="Transfers">🔄 Transfers</option>
+              <option value="Meetups">🍻 Meetups</option>
+              <option value="Memes">😂 Memes</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Search Status & Quick Reset -->
+        <div id="forumSearchStats" class="hidden items-center justify-between text-[10px] text-slate-400 px-1 pt-1 border-t border-slate-700/50">
+          <span id="forumSearchStatsText">Found 0 discussions</span>
+          <button type="button" id="resetForumSearchLink" class="text-red-400 hover:text-red-300 hover:underline cursor-pointer font-medium">Reset all filters</button>
+        </div>
+      </div>
+
       <!-- Feed Container: Compact Post List (Fitted to Viewport) -->
       <div id="postsList" class="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
         <!-- Posts will be injected here dynamically -->
