@@ -216,7 +216,7 @@ function getInitialPosts(): Post[] {
       title: '[Match Thread] Arsenal vs Chelsea (London Derby - Matchday 28 Live Discussion)',
       content: 'The Gunners host Chelsea at Emirates Stadium! Arteta starts with Raya, White, Saliba, Gabriel, Timber, Partey, Rice, Odegaard, Saka, Havertz, Martinelli. Live tactical thoughts, match reactions, and celebration thread. COYG! 🔴⚪',
       author: 'HelsinkiGunner',
-      author_flair: 'ArseFinland Member',
+      author_flair: 'Arsenal Finland Member',
       tag: 'Match Thread',
       upvotes: 87,
       downvotes: 3,
@@ -226,9 +226,9 @@ function getInitialPosts(): Post[] {
     },
     {
       id: 2,
-      title: 'ArseFinland Official Watch Party: Sports Academy Helsinki & Hook Tampere this Saturday!',
-      content: 'Moro kaikki Arsenal-fanit! ArseFinland järjestää jälleen yhteiskatsomon. Tervetuloa katsomaan peliä isolta screeniltä mahtavassa seurassa Helsingissä (Sports Academy, Kaivokatu 8) ja Tampereella (Ravintola Hook). Jäsenkortilla tutut faniedut hanatuotteista ja burgereista. Paikalle kannattaa saapua n. 45 min ennen aloituspotkua varmistaaksesi hyvät istumapaikat!',
-      author: 'ArseFinlandAdmin',
+      title: 'Arsenal Finland Official Watch Party: Sports Academy Helsinki & Hook Tampere this Saturday!',
+      content: 'Moro kaikki Arsenal-fanit! Arsenal Finland järjestää jälleen yhteiskatsomon. Tervetuloa katsomaan peliä isolta screeniltä mahtavassa seurassa Helsingissä (Sports Academy, Kaivokatu 8) ja Tampereella (Ravintola Hook). Jäsenkortilla tutut faniedut hanatuotteista ja burgereista. Paikalle kannattaa saapua n. 45 min ennen aloituspotkua varmistaaksesi hyvät istumapaikat!',
+      author: 'ArsenalFinlandAdmin',
       author_flair: 'Club Official',
       tag: 'Meetups',
       upvotes: 64,
@@ -266,9 +266,9 @@ function getInitialPosts(): Post[] {
     {
       id: 5,
       title: "When you check the league table on Sunday evening and we're top of the league",
-      content: 'Trust the process. 65 points and counting. The red and white cannon firing on all cylinders! Terveisiä kaikille ArseFinlandin jäsenille ympäri Suomea!',
+      content: 'Trust the process. 65 points and counting. The red and white cannon firing on all cylinders! Terveisiä kaikille ArsenalFinlandin jäsenille ympäri Suomea!',
       author: 'PohjolanTykkimies',
-      author_flair: 'ArseFinland Official Member',
+      author_flair: 'Arsenal Finland Official Member',
       tag: 'Memes',
       upvotes: 98,
       downvotes: 2,
@@ -281,7 +281,7 @@ function getInitialPosts(): Post[] {
       title: 'Terveisiä Rovaniemeltä! Uusi ketju',
       content: 'Pohjoisen tykkimiehet ilmoittautuvat mukaan keskusteluun.',
       author: 'RovaniemiGooner',
-      author_flair: 'ArseFinland Official Member',
+      author_flair: 'Arsenal Finland Official Member',
       tag: 'Discussion',
       upvotes: 1,
       downvotes: 0,
@@ -294,7 +294,7 @@ function getInitialPosts(): Post[] {
       title: 'Terveiset Espoosta! Loistava kausi',
       content: 'Espoon kannattajat myös mukana menossa täysillä!',
       author: 'EspooCannon',
-      author_flair: 'ArseFinland Official Member',
+      author_flair: 'Arsenal Finland Official Member',
       tag: 'Discussion',
       upvotes: 1,
       downvotes: 0,
@@ -377,7 +377,7 @@ function getInitialChatMessages(): ChatMessage[] {
     { id: 3, room: 'general', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'Watching live at Ravintola Hook with 15 other Finnish gooners 🍻', created_at: new Date(now - 15 * 60 * 1000).toISOString() },
     { id: 4, room: 'general', author: 'CityFan_99', author_flair: 'Man City', badge_color: '#06B6D4', content: 'City just equalized at St James Park! Haaland ⚽', created_at: new Date(now - 10 * 60 * 1000).toISOString() },
     { id: 5, room: 'general', author: 'Mikko_V', author_flair: 'Gunner', badge_color: '#EF4444', content: 'KAI HAVERTZ SCORESSSS 2-1!! GET IN THERE!! 🔴⚪', created_at: new Date(now - 5 * 60 * 1000).toISOString() },
-    { id: 6, room: 'general', author: 'ArseFinlandAdmin', author_flair: 'Official', badge_color: '#F59E0B', content: "Reminder: Voting is open for today's Man of the Match in the forum!", created_at: new Date(now - 2 * 60 * 1000).toISOString() },
+    { id: 6, room: 'general', author: 'ArsenalFinlandAdmin', author_flair: 'Official', badge_color: '#F59E0B', content: "Reminder: Voting is open for today's Man of the Match in the forum!", created_at: new Date(now - 2 * 60 * 1000).toISOString() },
     { id: 7, room: 'general', author: 'NordicGooner', author_flair: 'Gunner', badge_color: '#EF4444', content: "15 minutes left to hold on to the 3 points! Let's go boys!", created_at: new Date(now - 1 * 60 * 1000).toISOString() },
 
     { id: 8, room: 'matchday', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: "MATCHDAY LIVE CHAT! Lineups are in, let's hear your score predictions!", created_at: new Date(now - 45 * 60 * 1000).toISOString() },
@@ -387,7 +387,7 @@ function getInitialChatMessages(): ChatMessage[] {
     { id: 12, room: 'matchday', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'HAVERTZ WITH THE HEADER 2-1!! The Emirates is rocking right now!', created_at: new Date(now - 6 * 60 * 1000).toISOString() },
     { id: 13, room: 'matchday', author: 'ArtetaTactics', author_flair: 'Analyst', badge_color: '#93C5FD', content: 'Huge tactical substitution by Arteta putting in Merino to stabilize the midfield.', created_at: new Date(now - 2 * 60 * 1000).toISOString() },
 
-    { id: 14, room: 'suomi-fans', author: 'ArseFinlandAdmin', author_flair: 'Official', badge_color: '#F59E0B', content: 'Tervetuloa kaikille Suomen Arsenal-kannattajille! Täällä sovitaan kisakatsomoista.', created_at: new Date(now - 3 * 3600 * 1000).toISOString() },
+    { id: 14, room: 'suomi-fans', author: 'ArsenalFinlandAdmin', author_flair: 'Official', badge_color: '#F59E0B', content: 'Tervetuloa kaikille Suomen Arsenal-kannattajille! Täällä sovitaan kisakatsomoista.', created_at: new Date(now - 3 * 3600 * 1000).toISOString() },
     { id: 15, room: 'suomi-fans', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Sports Academyyn tulossa ainakin 25 tykkimiestä lauantaina. Pöydät varattu!', created_at: new Date(now - 2 * 3600 * 1000).toISOString() },
     { id: 16, room: 'suomi-fans', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'Tampereen Hookissa myös hyvä porukka kasassa! Siivet & bisseä kylkeen 🍗🍺', created_at: new Date(now - 1 * 3600 * 1000).toISOString() },
     { id: 17, room: 'suomi-fans', author: 'OuluCannon', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Onko Oulun St. Michaelissa tänään väkeä? Voisin tulla toisella puoliajalla!', created_at: new Date(now - 30 * 60 * 1000).toISOString() }
@@ -418,18 +418,18 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours of inactivity before expir
 const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes of recent activity for online presence
 
 export function normalizeFlair(flair: string | undefined): string {
-  if (!flair) return 'ArseFinland Official Member';
+  if (!flair) return 'Arsenal Finland Official Member';
   const str = String(flair).trim().toLowerCase();
   if (str.includes('tester')) return 'Testers';
   if (str.includes('neutral')) return 'Neutral Football Fan';
-  if (str.includes('arsefinland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
-    return 'ArseFinland Official Member';
+  if (str.includes('Arsenal Finland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
+    return 'Arsenal Finland Official Member';
   }
   if (typeof realms !== 'undefined' && Array.isArray(realms)) {
     const matched = realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
     if (matched) return matched.name;
   }
-  return 'ArseFinland Official Member';
+  return 'Arsenal Finland Official Member';
 }
 
 function getInitialSessions(): Session[] {
@@ -439,8 +439,8 @@ function getInitialSessions(): Session[] {
     {
       id: 'sess-helsinki-gunner',
       nickname: 'HelsinkiGunner',
-      email: 'helsinki.gunner@arsefinland.fi',
-      flair: 'ArseFinland Official Member',
+      email: 'helsinki.gunner@ArsenalFinland.fi',
+      flair: 'Arsenal Finland Official Member',
       created_at: new Date(now - 3600000).toISOString(),
       last_active_at: new Date(now - 60000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
@@ -448,17 +448,17 @@ function getInitialSessions(): Session[] {
     {
       id: 'sess-tampere-gooner',
       nickname: 'TampereGooner',
-      email: 'tampere.gooner@arsefinland.fi',
-      flair: 'ArseFinland Official Member',
+      email: 'tampere.gooner@ArsenalFinland.fi',
+      flair: 'Arsenal Finland Official Member',
       created_at: new Date(now - 7200000).toISOString(),
       last_active_at: new Date(now - 120000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
     },
     {
       id: 'sess-arsefin-admin',
-      nickname: 'ArseFinlandAdmin',
-      email: 'admin@arsefinland.fi',
-      flair: 'ArseFinland Official Member',
+      nickname: 'ArsenalFinlandAdmin',
+      email: 'admin@ArsenalFinland.fi',
+      flair: 'Arsenal Finland Official Member',
       created_at: new Date(now - 10000000).toISOString(),
       last_active_at: new Date(now - 30000).toISOString(),
       expires_at: new Date(now + twoHours).toISOString()
@@ -466,7 +466,7 @@ function getInitialSessions(): Session[] {
     {
       id: 'sess-turku-tester',
       nickname: 'TurkuTester',
-      email: 'tester.turku@arsefinland.fi',
+      email: 'tester.turku@ArsenalFinland.fi',
       flair: 'Testers',
       created_at: new Date(now - 4000000).toISOString(),
       last_active_at: new Date(now - 180000).toISOString(),
@@ -497,11 +497,11 @@ export function getInitialRealms(): ClubRealm[] {
   const now = new Date().toISOString();
   return [
     {
-      id: 'arsefinland-official',
-      name: 'ArseFinland Official Member',
+      id: 'Arsenal Finland-official',
+      name: 'Arsenal Finland Official Member',
       badge_color: '#EF4444',
       icon: '🔴',
-      description: 'Official verified ArseFinland community members and supporters',
+      description: 'Official verified Arsenal Finland community members and supporters',
       is_default: true,
       created_at: now
     },
@@ -777,6 +777,7 @@ let posts: Post[] = storedData.posts;
 let comments: Comment[] = storedData.comments;
 let chatMessages: ChatMessage[] = storedData.chatMessages;
 let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : getInitialRealms();
+
 
 // Sanitize defunct ephemeral upload URLs that no longer exist on container disk
 for (const p of posts) {
@@ -1245,10 +1246,10 @@ export function matchClubRealm(authorFlair: string | undefined, selectedRealm: s
     return a.includes('neutral');
   }
 
-  // ArseFinland official club realm
-  const arseFinlandVariants = ['arsefinland', 'arsenal', 'gunner', 'gooner', 'official', 'member'];
-  if (arseFinlandVariants.some(v => b.includes(v))) {
-    return arseFinlandVariants.some(v => a.includes(v));
+  // Arsenal Finland official club realm
+  const arsenalFinlandVariants = ['Arsenal Finland', 'arsenal', 'gunner', 'gooner', 'official', 'member'];
+  if (arsenalFinlandVariants.some(v => b.includes(v))) {
+    return arsenalFinlandVariants.some(v => a.includes(v));
   }
 
   // Dynamic registered realms matching
@@ -1343,7 +1344,7 @@ app.post('/api/posts', (req, res) => {
     title: title.trim(),
     content: content.trim(),
     author: session.nickname,
-    author_flair: session.flair || 'ArseFinland Official Member',
+    author_flair: session.flair || 'Arsenal Finland Official Member',
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
@@ -1521,7 +1522,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
     author: session.nickname,
-    author_flair: session.flair || 'ArseFinland Official Member',
+    author_flair: session.flair || 'Arsenal Finland Official Member',
     content: content.trim(),
     upvotes: 1,
     image_url: cleanCommentImageUrl,
@@ -1636,12 +1637,12 @@ app.post('/api/chat/message', (req, res) => {
     id: assignedChatId,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
-    author_flair: session.flair || 'ArseFinland Official Member',
+    author_flair: session.flair || 'Arsenal Finland Official Member',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: trimmedContent,
     created_at: new Date().toISOString(),
     reactions: {},
-    realm: session.flair || 'ArseFinland Official Member',
+    realm: session.flair || 'Arsenal Finland Official Member',
     mentions: extractedMentions
   };
 
@@ -1944,6 +1945,45 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
   res.status(201).json({ success: true, realm: newRealm, realms });
 });
 
+// Admin: Update Club Realm
+app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
+  const targetIdStr = String(req.params.id || '').trim().toLowerCase();
+  const index = realms.findIndex(r => r.id.toLowerCase() === targetIdStr);
+  
+  if (index === -1) {
+    return res.status(404).json({ detail: 'Club realm not found' });
+  }
+
+  const { name, badge_color, icon, description } = req.body || {};
+  
+  if (name && (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50)) {
+    return res.status(400).json({ detail: 'Realm name must be between 2 and 50 characters' });
+  }
+
+  const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+  
+  const updatedRealm = {
+    ...realms[index],
+    name: name ? name.trim() : realms[index].name,
+    badge_color: badge_color && hexRegex.test(badge_color.trim()) ? badge_color.trim() : realms[index].badge_color,
+    icon: icon && typeof icon === 'string' && icon.trim().length > 0 ? icon.trim().slice(0, 8) : realms[index].icon,
+    description: description !== undefined && typeof description === 'string' ? description.trim() : realms[index].description
+  };
+
+  realms[index] = updatedRealm;
+  forceSaveNow();
+  
+  // Assuming saveRealmToFirestore handles both create and update
+  saveRealmToFirestore(updatedRealm).catch(err => console.error('[Firestore] Realm update error:', err));
+  
+  broadcast({
+    type: 'realms_updated',
+    realms
+  });
+  
+  res.json({ success: true, realm: updatedRealm, realms });
+});
+
 // Admin: Remove Club Realm
 app.delete('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   const targetParam = req.params.id;
@@ -2163,12 +2203,12 @@ wss.on('connection', (ws: WebSocket) => {
             id: nextChatId++,
             room: payload.room || 'general',
             author: session.nickname,
-            author_flair: session.flair || 'ArseFinland Official Member',
+            author_flair: session.flair || 'Arsenal Finland Official Member',
             badge_color: payload.badge_color || '#EF4444',
             content,
             created_at: new Date().toISOString(),
             reactions: {},
-            realm: session.flair || 'ArseFinland Official Member',
+            realm: session.flair || 'Arsenal Finland Official Member',
             mentions: extractedMentions
           };
           chatMessages.push(newChat);
@@ -2392,8 +2432,8 @@ async function syncWithFirestore() {
     if (fsChats.status === 'fulfilled' && Array.isArray(fsChats.value) && fsChats.value.length > 0) {
       const existingChatIds = new Set(chatMessages.map(m => m.id));
       for (const m of fsChats.value) {
-        if (m && m.content && m.content.includes('ArseFinland FanSphere')) {
-          m.content = m.content.replace(/ArseFinland FanSphere/g, 'Fansphere');
+        if (m && m.content && m.content.includes('Arsenal Finland FanSphere')) {
+          m.content = m.content.replace(/Arsenal Finland FanSphere/g, 'Fansphere');
           saveChatMessageToFirestore(m).catch(() => {});
         }
         if (!existingChatIds.has(m.id)) {
@@ -2405,8 +2445,8 @@ async function syncWithFirestore() {
     }
     // Ensure all existing in-memory chat messages are sanitized
     for (const m of chatMessages) {
-      if (m && m.content && m.content.includes('ArseFinland FanSphere')) {
-        m.content = m.content.replace(/ArseFinland FanSphere/g, 'Fansphere');
+      if (m && m.content && m.content.includes('Arsenal Finland FanSphere')) {
+        m.content = m.content.replace(/Arsenal Finland FanSphere/g, 'Fansphere');
         updated = true;
         saveChatMessageToFirestore(m).catch(() => {});
       }

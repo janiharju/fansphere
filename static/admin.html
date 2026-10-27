@@ -56,7 +56,7 @@
                 Admin Console
               </span>
             </div>
-            <p class="text-[10px] text-slate-400">ArseFinland Official Supporters</p>
+            <p class="text-[10px] text-slate-400">ArsenalFinland Official Supporters</p>
           </div>
         </a>
       </div>
@@ -383,6 +383,46 @@
         class="text-xs px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition shadow-md shadow-red-600/20 cursor-pointer flex items-center gap-1.5"
       >
         <span>Delete Realm</span>
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Edit Realm Modal -->
+  <dialog id="editConfirmModal" class="bg-slate-900 text-slate-100 p-6 rounded-3xl border border-slate-700 shadow-2xl w-full max-w-sm backdrop:bg-slate-950/85 backdrop:backdrop-blur-md">
+    <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+      <div class="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-lg shrink-0">
+        ✏️
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-slate-100">Edit Club Realm</h3>
+        <p class="text-[11px] text-slate-400">Update realm configuration</p>
+      </div>
+    </div>
+
+    <form id="editRealmForm" class="py-4 text-xs text-slate-300 space-y-3">
+      <input type="hidden" id="editRealmIdInput" />
+      <div>
+        <label for="editRealmNameInput" class="block text-slate-400 mb-1">Name</label>
+        <input type="text" id="editRealmNameInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" required />
+      </div>
+      <div>
+        <label for="editRealmIconInput" class="block text-slate-400 mb-1">Icon</label>
+        <input type="text" id="editRealmIconInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" required />
+      </div>
+      <div>
+        <label for="editRealmColorInput" class="block text-slate-400 mb-1">Color</label>
+        <input type="color" id="editRealmColorInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-1 py-1 h-8 focus:outline-none focus:border-blue-500" required />
+      </div>
+      <div>
+        <label for="editRealmDescriptionInput" class="block text-slate-400 mb-1">Description</label>
+        <textarea id="editRealmDescriptionInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500"></textarea>
+      </div>
+    </form>
+
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+      <button type="button" id="cancelEditBtn" class="text-xs px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">Cancel</button>
+      <button type="submit" form="editRealmForm" id="confirmEditBtn" class="text-xs px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition shadow-md shadow-blue-600/20 cursor-pointer flex items-center gap-1.5">
+        <span>Save Changes</span>
       </button>
     </div>
   </dialog>

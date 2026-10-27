@@ -4,7 +4,8 @@ const adminState = {
   token: localStorage.getItem('fansphere_admin_token') || sessionStorage.getItem('fansphere_admin_token') || null,
   realms: [],
   ws: null,
-  deleteTarget: null
+  deleteTarget: null,
+  editTarget: null
 };
 
 // ==================== INITIALIZATION ====================
@@ -214,7 +215,7 @@ function renderRealmsList() {
     card.className = 'p-3.5 sm:p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-slate-700/80 transition flex items-center justify-between gap-3 shadow-sm';
     card.dataset.realmId = realm.id;
 
-    const isOfficial = realm.name.toLowerCase().includes('arsefinland');
+    const isOfficial = realm.name.toLowerCase().includes('arsenalfinland');
 
     card.innerHTML = `
       <div class="flex items-center gap-3 min-w-0">
@@ -247,6 +248,14 @@ function renderRealmsList() {
         </a>
         <button 
           type="button" 
+          class="edit-realm-btn text-xs text-blue-400 hover:text-white hover:bg-blue-600 bg-blue-950/40 border border-blue-900/60 p-2 rounded-xl transition cursor-pointer"
+          data-id="${realm.id}"
+          title="Edit this club realm"
+        >
+          <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+        </button>
+        <button 
+          type="button" 
           class="delete-realm-btn text-xs text-red-400 hover:text-white hover:bg-red-600 bg-red-950/40 border border-red-900/60 p-2 rounded-xl transition cursor-pointer"
           data-id="${realm.id}"
           data-name="${escapeHtml(realm.name)}"
@@ -270,7 +279,99 @@ function renderRealmsList() {
       promptDeleteRealm(id, name);
     });
   });
+
+  // Attach edit handlers
+  container.querySelectorAll('.edit-realm-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = btn.getAttribute('data-id');
+      promptEditRealm(id);
+    });
+  });
 }
+
+function promptEditRealm(id) {
+  const realm = adminState.realms.find(r => r.id === id);
+  if (!realm) return;
+  adminState.editTarget = realm;
+
+  const modal = document.getElementById('editConfirmModal');
+  const idInput = document.getElementById('editRealmIdInput');
+  const nameInput = document.getElementById('editRealmNameInput');
+  const iconInput = document.getElementById('editRealmIconInput');
+  const colorInput = document.getElementById('editRealmColorInput');
+  const descInput = document.getElementById('editRealmDescriptionInput');
+
+  if (idInput) idInput.value = realm.id;
+  if (nameInput) nameInput.value = realm.name;
+  if (iconInput) iconInput.value = realm.icon || '🛡️';
+  if (colorInput) colorInput.value = realm.badge_color || '#EF4444';
+  if (descInput) descInput.value = realm.description || '';
+
+  if (modal) modal.showModal();
+}
+
+async function confirmEditRealm(e) {
+  e.preventDefault();
+  if (!adminState.editTarget || !adminState.token) return;
+
+  const idInput = document.getElementById('editRealmIdInput');
+  const nameInput = document.getElementById('editRealmNameInput');
+  const iconInput = document.getElementById('editRealmIconInput');
+  const colorInput = document.getElementById('editRealmColorInput');
+  const descInput = document.getElementById('editRealmDescriptionInput');
+  const btn = document.getElementById('confirmEditBtn');
+
+  if (!idInput || !nameInput) return;
+
+  const id = idInput.value;
+  const name = nameInput.value.trim();
+  const icon = iconInput ? iconInput.value.trim() : '🛡️';
+  const badge_color = colorInput ? colorInput.value : '#EF4444';
+  const description = descInput ? descInput.value.trim() : '';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+  }
+
+  try {
+    const res = await fetch(`/api/admin/realms/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': adminState.token,
+        'Authorization': `Bearer ${adminState.token}`
+      },
+      body: JSON.stringify({ name, icon, badge_color, description })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.detail || 'Failed to update club realm');
+    }
+
+    const modal = document.getElementById('editConfirmModal');
+    if (modal) modal.close();
+    showToast(`Club realm "${name}" updated successfully`, 'success');
+    
+    if (data.realms) {
+      adminState.realms = data.realms;
+      renderRealmsList();
+    } else {
+      await loadRealms();
+    }
+  } catch (err) {
+    showToast(err.message || 'Error updating realm', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Save Changes';
+    }
+    adminState.editTarget = null;
+  }
+}
+
 
 function promptDeleteRealm(id, name) {
   adminState.deleteTarget = { id, name };
@@ -506,6 +607,13 @@ function setupEventListeners() {
     document.getElementById('deleteConfirmModal')?.close();
   });
   document.getElementById('confirmDeleteBtn')?.addEventListener('click', confirmDeleteRealm);
+
+  // Edit Confirmation Modal
+  document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
+    document.getElementById('editConfirmModal')?.close();
+    adminState.editTarget = null;
+  });
+  document.getElementById('editRealmForm')?.addEventListener('submit', confirmEditRealm);
 }
 
 // ==================== WEBSOCKET REAL-TIME SYNC ====================

@@ -36,7 +36,7 @@ export async function persistPostToFirestore(post: any) {
       title: String(post.title || '').trim(),
       content: String(post.content || '').trim(),
       author: String(post.author || 'Anonymous').trim(),
-      author_flair: String(post.author_flair || 'ArseFinland Official Member').trim(),
+      author_flair: String(post.author_flair || 'ArsenalFinland Official Member').trim(),
       tag: String(post.tag || 'Discussion').trim(),
       upvotes: Number(post.upvotes || 0),
       downvotes: Number(post.downvotes || 0),
@@ -104,7 +104,7 @@ export async function persistCommentToFirestore(comment: any) {
       post_id: Number(comment.post_id),
       parent_id: comment.parent_id !== null && comment.parent_id !== undefined ? Number(comment.parent_id) : null,
       author: String(comment.author || 'Anonymous').trim(),
-      author_flair: String(comment.author_flair || 'ArseFinland Official Member').trim(),
+      author_flair: String(comment.author_flair || 'ArsenalFinland Official Member').trim(),
       content: String(comment.content || '').trim(),
       upvotes: Number(comment.upvotes || 0),
       image_url: String(comment.image_url || '').trim(),
@@ -137,7 +137,7 @@ export async function persistChatMessageToFirestore(msg: any) {
       id: Number(msg.id),
       room: String(msg.room || 'general').trim(),
       author: String(msg.author || 'Anonymous').trim(),
-      author_flair: String(msg.author_flair || 'ArseFinland Official Member').trim(),
+      author_flair: String(msg.author_flair || 'ArsenalFinland Official Member').trim(),
       badge_color: String(msg.badge_color || '#EF4444').trim(),
       content: String(msg.content || '').trim(),
       created_at: String(msg.created_at || new Date().toISOString()),
@@ -170,7 +170,7 @@ export async function persistSessionToFirestore(session: any) {
       id: String(session.id),
       nickname: String(session.nickname || '').trim(),
       email: String(session.email || '').trim(),
-      flair: String(session.flair || 'ArseFinland Official Member').trim(),
+      flair: String(session.flair || 'ArsenalFinland Official Member').trim(),
       created_at: String(session.created_at || new Date().toISOString()),
       last_active_at: String(session.last_active_at || new Date().toISOString()),
       expires_at: String(session.expires_at || new Date().toISOString())
@@ -233,7 +233,7 @@ export async function persistUserToFirestore(user: any) {
     const cleanUser = {
       email: String(user.email || '').toLowerCase().trim(),
       nickname: String(user.nickname || '').trim(),
-      flair: String(user.flair || 'ArseFinland Official Member').trim(),
+      flair: String(user.flair || 'ArsenalFinland Official Member').trim(),
       created_at: String(user.created_at || new Date().toISOString()),
       last_updated_at: new Date().toISOString()
     };
