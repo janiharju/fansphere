@@ -209,189 +209,15 @@ function getInitialMatches(): Match[] {
 }
 
 function getInitialPosts(): Post[] {
-  const now = Date.now();
-  return [
-    {
-      id: 1,
-      title: '[Match Thread] Arsenal vs Chelsea (London Derby - Matchday 28 Live Discussion)',
-      content: 'The Gunners host Chelsea at Emirates Stadium! Arteta starts with Raya, White, Saliba, Gabriel, Timber, Partey, Rice, Odegaard, Saka, Havertz, Martinelli. Live tactical thoughts, match reactions, and celebration thread. COYG! 🔴⚪',
-      author: 'HelsinkiGunner',
-      author_flair: 'Arsenal Finland Member',
-      tag: 'Match Thread',
-      upvotes: 87,
-      downvotes: 3,
-      comment_count: 4,
-      image_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1000&q=80',
-      created_at: new Date(now - 2 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 2,
-      title: 'Arsenal Finland Official Watch Party: Sports Academy Helsinki & Hook Tampere this Saturday!',
-      content: 'Moro kaikki Arsenal-fanit! Arsenal Finland järjestää jälleen yhteiskatsomon. Tervetuloa katsomaan peliä isolta screeniltä mahtavassa seurassa Helsingissä (Sports Academy, Kaivokatu 8) ja Tampereella (Ravintola Hook). Jäsenkortilla tutut faniedut hanatuotteista ja burgereista. Paikalle kannattaa saapua n. 45 min ennen aloituspotkua varmistaaksesi hyvät istumapaikat!',
-      author: 'ArsenalFinlandAdmin',
-      author_flair: 'Club Official',
-      tag: 'Meetups',
-      upvotes: 64,
-      downvotes: 1,
-      comment_count: 2,
-      image_url: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&w=1000&q=80',
-      created_at: new Date(now - 4 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 3,
-      title: "Tactical breakdown: Jurrien Timber's role as inverted fullback and how it frees Odegaard",
-      content: "Watching the past 5 matches, Arteta has dialed in our rest defense significantly. When Timber inverts alongside Rice or Partey into the half-space, it creates a box midfield that completely neutralizes counter-attacks while letting Martin Odegaard drift into the right half-space triangle with Saka and White. Thoughts on how this will hold up against Europe's best?",
-      author: 'ArtetaTactics',
-      author_flair: 'Analyst',
-      tag: 'Tactics',
-      upvotes: 42,
-      downvotes: 2,
-      comment_count: 3,
-      image_url: '',
-      created_at: new Date(now - 7 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 4,
-      title: 'Summer Transfer Window: Who should be our dream striker target?',
-      content: 'With the Premier League title race reaching fever pitch, Edu and the scouting department are reportedly evaluating our #9 options for the summer window. Options being floated in the media: Benjamin Šeško, Alexander Isak, or Viktor Gyökeres. Who fits Arteta\'s physical press and link-up play best?',
-      author: 'GoonerJussi',
-      author_flair: 'Gunner',
-      tag: 'Transfers',
-      upvotes: 35,
-      downvotes: 4,
-      comment_count: 1,
-      image_url: '',
-      created_at: new Date(now - 24 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 5,
-      title: "When you check the league table on Sunday evening and we're top of the league",
-      content: 'Trust the process. 65 points and counting. The red and white cannon firing on all cylinders! Terveisiä kaikille ArsenalFinlandin jäsenille ympäri Suomea!',
-      author: 'PohjolanTykkimies',
-      author_flair: 'Arsenal Finland Official Member',
-      tag: 'Memes',
-      upvotes: 98,
-      downvotes: 2,
-      comment_count: 1,
-      image_url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1000&q=80',
-      created_at: new Date(now - 48 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 6,
-      title: 'Terveisiä Rovaniemeltä! Uusi ketju',
-      content: 'Pohjoisen tykkimiehet ilmoittautuvat mukaan keskusteluun.',
-      author: 'RovaniemiGooner',
-      author_flair: 'Arsenal Finland Official Member',
-      tag: 'Discussion',
-      upvotes: 1,
-      downvotes: 0,
-      comment_count: 0,
-      image_url: '',
-      created_at: new Date(now - 40 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 7,
-      title: 'Terveiset Espoosta! Loistava kausi',
-      content: 'Espoon kannattajat myös mukana menossa täysillä!',
-      author: 'EspooCannon',
-      author_flair: 'Arsenal Finland Official Member',
-      tag: 'Discussion',
-      upvotes: 1,
-      downvotes: 0,
-      comment_count: 2,
-      image_url: '',
-      created_at: new Date(now - 28 * 3600 * 1000).toISOString(),
-      last_activity_at: new Date(now - 27 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 8,
-      title: 'Taktinen analyysi viikonlopun derbyyn',
-      content: 'Odegaardin sijoittuminen taskuun avaa tiloja Sakalle.',
-      author: 'OdegaardVision',
-      author_flair: 'Neutral Football Fan',
-      tag: 'Tactics',
-      upvotes: 1,
-      downvotes: 0,
-      comment_count: 0,
-      image_url: '',
-      created_at: new Date(now - 20 * 3600 * 1000).toISOString(),
-      last_activity_at: new Date(now - 20 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 9,
-      title: 'Permanent Post Test',
-      content: 'Will this post survive a restart?',
-      author: 'TestUser99',
-      author_flair: 'Testers',
-      tag: 'Discussion',
-      upvotes: 1,
-      downvotes: 0,
-      comment_count: 0,
-      image_url: '',
-      created_at: new Date(now - 2 * 3600 * 1000).toISOString(),
-      last_activity_at: new Date(now - 2 * 3600 * 1000).toISOString()
-    },
-    {
-      id: 10,
-      title: 'Matchday Prediction: Arsenal vs Chelsea',
-      content: 'What is everyone score prediction for the weekend clash?',
-      author: 'TestUser99',
-      author_flair: 'Testers',
-      tag: 'Match Thread',
-      upvotes: 1,
-      downvotes: 0,
-      comment_count: 0,
-      image_url: '',
-      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
-      last_activity_at: new Date(now - 30 * 60 * 1000).toISOString()
-    }
-  ];
+  return [];
 }
 
 function getInitialComments(): Comment[] {
-  const now = Date.now();
-  return [
-    { id: 1, post_id: 1, parent_id: null, author: 'TurkuGunner', author_flair: 'Gunner', content: "Saka's goal in the 18th minute was pure filth! Cut inside, two defenders flat-footed.", upvotes: 18, image_url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80', created_at: new Date(now - 50 * 60 * 1000).toISOString() },
-    { id: 2, post_id: 1, parent_id: 1, author: 'TampereGooner', author_flair: 'Gunner', content: "Agreed! And look at Havertz's pressing run to drag the center back away to create the shooting lane.", upvotes: 9, created_at: new Date(now - 40 * 60 * 1000).toISOString() },
-    { id: 3, post_id: 1, parent_id: null, author: 'Mikko_V', author_flair: 'Fan', content: "Raya's distribution from the back tonight has been world class under pressure.", upvotes: 12, created_at: new Date(now - 25 * 60 * 1000).toISOString() },
-    { id: 4, post_id: 1, parent_id: null, author: 'OuluCannon', author_flair: 'Gunner', content: "Havertz makes it 2-1!! The Emirates is electric right now!", upvotes: 24, created_at: new Date(now - 10 * 60 * 1000).toISOString() },
-
-    { id: 5, post_id: 2, parent_id: null, author: 'EspooRed', author_flair: 'Gunner', content: "Nähdään Sports Academyssa! Viime katsomossa oli aivan mieletön tunnelma Pohjois-Lontoon derbyssä.", upvotes: 8, created_at: new Date(now - 3 * 3600 * 1000).toISOString() },
-    { id: 6, post_id: 2, parent_id: null, author: 'Jari_Arsenal', author_flair: 'Member', content: "Tampereen Hookissa myös pöytävaraus hoidettu 12 hengelle. Tervetuloa mukaan uudetkin fanit!", upvotes: 11, image_url: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80', created_at: new Date(now - 2 * 3600 * 1000).toISOString() },
-
-    { id: 7, post_id: 3, parent_id: null, author: 'NordicGooner', author_flair: 'Tactics', content: "Spot on analysis. Timber's recovery pace when we lose possession high up the pitch is unmatched.", upvotes: 6, created_at: new Date(now - 5 * 3600 * 1000).toISOString() },
-    { id: 8, post_id: 3, parent_id: 7, author: 'ArtetaTactics', author_flair: 'Analyst', content: "Exactly, it allows Gabriel to step up aggressively knowing Timber can sweep behind.", upvotes: 4, created_at: new Date(now - 4 * 3600 * 1000).toISOString() },
-    { id: 9, post_id: 3, parent_id: null, author: 'Lauri_Gunner', author_flair: 'Fan', content: "He was sorely missed last season due to the ACL injury. Having him back healthy changes everything.", upvotes: 5, created_at: new Date(now - 3 * 3600 * 1000).toISOString() },
-
-    { id: 10, post_id: 4, parent_id: null, author: 'StadinTykkimies', author_flair: 'Gunner', content: "Gyökeres would be an absolute powerhouse in the Premier League. His hold-up play and work rate are phenomenal.", upvotes: 7, created_at: new Date(now - 18 * 3600 * 1000).toISOString() },
-
-    { id: 11, post_id: 5, parent_id: null, author: 'Matti_99', author_flair: 'Fan', content: "Mind the gap!! 🔴⚪", upvotes: 14, created_at: new Date(now - 24 * 3600 * 1000).toISOString() }
-  ];
+  return [];
 }
 
 function getInitialChatMessages(): ChatMessage[] {
-  const now = Date.now();
-  return [
-    { id: 1, room: 'general', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Welcome to Fansphere everyone! Tervetuloa!', created_at: new Date(now - 25 * 60 * 1000).toISOString() },
-    { id: 2, room: 'general', author: 'TurkuGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'What a match so far! Saka is on fire today 🔥', created_at: new Date(now - 20 * 60 * 1000).toISOString() },
-    { id: 3, room: 'general', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'Watching live at Ravintola Hook with 15 other Finnish gooners 🍻', created_at: new Date(now - 15 * 60 * 1000).toISOString() },
-    { id: 4, room: 'general', author: 'CityFan_99', author_flair: 'Man City', badge_color: '#06B6D4', content: 'City just equalized at St James Park! Haaland ⚽', created_at: new Date(now - 10 * 60 * 1000).toISOString() },
-    { id: 5, room: 'general', author: 'Mikko_V', author_flair: 'Gunner', badge_color: '#EF4444', content: 'KAI HAVERTZ SCORESSSS 2-1!! GET IN THERE!! 🔴⚪', created_at: new Date(now - 5 * 60 * 1000).toISOString() },
-    { id: 6, room: 'general', author: 'ArsenalFinlandAdmin', author_flair: 'Official', badge_color: '#F59E0B', content: "Reminder: Voting is open for today's Man of the Match in the forum!", created_at: new Date(now - 2 * 60 * 1000).toISOString() },
-    { id: 7, room: 'general', author: 'NordicGooner', author_flair: 'Gunner', badge_color: '#EF4444', content: "15 minutes left to hold on to the 3 points! Let's go boys!", created_at: new Date(now - 1 * 60 * 1000).toISOString() },
-
-    { id: 8, room: 'matchday', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: "MATCHDAY LIVE CHAT! Lineups are in, let's hear your score predictions!", created_at: new Date(now - 45 * 60 * 1000).toISOString() },
-    { id: 9, room: 'matchday', author: 'Mikko_V', author_flair: 'Gunner', badge_color: '#EF4444', content: '3-1 Arsenal, Saka brace and Odegaard masterclass incoming!', created_at: new Date(now - 35 * 60 * 1000).toISOString() },
-    { id: 10, room: 'matchday', author: 'TurkuGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'GOALLLLL SAKA 18\'!! What a curler into the far corner!! 🔥⚽', created_at: new Date(now - 22 * 60 * 1000).toISOString() },
-    { id: 11, room: 'matchday', author: 'BlueFan', author_flair: 'Chelsea', badge_color: '#3B82F6', content: 'Palmer answers right back before half time 1-1, game on!', created_at: new Date(now - 18 * 60 * 1000).toISOString() },
-    { id: 12, room: 'matchday', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'HAVERTZ WITH THE HEADER 2-1!! The Emirates is rocking right now!', created_at: new Date(now - 6 * 60 * 1000).toISOString() },
-    { id: 13, room: 'matchday', author: 'ArtetaTactics', author_flair: 'Analyst', badge_color: '#93C5FD', content: 'Huge tactical substitution by Arteta putting in Merino to stabilize the midfield.', created_at: new Date(now - 2 * 60 * 1000).toISOString() },
-
-    { id: 14, room: 'suomi-fans', author: 'ArsenalFinlandAdmin', author_flair: 'Official', badge_color: '#F59E0B', content: 'Tervetuloa kaikille Suomen Arsenal-kannattajille! Täällä sovitaan kisakatsomoista.', created_at: new Date(now - 3 * 3600 * 1000).toISOString() },
-    { id: 15, room: 'suomi-fans', author: 'HelsinkiGunner', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Sports Academyyn tulossa ainakin 25 tykkimiestä lauantaina. Pöydät varattu!', created_at: new Date(now - 2 * 3600 * 1000).toISOString() },
-    { id: 16, room: 'suomi-fans', author: 'TampereGooner', author_flair: 'Gunner', badge_color: '#10B981', content: 'Tampereen Hookissa myös hyvä porukka kasassa! Siivet & bisseä kylkeen 🍗🍺', created_at: new Date(now - 1 * 3600 * 1000).toISOString() },
-    { id: 17, room: 'suomi-fans', author: 'OuluCannon', author_flair: 'Gunner', badge_color: '#EF4444', content: 'Onko Oulun St. Michaelissa tänään väkeä? Voisin tulla toisella puoliajalla!', created_at: new Date(now - 30 * 60 * 1000).toISOString() }
-  ];
+  return [];
 }
 
 // ==================== SESSION & PERSISTENT FILE-BACKED DATA STORE ====================
@@ -526,12 +352,18 @@ export function getInitialRealms(): ClubRealm[] {
   ];
 }
 
+export interface UserReadState {
+  last_read_at: string;
+  comment_count: number;
+}
+
 interface StoredData {
   posts: Post[];
   comments: Comment[];
   chatMessages: ChatMessage[];
   sessions?: Session[];
   realms?: ClubRealm[];
+  userReadStates?: Record<string, Record<string, UserReadState>>;
   nextPostId: number;
   nextCommentId: number;
   nextChatId: number;
@@ -597,6 +429,7 @@ function scheduleSave() {
       chatMessages,
       sessions: Array.from(sessions.values()),
       realms,
+      userReadStates: Object.fromEntries(userReadStates.entries()),
       nextPostId,
       nextCommentId,
       nextChatId,
@@ -616,6 +449,7 @@ function forceSaveNow() {
     chatMessages,
     sessions: Array.from(sessions.values()),
     realms,
+    userReadStates: Object.fromEntries(userReadStates.entries()),
     nextPostId,
     nextCommentId,
     nextChatId,
@@ -637,6 +471,7 @@ function parseStoreFile(filePath: string): StoredData | null {
         chatMessages: parsed.chatMessages,
         sessions: Array.isArray(parsed.sessions) ? parsed.sessions : getInitialSessions(),
         realms: Array.isArray(parsed.realms) ? parsed.realms : getInitialRealms(),
+        userReadStates: (parsed.userReadStates && typeof parsed.userReadStates === 'object') ? parsed.userReadStates : {},
         nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
         nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
         nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
@@ -654,15 +489,20 @@ function mergeStores(stores: StoredData[]): StoredData {
   const mergedChatMap = new Map<number, ChatMessage>();
   const mergedSessionsMap = new Map<string, Session>();
   const mergedRealmsMap = new Map<string, ClubRealm>();
+  const mergedUserReadStates: Record<string, Record<string, UserReadState>> = {};
   let maxPostId = 1;
   let maxCommentId = 1;
   let maxChatId = 1;
+
+  const SEED_POST_IDS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  const SEED_COMMENT_IDS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  const SEED_CHAT_IDS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
 
   for (const s of stores) {
     if (!s) continue;
     if (Array.isArray(s.posts)) {
       for (const p of s.posts) {
-        if (!p || !p.id) continue;
+        if (!p || !p.id || SEED_POST_IDS.has(p.id)) continue;
         const existing = mergedPostsMap.get(p.id);
         if (!existing || new Date(p.last_activity_at || p.created_at).getTime() >= new Date(existing.last_activity_at || existing.created_at).getTime()) {
           mergedPostsMap.set(p.id, p);
@@ -672,14 +512,14 @@ function mergeStores(stores: StoredData[]): StoredData {
     }
     if (Array.isArray(s.comments)) {
       for (const c of s.comments) {
-        if (!c || !c.id) continue;
+        if (!c || !c.id || SEED_COMMENT_IDS.has(c.id)) continue;
         mergedCommentsMap.set(c.id, c);
         maxCommentId = Math.max(maxCommentId, c.id + 1);
       }
     }
     if (Array.isArray(s.chatMessages)) {
       for (const m of s.chatMessages) {
-        if (!m || !m.id) continue;
+        if (!m || !m.id || SEED_CHAT_IDS.has(m.id)) continue;
         mergedChatMap.set(m.id, m);
         maxChatId = Math.max(maxChatId, m.id + 1);
       }
@@ -696,6 +536,20 @@ function mergeStores(stores: StoredData[]): StoredData {
         const key = r.id || slugify(r.name);
         if (!mergedRealmsMap.has(key)) {
           mergedRealmsMap.set(key, { ...r, id: key });
+        }
+      }
+    }
+    if (s.userReadStates && typeof s.userReadStates === 'object') {
+      for (const [userKey, postMap] of Object.entries(s.userReadStates)) {
+        if (!postMap || typeof postMap !== 'object') continue;
+        const uKey = userKey.toLowerCase();
+        if (!mergedUserReadStates[uKey]) mergedUserReadStates[uKey] = {};
+        for (const [postId, stateObj] of Object.entries(postMap)) {
+          if (!stateObj) continue;
+          const existing = mergedUserReadStates[uKey][postId];
+          if (!existing || new Date(stateObj.last_read_at).getTime() >= new Date(existing.last_read_at).getTime()) {
+            mergedUserReadStates[uKey][postId] = stateObj;
+          }
         }
       }
     }
@@ -732,9 +586,10 @@ function mergeStores(stores: StoredData[]): StoredData {
     chatMessages: chatList,
     sessions: sessionList,
     realms: realmList,
-    nextPostId: Math.max(maxPostId, ...postsList.map(p => p.id + 1)),
-    nextCommentId: Math.max(maxCommentId, ...commentsList.map(c => c.id + 1)),
-    nextChatId: Math.max(maxChatId, ...chatList.map(m => m.id + 1))
+    userReadStates: mergedUserReadStates,
+    nextPostId: Math.max(maxPostId, ...postsList.map(p => p.id + 1), 1),
+    nextCommentId: Math.max(maxCommentId, ...commentsList.map(c => c.id + 1), 1),
+    nextChatId: Math.max(maxChatId, ...chatList.map(m => m.id + 1), 1)
   };
 }
 
@@ -761,9 +616,10 @@ function loadInitialStore(): StoredData {
     chatMessages: getInitialChatMessages(),
     sessions: getInitialSessions(),
     realms: getInitialRealms(),
-    nextPostId: 6,
-    nextCommentId: 12,
-    nextChatId: 18,
+    userReadStates: {},
+    nextPostId: 1,
+    nextCommentId: 1,
+    nextChatId: 1,
   };
   saveDataSync(initial);
   console.log(`Initialized persistent store with default seed at ${DATA_FILE}`);
@@ -777,6 +633,15 @@ let posts: Post[] = storedData.posts;
 let comments: Comment[] = storedData.comments;
 let chatMessages: ChatMessage[] = storedData.chatMessages;
 let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : getInitialRealms();
+
+const userReadStates = new Map<string, Record<string, UserReadState>>();
+if (storedData.userReadStates) {
+  for (const [uKey, states] of Object.entries(storedData.userReadStates)) {
+    if (states && typeof states === 'object') {
+      userReadStates.set(uKey.toLowerCase(), states);
+    }
+  }
+}
 
 
 // Sanitize defunct ephemeral upload URLs that no longer exist on container disk
@@ -922,6 +787,20 @@ function getSessionFromReq(req: express.Request): Session | null {
   return session;
 }
 
+function getUserIdentifier(req: express.Request, session?: Session | null): string | null {
+  if (session && session.email) return session.email.toLowerCase();
+  if (session && session.nickname) return session.nickname.toLowerCase();
+  const headerEmail = req.headers['x-user-email'];
+  if (typeof headerEmail === 'string' && headerEmail.trim()) {
+    return headerEmail.trim().toLowerCase();
+  }
+  const headerNick = req.headers['x-user-nickname'];
+  if (typeof headerNick === 'string' && headerNick.trim()) {
+    return headerNick.trim().toLowerCase();
+  }
+  return null;
+}
+
 // Helper to find latest activity timestamp for a post (considering its creation and all comments)
 function getPostLatestActivityTime(post: Post): number {
   let latestTime = new Date(post.created_at).getTime();
@@ -966,6 +845,7 @@ app.get('/api/backup', (_req, res) => {
     comments,
     chatMessages,
     sessions: Array.from(sessions.values()),
+    userReadStates: Object.fromEntries(userReadStates.entries()),
     nextPostId,
     nextCommentId,
     nextChatId
@@ -1291,15 +1171,53 @@ app.get('/api/posts', (req, res) => {
     });
   }
 
+  const session = getSessionFromReq(req);
+  const userKey = getUserIdentifier(req, session);
+  const userStates = userKey ? (userReadStates.get(userKey) || {}) : null;
+  const userNickname = session ? session.nickname.toLowerCase() : (typeof req.headers['x-user-nickname'] === 'string' ? req.headers['x-user-nickname'].trim().toLowerCase() : '');
+
   // Always sort forum feed by latest changes, taking comments into account
   const mapped = filtered.map(p => {
     const latestActivityTime = getPostLatestActivityTime(p);
     const matchedComments = matchingCommentsMap.get(p.id) || [];
+    const totalComments = getDynamicCommentCount(p.id);
+
+    let isUnread = false;
+    let unreadCommentsCount = 0;
+
+    if (userKey) {
+      const postComments = comments.filter(c => c.post_id === p.id);
+      const readState = userStates ? userStates[String(p.id)] : null;
+      const isAuthor = Boolean(userNickname && p.author.toLowerCase() === userNickname);
+
+      if (!readState) {
+        if (!isAuthor) {
+          isUnread = true;
+          // All comments from other users are unread
+          unreadCommentsCount = postComments.filter(c => !userNickname || c.author.toLowerCase() !== userNickname).length;
+        } else {
+          // Author created the thread, thread itself is read, comments by others are unread
+          unreadCommentsCount = postComments.filter(c => c.author.toLowerCase() !== userNickname).length;
+        }
+      } else {
+        isUnread = false;
+        const lastReadTime = new Date(readState.last_read_at).getTime();
+        unreadCommentsCount = postComments.filter(c => {
+          const commentTime = new Date(c.created_at).getTime();
+          const isSelf = Boolean(userNickname && c.author.toLowerCase() === userNickname);
+          return !isSelf && commentTime > lastReadTime;
+        }).length;
+      }
+    }
+
     return {
       ...p,
-      comment_count: getDynamicCommentCount(p.id),
+      comment_count: totalComments,
       latest_activity_at: new Date(latestActivityTime).toISOString(),
       latest_activity_time: latestActivityTime,
+      is_unread: isUnread,
+      unread_comments_count: unreadCommentsCount,
+      has_new_activity: isUnread || unreadCommentsCount > 0,
       matched_comments: matchedComments.map(c => ({
         id: c.id,
         author: c.author,
@@ -1354,6 +1272,19 @@ app.post('/api/posts', (req, res) => {
   };
 
   posts.unshift(newPost);
+
+  // Automatically mark thread as read for its creator
+  const creatorKey = (session.email || session.nickname).toLowerCase();
+  let creatorMap = userReadStates.get(creatorKey);
+  if (!creatorMap) {
+    creatorMap = {};
+    userReadStates.set(creatorKey, creatorMap);
+  }
+  creatorMap[String(assignedPostId)] = {
+    last_read_at: nowIso,
+    comment_count: 0
+  };
+
   forceSaveNow();
   savePostToFirestore(newPost).catch(err => console.error('[Firestore] Post save error:', err));
   
@@ -1394,7 +1325,9 @@ app.post('/api/posts', (req, res) => {
     ...newPost,
     comment_count: 0,
     latest_activity_at: nowIso,
-    score: 1
+    score: 1,
+    is_unread: false,
+    unread_comments_count: 0
   });
 });
 
@@ -1443,6 +1376,21 @@ app.get('/api/posts/:id', (req, res) => {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
 
+  const session = getSessionFromReq(req);
+  const userKey = getUserIdentifier(req, session);
+  if (userKey) {
+    let uMap = userReadStates.get(userKey);
+    if (!uMap) {
+      uMap = {};
+      userReadStates.set(userKey, uMap);
+    }
+    uMap[String(postId)] = {
+      last_read_at: new Date().toISOString(),
+      comment_count: postComments.length
+    };
+    scheduleSave();
+  }
+
   res.json({
     post: {
       ...post,
@@ -1451,6 +1399,55 @@ app.get('/api/posts/:id', (req, res) => {
     },
     comments: postComments
   });
+});
+
+// Mark thread as read by user
+app.post('/api/posts/:id/read', (req, res) => {
+  const session = getSessionFromReq(req);
+  const userKey = getUserIdentifier(req, session);
+  const postId = parseInt(req.params.id, 10);
+
+  if (isNaN(postId)) {
+    return res.status(400).json({ error: 'Invalid post ID' });
+  }
+
+  const post = posts.find(p => p.id === postId);
+  if (!post) {
+    return res.status(404).json({ error: 'Post not found' });
+  }
+
+  const currentCommentCount = comments.filter(c => c.post_id === postId).length;
+  const nowIso = new Date().toISOString();
+
+  if (userKey) {
+    let userMap = userReadStates.get(userKey);
+    if (!userMap) {
+      userMap = {};
+      userReadStates.set(userKey, userMap);
+    }
+    userMap[String(postId)] = {
+      last_read_at: nowIso,
+      comment_count: currentCommentCount
+    };
+    scheduleSave();
+  }
+
+  res.json({
+    success: true,
+    post_id: postId,
+    read_state: userKey ? (userReadStates.get(userKey)?.[String(postId)] || null) : null
+  });
+});
+
+// Get user read states
+app.get('/api/posts-read-states', (req, res) => {
+  const session = getSessionFromReq(req);
+  const userKey = getUserIdentifier(req, session);
+  if (!userKey) {
+    return res.json({ read_states: {} });
+  }
+  const userMap = userReadStates.get(userKey) || {};
+  res.json({ read_states: userMap });
 });
 
 // 4. Vote on Post
@@ -1533,6 +1530,19 @@ app.post('/api/posts/:id/comments', (req, res) => {
   const nowIso = comment.created_at;
   post.last_activity_at = nowIso;
   const currentCommentCount = getDynamicCommentCount(postId);
+
+  // Automatically mark thread as read for commenter up to current comments count
+  const commenterKey = (session.email || session.nickname).toLowerCase();
+  let commenterMap = userReadStates.get(commenterKey);
+  if (!commenterMap) {
+    commenterMap = {};
+    userReadStates.set(commenterKey, commenterMap);
+  }
+  commenterMap[String(postId)] = {
+    last_read_at: nowIso,
+    comment_count: currentCommentCount
+  };
+
   forceSaveNow();
   saveCommentToFirestore(comment).catch((err: unknown) => console.error('[Firestore] Comment save error:', err));
   updatePostCommentCountInFirestore(postId, currentCommentCount, nowIso).catch((err: unknown) => console.error('[Firestore] Post activity update error:', err));

@@ -58,8 +58,103 @@ const state = {
   activeNicknames: [],
   activeUsers: [],
   lastRenderedPagination: {},
-  lastRenderedPostIds: []
+  lastRenderedPostIds: [],
+  userReadStates: {}
 };
+
+// ==================== USER READ STATES (ISOLATED PER USER) ====================
+
+function getUserReadStorageKey() {
+  const email = (state.user?.email || '').trim().toLowerCase();
+  const handle = (state.user?.handle || '').trim().toLowerCase();
+  return email || handle || 'guest';
+}
+
+function loadLocalReadStates() {
+  try {
+    const key = `fansphere_read_states_${getUserReadStorageKey()}`;
+    const raw = localStorage.getItem(key);
+    state.userReadStates = raw ? JSON.parse(raw) : {};
+  } catch {
+    state.userReadStates = {};
+  }
+}
+
+function saveLocalReadStates() {
+  try {
+    const key = `fansphere_read_states_${getUserReadStorageKey()}`;
+    localStorage.setItem(key, JSON.stringify(state.userReadStates || {}));
+  } catch {}
+}
+
+async function syncUserReadStatesFromServer() {
+  if (!state.sessionId && !state.user?.email && !state.user?.handle) return;
+  try {
+    const headers = {};
+    if (state.sessionId) headers['x-session-id'] = state.sessionId;
+    if (state.user?.email) headers['x-user-email'] = state.user.email;
+    if (state.user?.handle) headers['x-user-nickname'] = state.user.handle;
+
+    const res = await fetch('/api/posts-read-states', { headers });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.read_states && typeof data.read_states === 'object') {
+        state.userReadStates = {
+          ...data.read_states,
+          ...(state.userReadStates || {})
+        };
+        saveLocalReadStates();
+      }
+    }
+  } catch {}
+}
+
+function markPostAsReadLocally(postId, commentCount) {
+  const numId = Number(postId);
+  const strId = String(postId);
+
+  const post = (state.posts || []).find(p => Number(p.id) === numId);
+  const currentCount = (commentCount !== undefined) 
+    ? Number(commentCount) 
+    : (post ? (Number(post.comment_count) || 0) : 0);
+
+  if (post) {
+    post.is_unread = false;
+    post.unread_comments_count = 0;
+  }
+
+  if (!state.userReadStates) state.userReadStates = {};
+  state.userReadStates[strId] = {
+    last_read_at: new Date().toISOString(),
+    comment_count: currentCount
+  };
+  saveLocalReadStates();
+
+  // Update card in DOM if visible
+  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+  if (card) {
+    const unreadBadge = card.querySelector('.thread-unread-badge');
+    if (unreadBadge) unreadBadge.remove();
+
+    const newCountBadge = card.querySelector('.thread-new-count');
+    if (newCountBadge) newCountBadge.remove();
+
+    card.classList.remove('border-l-4', 'border-l-red-500', 'border-l-amber-500');
+  }
+
+  // Notify backend
+  const headers = {};
+  if (state.sessionId) headers['x-session-id'] = state.sessionId;
+  if (state.user?.email) headers['x-user-email'] = state.user.email;
+  if (state.user?.handle) headers['x-user-nickname'] = state.user.handle;
+
+  fetch(`/api/posts/${postId}/read`, {
+    method: 'POST',
+    headers
+  }).catch(() => {});
+}
+
+loadLocalReadStates();
 
 // ==================== REALM & CLUB TAG FILTERING HELPERS ====================
 
@@ -479,6 +574,8 @@ function applySession(session, skipWsAuth = false) {
   }
 
   initUserProfile();
+  loadLocalReadStates();
+  syncUserReadStatesFromServer().catch(() => {});
   updateGateState();
 
   // If websocket is open and not skipping WS auth, authenticate socket connection only once per session ID
@@ -926,11 +1023,26 @@ async function loadPosts() {
       url.searchParams.set('q', state.searchQuery.trim());
     }
 
-    const res = await fetch(url);
+    const headers = {};
+    if (state.sessionId) headers['x-session-id'] = state.sessionId;
+    if (state.user?.email) headers['x-user-email'] = state.user.email;
+    if (state.user?.handle) headers['x-user-nickname'] = state.user.handle;
+
+    const res = await fetch(url, { headers });
     if (!res.ok) throw new Error('Failed to load posts');
     const rawPosts = await res.json();
 
     let merged = Array.isArray(rawPosts) ? [...rawPosts] : [];
+
+    merged.forEach(p => {
+      const readState = state.userReadStates ? state.userReadStates[String(p.id)] : null;
+      if (readState) {
+        p.is_unread = false;
+        if (p.unread_comments_count === undefined) {
+          p.unread_comments_count = Math.max(0, (Number(p.comment_count) || 0) - (Number(readState.comment_count) || 0));
+        }
+      }
+    });
 
     // Client-side self-healing: if server was restarted and is missing any locally created/cached posts,
     // merge them and restore them to the server so they never disappear
@@ -939,8 +1051,9 @@ async function loadPosts() {
       if (cachedRaw) {
         const cached = JSON.parse(cachedRaw);
         if (Array.isArray(cached) && cached.length > 0) {
+          const validCached = cached.filter(p => p && p.id > 10);
           const serverIds = new Set(merged.map(p => p.id));
-          const missing = cached.filter(p => !serverIds.has(p.id));
+          const missing = validCached.filter(p => !serverIds.has(p.id));
           if (missing.length > 0) {
             missing.forEach(p => {
               merged.push(p);
@@ -1204,7 +1317,7 @@ function renderPosts() {
   }
 
   // Prevent re-rendering and flickering if the target cards and pagination are already rendered
-  const renderKey = `${state.selectedRealm}:${state.currentTag}:${state.searchQuery || ''}:${state.currentPage}:${shouldPaginate}:${totalPages}:${postsPerPage}:${pagePosts.map(p => `${p.id}_${p.comment_count || 0}_${p.upvotes || 0}_${p.title}`).join('|')}`;
+  const renderKey = `${state.selectedRealm}:${state.currentTag}:${state.searchQuery || ''}:${state.currentPage}:${shouldPaginate}:${totalPages}:${postsPerPage}:${pagePosts.map(p => `${p.id}_${p.comment_count || 0}_${p.unread_comments_count || 0}_${p.is_unread ? 1 : 0}_${state.userReadStates?.[String(p.id)] ? 1 : 0}_${p.title}`).join('|')}`;
   container.dataset.lastRenderKey = renderKey;
 
   requestAnimationFrame(() => {
@@ -1273,15 +1386,46 @@ function highlightSearchMatches(htmlStr, query) {
 
 function renderPostCardHtml(post) {
   const tagClass = getTagClass(post.tag);
-  const hasNewComments = post.latest_activity_at && post.comment_count > 0 && new Date(post.latest_activity_at).getTime() > new Date(post.created_at).getTime() + 1000;
   const q = (state.searchQuery || '').trim();
+
+  // Compute unread status for current user
+  const readState = state.userReadStates ? state.userReadStates[String(post.id)] : null;
+  const isAuthor = Boolean(state.user && state.user.handle && (post.author || '').toLowerCase() === state.user.handle.toLowerCase());
+
+  let isUnread = false;
+  let unreadCommentsCount = 0;
+
+  if (readState) {
+    isUnread = false;
+    if (post.unread_comments_count !== undefined) {
+      unreadCommentsCount = Math.max(0, Number(post.unread_comments_count) || 0);
+    } else {
+      unreadCommentsCount = Math.max(0, (Number(post.comment_count) || 0) - (Number(readState.comment_count) || 0));
+    }
+  } else {
+    if (post.is_unread !== undefined) {
+      isUnread = Boolean(post.is_unread);
+      unreadCommentsCount = Math.max(0, Number(post.unread_comments_count) || 0);
+    } else if (!isAuthor) {
+      isUnread = true;
+      unreadCommentsCount = Math.max(0, Number(post.comment_count) || 0);
+    } else {
+      isUnread = false;
+      unreadCommentsCount = Math.max(0, Number(post.unread_comments_count) || 0);
+    }
+  }
+
+  const hasNewComments = post.latest_activity_at && post.comment_count > 0 && new Date(post.latest_activity_at).getTime() > new Date(post.created_at).getTime() + 1000;
+  const cardBorderClass = (unreadCommentsCount > 0)
+    ? 'border-l-4 border-l-red-500 border-slate-700/70'
+    : (isUnread ? 'border-l-4 border-l-amber-500 border-slate-700/70' : 'border-slate-700/70');
 
   const renderedTitle = q ? highlightSearchMatches(escapeHtml(post.title), q) : escapeHtml(post.title);
   const renderedContent = q ? highlightSearchMatches(formatLightweightMarkdown(post.content), q) : formatLightweightMarkdown(post.content);
 
   return `
     <article 
-      class="post-card bg-slate-800/90 hover:bg-slate-800 rounded-xl p-3 border border-slate-700/70 transition flex flex-col gap-1.5 shadow-sm group shrink-0"
+      class="post-card bg-slate-800/90 hover:bg-slate-800 rounded-xl p-3 border ${cardBorderClass} transition flex flex-col gap-1.5 shadow-sm group shrink-0"
       data-post-id="${post.id}"
     >
       <!-- Main Post Content -->
@@ -1296,7 +1440,21 @@ function renderPostCardHtml(post) {
             ${escapeHtml(post.author_flair || 'Gunner')}
           </span>
           <span class="text-slate-500">• ${formatRelativeTime(post.created_at)}</span>
-          ${hasNewComments ? `<span class="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 rounded font-medium ml-auto flex items-center gap-0.5"><i data-lucide="message-square" class="w-2.5 h-2.5"></i> Active ${formatRelativeTime(post.latest_activity_at)}</span>` : ''}
+          ${unreadCommentsCount > 0 ? `
+            <span class="thread-unread-badge inline-flex items-center gap-1 bg-red-950/90 text-red-300 border border-red-600/80 text-[9px] font-bold px-1.5 py-0.2 rounded-full shadow-sm animate-pulse ml-auto">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+              ${unreadCommentsCount} new
+            </span>
+          ` : (isUnread ? `
+            <span class="thread-unread-badge inline-flex items-center gap-1 bg-amber-950/90 text-amber-300 border border-amber-600/80 text-[9px] font-bold px-1.5 py-0.2 rounded-full shadow-sm ml-auto">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              New
+            </span>
+          ` : (hasNewComments ? `
+            <span class="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] px-1.5 py-0.2 rounded font-medium ml-auto flex items-center gap-0.5">
+              <i data-lucide="message-square" class="w-2.5 h-2.5"></i> Active ${formatRelativeTime(post.latest_activity_at)}
+            </span>
+          ` : ''))}
         </div>
 
         <!-- Post Title -->
@@ -1342,6 +1500,11 @@ function renderPostCardHtml(post) {
           <button class="open-comments-btn flex items-center gap-1 hover:text-slate-200 transition py-0.5" data-post-id="${post.id}">
             <i data-lucide="message-circle" class="w-3 h-3 text-red-400"></i>
             <span>${post.comment_count} Comments</span>
+            ${unreadCommentsCount > 0 ? `
+              <span class="thread-new-count text-[9px] font-bold text-red-300 bg-red-950/80 border border-red-700/70 px-1.5 py-0.2 rounded-full">
+                +${unreadCommentsCount} new
+              </span>
+            ` : ''}
           </button>
           
           ${post.image_url ? `
@@ -1393,6 +1556,15 @@ function handleIncomingNewPost(newPost) {
     if (!newPost.latest_activity_at) {
       newPost.latest_activity_at = newPost.created_at;
     }
+    const isSelf = Boolean(state.user?.handle && (newPost.author || '').toLowerCase() === state.user.handle.toLowerCase());
+    if (!isSelf) {
+      newPost.is_unread = true;
+      newPost.unread_comments_count = 0;
+    } else {
+      newPost.is_unread = false;
+      newPost.unread_comments_count = 0;
+      markPostAsReadLocally(newPost.id, 0);
+    }
     state.posts = state.posts.filter(p => p.id !== newPost.id);
     state.posts.unshift(newPost);
     sortPostsByLatestActivity(state.posts);
@@ -1404,6 +1576,8 @@ function handleIncomingNewPost(newPost) {
 
 async function openPostDetailModal(postId) {
   state.activePostDetailId = postId;
+  markPostAsReadLocally(postId);
+
   const modal = document.getElementById('postDetailModal');
   const headerFlairs = document.getElementById('modalPostHeaderFlairs');
   const contentEl = document.getElementById('modalPostContent');
@@ -1414,11 +1588,18 @@ async function openPostDetailModal(postId) {
   modal.showModal();
 
   try {
-    const res = await fetch(`/api/posts/${postId}`);
+    const headers = {};
+    if (state.sessionId) headers['x-session-id'] = state.sessionId;
+    if (state.user?.email) headers['x-user-email'] = state.user.email;
+    if (state.user?.handle) headers['x-user-nickname'] = state.user.handle;
+
+    const res = await fetch(`/api/posts/${postId}`, { headers });
     if (!res.ok) throw new Error('Failed to load post');
     const data = await res.json();
     const post = data.post;
     const comments = data.comments;
+
+    markPostAsReadLocally(postId, comments.length);
 
     headerFlairs.innerHTML = `
       <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${getTagClass(post.tag)}">
@@ -1501,26 +1682,57 @@ function updateCommentVoteInDOM(commentId, upvotes) {
 }
 
 function handleIncomingNewComment(newComment) {
-  if (state.activePostDetailId === newComment.post_id) {
+  if (!newComment || !newComment.post_id) return;
+
+  const isCurrentDetailOpen = Number(state.activePostDetailId) === Number(newComment.post_id);
+  const isSelf = Boolean(state.user?.handle && (newComment.author || '').toLowerCase() === state.user.handle.toLowerCase());
+
+  if (isCurrentDetailOpen) {
     const list = document.getElementById('modalCommentsList');
     const countEl = document.getElementById('modalCommentCount');
     if (list) {
-      const div = document.createElement('div');
-      div.innerHTML = renderCommentHtml(newComment);
-      list.appendChild(div.firstElementChild);
-      attachCommentListeners();
-      initLucide();
+      // Prevent duplicate rendering if already appended (from immediate submit or WS)
+      const alreadyPresent = list.querySelector(`[data-comment-id="${newComment.id}"]`);
+      if (!alreadyPresent) {
+        // If placeholder ("No comments yet" or "Loading comments...") is visible, clear it
+        const placeholder = list.querySelector('p');
+        if (placeholder && (placeholder.textContent.includes('No comments') || placeholder.textContent.includes('Loading comments'))) {
+          list.innerHTML = '';
+        }
+
+        const div = document.createElement('div');
+        div.innerHTML = renderCommentHtml(newComment);
+        const newEl = div.firstElementChild;
+        if (newEl) {
+          list.appendChild(newEl);
+          attachCommentListeners();
+          initLucide();
+          newEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        if (countEl) {
+          const cur = parseInt(countEl.textContent || '0', 10);
+          countEl.textContent = isNaN(cur) ? '1' : String(cur + 1);
+        }
+      }
     }
-    if (countEl) {
-      countEl.textContent = parseInt(countEl.textContent || '0') + 1;
-    }
+    // Thread is open right now, keep it marked as read for this user
+    markPostAsReadLocally(newComment.post_id);
   }
 
   // Update post latest activity and comment count, then re-sort feed so active thread moves to top
-  const targetPost = state.posts.find(p => p.id === newComment.post_id);
+  const targetPost = state.posts.find(p => Number(p.id) === Number(newComment.post_id));
   if (targetPost) {
     targetPost.comment_count = (targetPost.comment_count || 0) + 1;
     targetPost.latest_activity_at = newComment.created_at || new Date().toISOString();
+
+    if (!isCurrentDetailOpen && !isSelf) {
+      targetPost.unread_comments_count = (targetPost.unread_comments_count || 0) + 1;
+    } else if (isCurrentDetailOpen) {
+      targetPost.is_unread = false;
+      targetPost.unread_comments_count = 0;
+    }
+
     sortPostsByLatestActivity(state.posts);
     renderPosts();
     try {
@@ -2553,6 +2765,9 @@ function initEventHandlers() {
       if (res.ok) {
         const createdPost = await res.json().catch(() => null);
         if (createdPost && createdPost.id) {
+          createdPost.is_unread = false;
+          createdPost.unread_comments_count = 0;
+          markPostAsReadLocally(createdPost.id, 0);
           state.posts = state.posts.filter(p => p.id !== createdPost.id);
           state.posts.unshift(createdPost);
           try {
@@ -2609,6 +2824,9 @@ function initEventHandlers() {
   const postDetailModal = document.getElementById('postDetailModal');
   document.getElementById('closeDetailModalBtn')?.addEventListener('click', () => {
     postDetailModal.close();
+    state.activePostDetailId = null;
+  });
+  postDetailModal?.addEventListener('close', () => {
     state.activePostDetailId = null;
   });
 
@@ -2766,9 +2984,13 @@ function initEventHandlers() {
         });
 
         if (res.ok) {
+          const createdComment = await res.json().catch(() => null);
           input.value = '';
           resetCommentImageState();
           playChime(587.33, 0.08);
+          if (createdComment) {
+            handleIncomingNewComment(createdComment);
+          }
         } else if (res.status === 401) {
           openSessionPromptModal('expired');
         }
@@ -3418,6 +3640,8 @@ function initPWA() {
   // Detect standalone mode (already running as installed app on home screen or desktop window)
   const isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches ||
     window.navigator.standalone === true ||
     document.referrer.includes('android-app://');
 
@@ -3436,6 +3660,10 @@ function initPWA() {
 
   function showUpdateBanner(worker) {
     if (!updateBanner) return;
+    // The PWA update banner should only be shown for installed PWA / standalone users, NOT regular web browser users
+    if (!isStandalone) {
+      return;
+    }
     if (sessionStorage.getItem('fansphere_update_dismissed') === 'true') {
       return;
     }
