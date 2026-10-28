@@ -1469,14 +1469,18 @@ function renderPostCardHtml(post) {
           </p>
           ${post.image_url ? `
             <div class="shrink-0 relative group/thumb cursor-pointer" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(post.image_url)}', '${escapeJsString(post.title)}')">
+              <div class="absolute inset-0 flex items-center justify-center loading-spinner z-10">
+                <i data-lucide="loader-2" class="w-4 h-4 text-slate-500 animate-spin"></i>
+              </div>
               <img 
                 src="${escapeHtml(post.image_url)}" 
                 alt="Post thumbnail" 
                 loading="lazy"
-                class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border border-slate-700/80 group-hover/thumb:border-red-500/80 group-hover/thumb:scale-105 transition shadow-sm bg-slate-900"
+                onload="this.parentElement.querySelector('.loading-spinner').classList.add('hidden')"
+                class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border border-slate-700/80 group-hover/thumb:border-red-500/80 group-hover/thumb:scale-105 transition shadow-sm bg-slate-900 relative z-20"
                 onerror="this.parentElement.style.display='none'"
               />
-              <div class="absolute inset-0 bg-black/30 group-hover/thumb:bg-black/10 rounded-lg flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition pointer-events-none">
+              <div class="absolute inset-0 bg-black/30 group-hover/thumb:bg-black/10 rounded-lg flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition pointer-events-none z-30">
                 <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-white drop-shadow"></i>
               </div>
             </div>
@@ -1614,12 +1618,16 @@ async function openPostDetailModal(postId) {
       <div class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed">${formatLightweightMarkdown(post.content)}</div>
       ${post.image_url ? `
         <div class="mt-3 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-950/60 max-h-72 flex items-center justify-center relative group cursor-pointer" onclick="openImageLightbox('${escapeJsString(post.image_url)}', '${escapeJsString(post.title)}')">
+          <div class="absolute inset-0 flex items-center justify-center loading-spinner z-10">
+            <i data-lucide="loader-2" class="w-6 h-6 text-slate-500 animate-spin"></i>
+          </div>
           <img 
             src="${escapeHtml(post.image_url)}" 
             alt="Attached image" 
-            class="max-h-72 w-full object-contain rounded-xl transition duration-300 group-hover:scale-[1.01]" 
+            onload="this.parentElement.querySelector('.loading-spinner').classList.add('hidden')"
+            class="max-h-72 w-full object-contain rounded-xl transition duration-300 group-hover:scale-[1.01] relative z-20" 
           />
-          <div class="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] px-2 py-1 rounded-md border border-slate-700 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+          <div class="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] px-2 py-1 rounded-md border border-slate-700 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition z-30">
             <i data-lucide="zoom-in" class="w-3 h-3 text-red-400"></i>
             <span>Click to enlarge</span>
           </div>
@@ -1657,14 +1665,18 @@ function renderCommentHtml(comment) {
       <div class="text-slate-300 leading-relaxed text-xs whitespace-pre-wrap">${formatLightweightMarkdown(comment.content)}</div>
       ${comment.image_url ? `
         <div class="relative group/cimg inline-block max-w-[280px] rounded-xl overflow-hidden border border-slate-700 bg-slate-950 cursor-pointer mt-1" onclick="openImageLightbox('${escapeJsString(comment.image_url)}', 'Comment by ${escapeJsString(comment.author)}')">
+          <div class="absolute inset-0 flex items-center justify-center loading-spinner z-10">
+            <i data-lucide="loader-2" class="w-4 h-4 text-slate-500 animate-spin"></i>
+          </div>
           <img 
             src="${escapeHtml(comment.image_url)}" 
             alt="Comment attachment" 
             loading="lazy" 
-            class="max-h-48 max-w-[280px] object-cover rounded-xl transition group-hover/cimg:scale-105" 
+            onload="this.parentElement.querySelector('.loading-spinner').classList.add('hidden')"
+            class="max-h-48 max-w-[280px] object-cover rounded-xl transition group-hover/cimg:scale-105 relative z-20" 
             onerror="this.parentElement.style.display='none'"
           />
-          <div class="absolute inset-0 bg-black/25 opacity-0 group-hover/cimg:opacity-100 transition rounded-xl flex items-center justify-center pointer-events-none">
+          <div class="absolute inset-0 bg-black/25 opacity-0 group-hover/cimg:opacity-100 transition rounded-xl flex items-center justify-center pointer-events-none z-30">
             <i data-lucide="zoom-in" class="w-4 h-4 text-white drop-shadow"></i>
           </div>
         </div>
