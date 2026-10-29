@@ -212,6 +212,20 @@
               <p class="text-[10px] text-slate-500 mt-1">This name will appear in user profiles and supporter flair tags.</p>
             </div>
 
+            <!-- Short Name -->
+            <div>
+              <label for="realmShortNameInput" class="block font-semibold text-slate-200 mb-1">
+                Short Name <span class="text-slate-500 font-normal">(Max 16 chars)</span>
+              </label>
+              <input 
+                type="text" 
+                id="realmShortNameInput" 
+                class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-red-500 placeholder:text-slate-500 font-medium"
+                placeholder="e.g. CFC, HJK"
+                maxlength="16"
+              />
+            </div>
+
             <!-- Icon / Emoji -->
             <div>
               <label for="realmIconInput" class="block font-semibold text-slate-200 mb-1">
@@ -420,11 +434,24 @@
       </div>
       <div>
         <label for="editRealmIconInput" class="block text-slate-400 mb-1">Icon</label>
-        <input type="text" id="editRealmIconInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" required />
+        <div class="flex items-center gap-2">
+          <input type="text" id="editRealmIconInput" class="w-16 text-center bg-slate-950 border border-slate-700 text-white rounded-xl py-2 text-base focus:outline-none focus:border-blue-500" required maxlength="6" />
+          <div class="flex flex-wrap gap-1 items-center">
+            <button type="button" class="edit-emoji-quick-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition" data-emoji="🔴">🔴</button>
+            <button type="button" class="edit-emoji-quick-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition" data-emoji="🔵">🔵</button>
+            <button type="button" class="edit-emoji-quick-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition" data-emoji="⚪">⚪</button>
+            <button type="button" class="edit-emoji-quick-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition" data-emoji="🦁">🦁</button>
+            <button type="button" class="edit-emoji-quick-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition" data-emoji="👑">👑</button>
+          </div>
+        </div>
       </div>
       <div>
         <label for="editRealmImageIconFile" class="block text-slate-400 mb-1">Image Icon</label>
         <input type="file" id="editRealmImageIconFile" accept="image/*" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" />
+      </div>
+      <div>
+        <label for="editRealmShortNameInput" class="block text-slate-400 mb-1">Short Name</label>
+        <input type="text" id="editRealmShortNameInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" maxlength="16" />
       </div>
       <div>
         <label for="editRealmColorInput" class="block text-slate-400 mb-1">Color</label>

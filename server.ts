@@ -305,6 +305,7 @@ function getInitialSessions(): Session[] {
 export interface ClubRealm {
   id: string;
   name: string;
+  short_name?: string;
   badge_color: string;
   icon: string;
   image_icon?: string;
@@ -1379,7 +1380,7 @@ app.post('/api/admin/upload-realm-icon', requireAdminAuth, upload.single('image'
     res.json({ url });
   } catch (err) {
     console.error('[Storage] Realm icon upload error:', err);
-    res.status(500).json({ error: 'Failed to upload icon' });
+    res.status(500).json({ error: 'Failed to upload icon', detail: err instanceof Error ? err.message : String(err) });
   }
 });
 
@@ -1938,7 +1939,7 @@ app.get('/api/realms', (_req, res) => {
 
 // Admin: Add New Club Realm
 app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
-  const { name, badge_color, icon, description, image_icon } = req.body || {};
+  const { name, badge_color, icon, description, image_icon, short_name } = req.body || {};
   if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50) {
     return res.status(400).json({ detail: 'Realm name must be between 2 and 50 characters' });
   }
@@ -1965,6 +1966,7 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
     badge_color: cleanColor,
     icon: cleanIcon,
     image_icon: image_icon && typeof image_icon === 'string' ? image_icon.trim() : '',
+    short_name: short_name && typeof short_name === 'string' ? short_name.trim().slice(0, 16) : '',
     description: description && typeof description === 'string' ? description.trim() : '',
     is_default: false,
     created_at: new Date().toISOString()
@@ -1991,7 +1993,7 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
     return res.status(404).json({ detail: 'Club realm not found' });
   }
 
-  const { name, badge_color, icon, description, image_icon } = req.body || {};
+  const { name, badge_color, icon, description, image_icon, short_name } = req.body || {};
   
   if (name && (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50)) {
     return res.status(400).json({ detail: 'Realm name must be between 2 and 50 characters' });
@@ -2005,6 +2007,7 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
     badge_color: badge_color && hexRegex.test(badge_color.trim()) ? badge_color.trim() : realms[index].badge_color,
     icon: icon && typeof icon === 'string' && icon.trim().length > 0 ? icon.trim().slice(0, 8) : realms[index].icon,
     image_icon: image_icon !== undefined && typeof image_icon === 'string' ? image_icon.trim() : realms[index].image_icon,
+    short_name: short_name !== undefined && typeof short_name === 'string' ? short_name.trim().slice(0, 16) : realms[index].short_name,
     description: description !== undefined && typeof description === 'string' ? description.trim() : realms[index].description
   };
 

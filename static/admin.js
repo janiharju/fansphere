@@ -217,16 +217,24 @@ function renderRealmsList() {
 
     const isOfficial = realm.name.toLowerCase().includes('arsenalfinland');
 
+    const iconDisplay = realm.image_icon 
+      ? `<img src="${escapeHtml(realm.image_icon)}" alt="${escapeHtml(realm.name)}" class="w-8 h-8 object-cover rounded-lg" />`
+      : `<span>${escapeHtml(realm.icon || '🛡️')}</span>`;
+      
+    const iconBadgeDisplay = realm.image_icon 
+      ? `<img src="${escapeHtml(realm.image_icon)}" alt="${escapeHtml(realm.name)}" class="w-3 h-3 object-cover rounded-sm mr-1" />`
+      : `${escapeHtml(realm.icon || '🛡️')} `;
+
     card.innerHTML = `
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-inner" style="background-color: ${realm.badge_color || '#EF4444'}20; border: 1px solid ${realm.badge_color || '#EF4444'}40">
-          <span>${escapeHtml(realm.icon || '🛡️')}</span>
+          ${iconDisplay}
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="font-bold text-sm text-slate-100 truncate">${escapeHtml(realm.name)}</span>
             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs shrink-0" style="background-color: ${realm.badge_color || '#EF4444'}">
-              ${escapeHtml(realm.icon || '🛡️')} ${escapeHtml(realm.name)}
+              ${iconBadgeDisplay} ${escapeHtml(realm.name)}
             </span>
             ${isOfficial ? '<span class="text-[9px] font-bold uppercase tracking-wider bg-red-950/80 text-red-300 border border-red-800/60 px-1.5 py-0.2 rounded shrink-0">Official Club</span>' : ''}
           </div>
@@ -306,7 +314,9 @@ function promptEditRealm(id) {
   if (iconInput) iconInput.value = realm.icon || '🛡️';
   if (colorInput) colorInput.value = realm.badge_color || '#EF4444';
   const imgInput = document.getElementById('editRealmImageIconInput');
+  const shortNameInput = document.getElementById('editRealmShortNameInput');
   if (imgInput) imgInput.value = realm.image_icon || '';
+  if (shortNameInput) shortNameInput.value = realm.short_name || '';
   if (descInput) descInput.value = realm.description || '';
 
   if (modal) modal.showModal();
@@ -341,6 +351,7 @@ async function confirmEditRealm(e) {
   const iconInput = document.getElementById('editRealmIconInput');
   const colorInput = document.getElementById('editRealmColorInput');
   const descInput = document.getElementById('editRealmDescriptionInput');
+  const shortNameInput = document.getElementById('editRealmShortNameInput');
   const fileInput = document.getElementById('editRealmImageIconFile');
   const btn = document.getElementById('confirmEditBtn');
 
@@ -351,6 +362,7 @@ async function confirmEditRealm(e) {
   const icon = iconInput ? iconInput.value.trim() : '🛡️';
   const badge_color = colorInput ? colorInput.value : '#EF4444';
   const description = descInput ? descInput.value.trim() : '';
+  const short_name = shortNameInput ? shortNameInput.value.trim().slice(0, 16) : '';
   let image_icon = adminState.editTarget.image_icon || '';
 
   if (btn) {
@@ -370,7 +382,7 @@ async function confirmEditRealm(e) {
         'x-admin-token': adminState.token,
         'Authorization': `Bearer ${adminState.token}`
       },
-      body: JSON.stringify({ name, icon, badge_color, image_icon, description })
+      body: JSON.stringify({ name, icon, badge_color, image_icon, short_name, description })
     });
 
 
@@ -467,6 +479,7 @@ async function createRealm(e) {
   const colorInput = document.getElementById('realmColorHex');
   const iconInput = document.getElementById('realmIconInput');
   const fileInput = document.getElementById('realmImageIconFile');
+  const shortNameInput = document.getElementById('realmShortNameInput');
   const descInput = document.getElementById('realmDescriptionInput');
   const submitBtn = document.getElementById('createRealmBtn');
 
@@ -474,6 +487,7 @@ async function createRealm(e) {
   const name = nameInput.value.trim();
   const badge_color = colorInput ? colorInput.value.trim() : '#EF4444';
   const icon = iconInput ? iconInput.value.trim() : '🛡️';
+  const short_name = shortNameInput ? shortNameInput.value.trim().slice(0, 16) : '';
   const description = descInput ? descInput.value.trim() : '';
 
   if (name.length < 2) {
@@ -499,7 +513,7 @@ async function createRealm(e) {
         'x-admin-token': adminState.token,
         'Authorization': `Bearer ${adminState.token}`
       },
-      body: JSON.stringify({ name, badge_color, icon, image_icon, description })
+      body: JSON.stringify({ name, badge_color, icon, image_icon, short_name, description })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -513,6 +527,7 @@ async function createRealm(e) {
     // Reset Form
     nameInput.value = '';
     if (descInput) descInput.value = '';
+    if (shortNameInput) shortNameInput.value = '';
     if (colorInput) colorInput.value = '#EF4444';
     const picker = document.getElementById('realmColorPicker');
     if (picker) picker.value = '#EF4444';
@@ -568,6 +583,17 @@ function setupLivePreview() {
       if (iconInput) {
         iconInput.value = emoji;
         updateLivePreview();
+      }
+    });
+  });
+
+  // Edit modal emoji buttons
+  document.querySelectorAll('.edit-emoji-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const emoji = btn.getAttribute('data-emoji');
+      const editIconInput = document.getElementById('editRealmIconInput');
+      if (editIconInput) {
+        editIconInput.value = emoji;
       }
     });
   });

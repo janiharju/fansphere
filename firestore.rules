@@ -75,11 +75,13 @@ service cloud.firestore {
 
     function isValidRealm(data) {
       return data.keys().hasAll(['id', 'name', 'created_at']) &&
-             data.keys().hasOnly(['id', 'name', 'badge_color', 'icon', 'description', 'is_default', 'created_at']) &&
+             data.keys().hasOnly(['id', 'name', 'badge_color', 'icon', 'image_icon', 'short_name', 'description', 'is_default', 'created_at']) &&
              data.id is string && data.id.size() <= 100 &&
              data.name is string && data.name.size() <= 100 &&
              (!('badge_color' in data) || (data.badge_color is string && data.badge_color.size() <= 20)) &&
              (!('icon' in data) || (data.icon is string && data.icon.size() <= 20)) &&
+             (!('image_icon' in data) || (data.image_icon is string && data.image_icon.size() <= 2048)) &&
+             (!('short_name' in data) || (data.short_name is string && data.short_name.size() <= 16)) &&
              (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
              (!('is_default' in data) || data.is_default is bool) &&
              data.created_at is string && data.created_at.size() <= 100;

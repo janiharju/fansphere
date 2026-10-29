@@ -205,6 +205,7 @@ export async function persistRealmToFirestore(realm: any) {
       icon: String(realm.icon || '🔴').trim(),
       description: String(realm.description || '').trim(),
       image_icon: String(realm.image_icon || '').trim(),
+      short_name: String(realm.short_name || '').trim().slice(0, 16),
       is_default: Boolean(realm.is_default),
       created_at: String(realm.created_at || new Date().toISOString())
     };
