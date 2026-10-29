@@ -142,10 +142,7 @@ service cloud.firestore {
     match /sessions/{sessionId} {
       allow get, list: if true;
       allow create: if isValidId(sessionId) && isValidSession(incoming());
-      allow update: if isValidId(sessionId) && isValidSession(incoming()) && incoming().id == existing().id && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['last_active_at', 'expires_at', 'flair', 'nickname']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly([])
-      );
+      allow update: if isValidId(sessionId) && isValidSession(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(sessionId);
     }
 

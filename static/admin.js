@@ -305,9 +305,31 @@ function promptEditRealm(id) {
   if (nameInput) nameInput.value = realm.name;
   if (iconInput) iconInput.value = realm.icon || '🛡️';
   if (colorInput) colorInput.value = realm.badge_color || '#EF4444';
+  const imgInput = document.getElementById('editRealmImageIconInput');
+  if (imgInput) imgInput.value = realm.image_icon || '';
   if (descInput) descInput.value = realm.description || '';
 
   if (modal) modal.showModal();
+}
+
+async function uploadRealmIcon(file) {
+  if (!file) return '';
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await fetch('/api/admin/upload-realm-icon', {
+    method: 'POST',
+    headers: {
+      'x-admin-token': adminState.token,
+      'Authorization': `Bearer ${adminState.token}`
+    },
+    body: formData
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to upload icon');
+  }
+  const data = await res.json();
+  return data.url;
 }
 
 async function confirmEditRealm(e) {
@@ -319,6 +341,7 @@ async function confirmEditRealm(e) {
   const iconInput = document.getElementById('editRealmIconInput');
   const colorInput = document.getElementById('editRealmColorInput');
   const descInput = document.getElementById('editRealmDescriptionInput');
+  const fileInput = document.getElementById('editRealmImageIconFile');
   const btn = document.getElementById('confirmEditBtn');
 
   if (!idInput || !nameInput) return;
@@ -328,6 +351,7 @@ async function confirmEditRealm(e) {
   const icon = iconInput ? iconInput.value.trim() : '🛡️';
   const badge_color = colorInput ? colorInput.value : '#EF4444';
   const description = descInput ? descInput.value.trim() : '';
+  let image_icon = adminState.editTarget.image_icon || '';
 
   if (btn) {
     btn.disabled = true;
@@ -335,6 +359,10 @@ async function confirmEditRealm(e) {
   }
 
   try {
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      image_icon = await uploadRealmIcon(fileInput.files[0]);
+    }
+
     const res = await fetch(`/api/admin/realms/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: {
@@ -342,8 +370,9 @@ async function confirmEditRealm(e) {
         'x-admin-token': adminState.token,
         'Authorization': `Bearer ${adminState.token}`
       },
-      body: JSON.stringify({ name, icon, badge_color, description })
+      body: JSON.stringify({ name, icon, badge_color, image_icon, description })
     });
+
 
     const data = await res.json().catch(() => ({}));
 
@@ -437,6 +466,7 @@ async function createRealm(e) {
   const nameInput = document.getElementById('realmNameInput');
   const colorInput = document.getElementById('realmColorHex');
   const iconInput = document.getElementById('realmIconInput');
+  const fileInput = document.getElementById('realmImageIconFile');
   const descInput = document.getElementById('realmDescriptionInput');
   const submitBtn = document.getElementById('createRealmBtn');
 
@@ -457,6 +487,11 @@ async function createRealm(e) {
   }
 
   try {
+    let image_icon = '';
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      image_icon = await uploadRealmIcon(fileInput.files[0]);
+    }
+
     const res = await fetch('/api/admin/realms', {
       method: 'POST',
       headers: {
@@ -464,7 +499,7 @@ async function createRealm(e) {
         'x-admin-token': adminState.token,
         'Authorization': `Bearer ${adminState.token}`
       },
-      body: JSON.stringify({ name, badge_color, icon, description })
+      body: JSON.stringify({ name, badge_color, icon, image_icon, description })
     });
 
     const data = await res.json().catch(() => ({}));

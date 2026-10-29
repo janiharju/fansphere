@@ -204,6 +204,7 @@ export async function persistRealmToFirestore(realm: any) {
       badge_color: String(realm.badge_color || '#EF4444').trim(),
       icon: String(realm.icon || '🔴').trim(),
       description: String(realm.description || '').trim(),
+      image_icon: String(realm.image_icon || '').trim(),
       is_default: Boolean(realm.is_default),
       created_at: String(realm.created_at || new Date().toISOString())
     };

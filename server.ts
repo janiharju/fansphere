@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import multer from 'multer';
+import sharp from 'sharp';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   fetchAllPostsFromFirestore,
@@ -306,6 +307,7 @@ export interface ClubRealm {
   name: string;
   badge_color: string;
   icon: string;
+  image_icon?: string;
   description?: string;
   is_default?: boolean;
   created_at: string;
@@ -1358,6 +1360,30 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
   }
 });
 
+// Upload realm icon endpoint
+app.post('/api/admin/upload-realm-icon', requireAdminAuth, upload.single('image'), async (req, res) => {
+  const file = (req as any).file;
+  if (!file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  try {
+    const resizedBuffer = await sharp(file.buffer)
+      .resize(256, 256, { fit: 'cover' })
+      .toBuffer();
+    
+    const filename = `realm-icons/${crypto.randomUUID()}.png`;
+    const storageRef = ref(storage, filename);
+    await uploadBytes(storageRef, resizedBuffer, { contentType: 'image/png' });
+    const url = await getDownloadURL(storageRef);
+    res.json({ url });
+  } catch (err) {
+    console.error('[Storage] Realm icon upload error:', err);
+    res.status(500).json({ error: 'Failed to upload icon' });
+  }
+});
+
+
 
 
 
@@ -1845,7 +1871,7 @@ app.post('/api/league/reset', (_req, res) => {
 });
 
 // ==================== ADMIN & CLUB REALMS MANAGEMENT ====================
-const ADMIN_PASSWORD = 'sala666sana';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const activeAdminTokens = new Set<string>();
 
 function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -1912,7 +1938,7 @@ app.get('/api/realms', (_req, res) => {
 
 // Admin: Add New Club Realm
 app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
-  const { name, badge_color, icon, description } = req.body || {};
+  const { name, badge_color, icon, description, image_icon } = req.body || {};
   if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50) {
     return res.status(400).json({ detail: 'Realm name must be between 2 and 50 characters' });
   }
@@ -1938,6 +1964,7 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
     name: cleanName,
     badge_color: cleanColor,
     icon: cleanIcon,
+    image_icon: image_icon && typeof image_icon === 'string' ? image_icon.trim() : '',
     description: description && typeof description === 'string' ? description.trim() : '',
     is_default: false,
     created_at: new Date().toISOString()
@@ -1964,7 +1991,7 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
     return res.status(404).json({ detail: 'Club realm not found' });
   }
 
-  const { name, badge_color, icon, description } = req.body || {};
+  const { name, badge_color, icon, description, image_icon } = req.body || {};
   
   if (name && (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50)) {
     return res.status(400).json({ detail: 'Realm name must be between 2 and 50 characters' });
@@ -1977,6 +2004,7 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
     name: name ? name.trim() : realms[index].name,
     badge_color: badge_color && hexRegex.test(badge_color.trim()) ? badge_color.trim() : realms[index].badge_color,
     icon: icon && typeof icon === 'string' && icon.trim().length > 0 ? icon.trim().slice(0, 8) : realms[index].icon,
+    image_icon: image_icon !== undefined && typeof image_icon === 'string' ? image_icon.trim() : realms[index].image_icon,
     description: description !== undefined && typeof description === 'string' ? description.trim() : realms[index].description
   };
 

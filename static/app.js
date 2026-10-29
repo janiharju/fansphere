@@ -3650,12 +3650,7 @@ function initPWA() {
   const dismissIosBtn = document.getElementById('dismissPwaIosModalBtn');
 
   // Detect standalone mode (already running as installed app on home screen or desktop window)
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches ||
-    window.matchMedia('(display-mode: minimal-ui)').matches ||
-    window.navigator.standalone === true ||
-    document.referrer.includes('android-app://');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
 
   // Detect iOS Safari device
   const userAgent = window.navigator.userAgent.toLowerCase();

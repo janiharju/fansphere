@@ -238,6 +238,19 @@
               </div>
             </div>
 
+            <!-- Custom Image Icon (File) -->
+            <div>
+              <label for="realmImageIconFile" class="block font-semibold text-slate-200 mb-1">
+                Club Icon (Image) <span class="text-slate-500 font-normal">(Optional, 256x256)</span>
+              </label>
+              <input 
+                type="file" 
+                id="realmImageIconFile" 
+                accept="image/*"
+                class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-red-500 placeholder:text-slate-500 font-medium"
+              />
+            </div>
+
             <!-- Badge Color -->
             <div>
               <label class="block font-semibold text-slate-200 mb-1">
@@ -408,6 +421,10 @@
       <div>
         <label for="editRealmIconInput" class="block text-slate-400 mb-1">Icon</label>
         <input type="text" id="editRealmIconInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" required />
+      </div>
+      <div>
+        <label for="editRealmImageIconFile" class="block text-slate-400 mb-1">Image Icon</label>
+        <input type="file" id="editRealmImageIconFile" accept="image/*" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" />
       </div>
       <div>
         <label for="editRealmColorInput" class="block text-slate-400 mb-1">Color</label>
