@@ -175,19 +175,50 @@ export interface Session {
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours of inactivity before expiration
 const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes of recent activity for online presence
 
-export function normalizeFlair(flair: string | undefined): string {
-  if (!flair) return 'Neutral Football Fan';
-  const str = String(flair).trim().toLowerCase();
-  if (str.includes('tester')) return 'Testers';
-  if (str.includes('neutral')) return 'Neutral Football Fan';
-  if (str.includes('Arsenal Finland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
-    return 'Arsenal Finland Official Member';
+export interface FlairConfig {
+  default: string;
+  mappings: Record<string, string>;
+}
+
+let flairConfig: FlairConfig = {
+  default: 'Arsenal Finland Official Member',
+  mappings: {
+    'tester': 'Testers',
+    'neutral': 'Neutral Football Fan',
+    'arsenal': 'Arsenal Finland Official Member',
+    'gunner': 'Arsenal Finland Official Member',
+    'gooner': 'Arsenal Finland Official Member',
+    'official': 'Arsenal Finland Official Member'
   }
+};
+
+function loadFlairConfig() {
+  const configPath = path.resolve(DATA_DIR, 'flair-mappings.json');
+  if (fs.existsSync(configPath)) {
+    try {
+      const raw = fs.readFileSync(configPath, 'utf-8');
+      flairConfig = JSON.parse(raw);
+      console.log('Loaded flair mappings from disk');
+    } catch (e) {
+      console.error('Failed to load flair mappings:', e);
+    }
+  }
+}
+
+export function normalizeFlair(flair: string | undefined): string {
+  if (!flair) return flairConfig.default;
+  const str = String(flair).trim().toLowerCase();
+  
+  for (const [keyword, normalized] of Object.entries(flairConfig.mappings)) {
+    if (str.includes(keyword.toLowerCase())) return normalized;
+  }
+  
   if (typeof realms !== 'undefined' && Array.isArray(realms)) {
     const matched = realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
     if (matched) return matched.name;
   }
-  return 'Neutral Football Fan';
+  
+  return flairConfig.default;
 }
 
 
@@ -451,6 +482,7 @@ function mergeStores(stores: StoredData[]): StoredData {
 }
 
 function loadInitialStore(): StoredData {
+  loadFlairConfig();
   ensureDataDir();
 
   const validStores: StoredData[] = [];
@@ -1119,7 +1151,7 @@ app.post('/api/posts', (req, res) => {
     title: title.trim(),
     content: content.trim(),
     author: session.nickname,
-    author_flair: session.flair || 'Arsenal Finland Official Member',
+    author_flair: session.flair || 'Neutral Football Fan',
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
@@ -1400,7 +1432,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
     author: session.nickname,
-    author_flair: session.flair || 'Arsenal Finland Official Member',
+    author_flair: session.flair || 'Neutral Football Fan',
     content: content.trim(),
     upvotes: 1,
     image_url: cleanCommentImageUrl,
@@ -1528,12 +1560,12 @@ app.post('/api/chat/message', (req, res) => {
     id: assignedChatId,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
-    author_flair: session.flair || 'Arsenal Finland Official Member',
+    author_flair: session.flair || 'Neutral Football Fan',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: trimmedContent,
     created_at: new Date().toISOString(),
     reactions: {},
-    realm: session.flair || 'Arsenal Finland Official Member',
+    realm: session.flair || 'Neutral Football Fan',
     mentions: extractedMentions
   };
 
@@ -2098,12 +2130,12 @@ wss.on('connection', (ws: WebSocket) => {
             id: nextChatId++,
             room: payload.room || 'general',
             author: session.nickname,
-            author_flair: session.flair || 'Arsenal Finland Official Member',
+            author_flair: session.flair || 'Neutral Football Fan',
             badge_color: payload.badge_color || '#EF4444',
             content,
             created_at: new Date().toISOString(),
             reactions: {},
-            realm: session.flair || 'Arsenal Finland Official Member',
+            realm: session.flair || 'Neutral Football Fan',
             mentions: extractedMentions
           };
           chatMessages.push(newChat);
