@@ -142,84 +142,15 @@ function extractQuotedAuthors(text: string): string[] {
 }
 
 // Initial seed generators
-function getInitialTeams(): Team[] {
-  return [
-    { id: 'ARS', name: 'Arsenal', short_name: 'Arsenal', logo: '🔴⚪', played: 28, won: 20, drawn: 5, lost: 3, gf: 64, ga: 22, points: 65, form: ['W', 'W', 'D', 'W', 'W'] },
-    { id: 'MCI', name: 'Manchester City', short_name: 'Man City', logo: '🩵⚪', played: 28, won: 19, drawn: 6, lost: 3, gf: 63, ga: 26, points: 63, form: ['W', 'D', 'W', 'W', 'W'] },
-    { id: 'LIV', name: 'Liverpool', short_name: 'Liverpool', logo: '🔴🔴', played: 28, won: 19, drawn: 5, lost: 4, gf: 62, ga: 25, points: 62, form: ['W', 'W', 'L', 'W', 'D'] },
-    { id: 'AVL', name: 'Aston Villa', short_name: 'Aston Villa', logo: '🟣🩵', played: 28, won: 16, drawn: 5, lost: 7, gf: 52, ga: 35, points: 53, form: ['L', 'W', 'W', 'D', 'W'] },
-    { id: 'CHE', name: 'Chelsea', short_name: 'Chelsea', logo: '🔵⚪', played: 28, won: 14, drawn: 7, lost: 7, gf: 49, ga: 36, points: 49, form: ['D', 'W', 'W', 'L', 'D'] },
-    { id: 'NEW', name: 'Newcastle United', short_name: 'Newcastle', logo: '⚪⚫', played: 28, won: 14, drawn: 5, lost: 9, gf: 48, ga: 38, points: 47, form: ['W', 'L', 'W', 'W', 'L'] },
-    { id: 'TOT', name: 'Tottenham Hotspur', short_name: 'Tottenham', logo: '⚪⚪', played: 28, won: 13, drawn: 5, lost: 10, gf: 50, ga: 42, points: 44, form: ['L', 'L', 'W', 'D', 'W'] },
-    { id: 'BHA', name: 'Brighton & Hove Albion', short_name: 'Brighton', logo: '🔵⚪', played: 28, won: 11, drawn: 8, lost: 9, gf: 43, ga: 40, points: 41, form: ['D', 'W', 'D', 'L', 'W'] },
-    { id: 'FUL', name: 'Fulham', short_name: 'Fulham', logo: '⚪⚫', played: 28, won: 11, drawn: 6, lost: 11, gf: 41, ga: 41, points: 39, form: ['W', 'D', 'L', 'W', 'L'] },
-    { id: 'MUN', name: 'Manchester United', short_name: 'Man Utd', logo: '🔴⚫', played: 28, won: 10, drawn: 6, lost: 12, gf: 38, ga: 42, points: 36, form: ['L', 'D', 'W', 'L', 'L'] },
-    { id: 'BOU', name: 'AFC Bournemouth', short_name: 'Bournemouth', logo: '🔴⚫', played: 28, won: 9, drawn: 8, lost: 11, gf: 40, ga: 44, points: 35, form: ['W', 'L', 'D', 'D', 'W'] },
-    { id: 'WHU', name: 'West Ham United', short_name: 'West Ham', logo: '🍷🩵', played: 28, won: 9, drawn: 7, lost: 12, gf: 37, ga: 48, points: 34, form: ['L', 'W', 'L', 'D', 'D'] },
-    { id: 'BRE', name: 'Brentford', short_name: 'Brentford', logo: '🔴⚪', played: 28, won: 9, drawn: 5, lost: 14, gf: 45, ga: 52, points: 32, form: ['L', 'L', 'W', 'L', 'D'] },
-    { id: 'CRY', name: 'Crystal Palace', short_name: 'Crystal Palace', logo: '🔴🔵', played: 28, won: 7, drawn: 10, lost: 11, gf: 33, ga: 43, points: 31, form: ['D', 'D', 'L', 'W', 'D'] },
-    { id: 'EVE', name: 'Everton', short_name: 'Everton', logo: '🔵⚪', played: 28, won: 7, drawn: 9, lost: 12, gf: 30, ga: 41, points: 30, form: ['D', 'W', 'L', 'D', 'L'] },
-    { id: 'NFO', name: 'Nottingham Forest', short_name: 'Nottm Forest', logo: '🔴⚪', played: 28, won: 7, drawn: 7, lost: 14, gf: 32, ga: 49, points: 28, form: ['W', 'L', 'L', 'D', 'L'] },
-    { id: 'WOL', name: 'Wolverhampton Wanderers', short_name: 'Wolves', logo: '🟡⚫', played: 28, won: 7, drawn: 6, lost: 15, gf: 36, ga: 54, points: 27, form: ['L', 'L', 'L', 'W', 'L'] },
-    { id: 'IPS', name: 'Ipswich Town', short_name: 'Ipswich', logo: '🔵⚪', played: 28, won: 4, drawn: 9, lost: 15, gf: 27, ga: 56, points: 21, form: ['L', 'D', 'L', 'L', 'D'] },
-    { id: 'LEI', name: 'Leicester City', short_name: 'Leicester', logo: '🔵⚪', played: 28, won: 4, drawn: 7, lost: 17, gf: 29, ga: 61, points: 19, form: ['L', 'L', 'D', 'L', 'L'] },
-    { id: 'SOU', name: 'Southampton', short_name: 'Southampton', logo: '🔴⚪', played: 28, won: 2, drawn: 4, lost: 22, gf: 19, ga: 68, points: 10, form: ['L', 'L', 'L', 'L', 'L'] },
-  ];
-}
 
-function getInitialMatches(): Match[] {
-  return [
-    {
-      id: 'm1',
-      home_team_id: 'ARS',
-      away_team_id: 'CHE',
-      home_score: 2,
-      away_score: 1,
-      minute: 74,
-      status: 'LIVE',
-      events: [
-        { min: 18, team: 'ARS', player: 'Saka', type: 'GOAL' },
-        { min: 42, team: 'CHE', player: 'Palmer', type: 'GOAL' },
-        { min: 63, team: 'ARS', player: 'Havertz', type: 'GOAL' }
-      ]
-    },
-    {
-      id: 'm2',
-      home_team_id: 'MCI',
-      away_team_id: 'NEW',
-      home_score: 1,
-      away_score: 1,
-      minute: 68,
-      status: 'LIVE',
-      events: [
-        { min: 24, team: 'NEW', player: 'Isak', type: 'GOAL' },
-        { min: 55, team: 'MCI', player: 'Haaland', type: 'GOAL' }
-      ]
-    },
-    {
-      id: 'm3',
-      home_team_id: 'LIV',
-      away_team_id: 'TOT',
-      home_score: 0,
-      away_score: 0,
-      minute: 0,
-      status: 'UPCOMING',
-      events: []
-    }
-  ];
-}
 
-function getInitialPosts(): Post[] {
-  return [];
-}
 
-function getInitialComments(): Comment[] {
-  return [];
-}
 
-function getInitialChatMessages(): ChatMessage[] {
-  return [];
-}
+
+
+
+
+
 
 // ==================== SESSION & PERSISTENT FILE-BACKED DATA STORE ====================
 // Configurable data path: allows persistent volumes (e.g. /app/data, /mnt/data, or custom volume mounts)
@@ -245,7 +176,7 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours of inactivity before expir
 const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes of recent activity for online presence
 
 export function normalizeFlair(flair: string | undefined): string {
-  if (!flair) return 'Arsenal Finland Official Member';
+  if (!flair) return 'Neutral Football Fan';
   const str = String(flair).trim().toLowerCase();
   if (str.includes('tester')) return 'Testers';
   if (str.includes('neutral')) return 'Neutral Football Fan';
@@ -256,51 +187,10 @@ export function normalizeFlair(flair: string | undefined): string {
     const matched = realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
     if (matched) return matched.name;
   }
-  return 'Arsenal Finland Official Member';
+  return 'Neutral Football Fan';
 }
 
-function getInitialSessions(): Session[] {
-  const now = Date.now();
-  const twoHours = SESSION_TTL_MS;
-  return [
-    {
-      id: 'sess-helsinki-gunner',
-      nickname: 'HelsinkiGunner',
-      email: 'helsinki.gunner@ArsenalFinland.fi',
-      flair: 'Arsenal Finland Official Member',
-      created_at: new Date(now - 3600000).toISOString(),
-      last_active_at: new Date(now - 60000).toISOString(),
-      expires_at: new Date(now + twoHours).toISOString()
-    },
-    {
-      id: 'sess-tampere-gooner',
-      nickname: 'TampereGooner',
-      email: 'tampere.gooner@ArsenalFinland.fi',
-      flair: 'Arsenal Finland Official Member',
-      created_at: new Date(now - 7200000).toISOString(),
-      last_active_at: new Date(now - 120000).toISOString(),
-      expires_at: new Date(now + twoHours).toISOString()
-    },
-    {
-      id: 'sess-arsefin-admin',
-      nickname: 'ArsenalFinlandAdmin',
-      email: 'admin@ArsenalFinland.fi',
-      flair: 'Arsenal Finland Official Member',
-      created_at: new Date(now - 10000000).toISOString(),
-      last_active_at: new Date(now - 30000).toISOString(),
-      expires_at: new Date(now + twoHours).toISOString()
-    },
-    {
-      id: 'sess-turku-tester',
-      nickname: 'TurkuTester',
-      email: 'tester.turku@ArsenalFinland.fi',
-      flair: 'Testers',
-      created_at: new Date(now - 4000000).toISOString(),
-      last_active_at: new Date(now - 180000).toISOString(),
-      expires_at: new Date(now + twoHours).toISOString()
-    }
-  ];
-}
+
 
 export interface ClubRealm {
   id: string;
@@ -322,38 +212,7 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-export function getInitialRealms(): ClubRealm[] {
-  const now = new Date().toISOString();
-  return [
-    {
-      id: 'Arsenal Finland-official',
-      name: 'Arsenal Finland Official Member',
-      badge_color: '#EF4444',
-      icon: '🔴',
-      description: 'Official verified Arsenal Finland community members and supporters',
-      is_default: true,
-      created_at: now
-    },
-    {
-      id: 'neutral-football-fan',
-      name: 'Neutral Football Fan',
-      badge_color: '#94A3B8',
-      icon: '⚪',
-      description: 'Neutral fans, tacticians, and general football supporters',
-      is_default: false,
-      created_at: now
-    },
-    {
-      id: 'testers',
-      name: 'Testers',
-      badge_color: '#A855F7',
-      icon: '🧪',
-      description: 'Test realm for quality assurance and feature verification',
-      is_default: false,
-      created_at: now
-    }
-  ];
-}
+
 
 export interface UserReadState {
   last_read_at: string;
@@ -472,8 +331,8 @@ function parseStoreFile(filePath: string): StoredData | null {
         posts: parsed.posts,
         comments: parsed.comments,
         chatMessages: parsed.chatMessages,
-        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : getInitialSessions(),
-        realms: Array.isArray(parsed.realms) ? parsed.realms : getInitialRealms(),
+        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+        realms: Array.isArray(parsed.realms) ? parsed.realms : [],
         userReadStates: (parsed.userReadStates && typeof parsed.userReadStates === 'object') ? parsed.userReadStates : {},
         nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
         nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
@@ -562,19 +421,14 @@ function mergeStores(stores: StoredData[]): StoredData {
   }
 
   if (mergedPostsMap.size === 0) {
-    for (const p of getInitialPosts()) mergedPostsMap.set(p.id, p);
   }
   if (mergedCommentsMap.size === 0) {
-    for (const c of getInitialComments()) mergedCommentsMap.set(c.id, c);
   }
   if (mergedChatMap.size === 0) {
-    for (const m of getInitialChatMessages()) mergedChatMap.set(m.id, m);
   }
   if (mergedSessionsMap.size === 0) {
-    for (const s of getInitialSessions()) mergedSessionsMap.set(s.id, s);
   }
   if (mergedRealmsMap.size === 0) {
-    for (const r of getInitialRealms()) mergedRealmsMap.set(r.id, r);
   }
 
   const postsList = Array.from(mergedPostsMap.values()).sort((a, b) => b.id - a.id);
@@ -614,11 +468,11 @@ function loadInitialStore(): StoredData {
 
   // 3. Fallback to initial seed only if no store exists anywhere
   const initial: StoredData = {
-    posts: getInitialPosts(),
-    comments: getInitialComments(),
-    chatMessages: getInitialChatMessages(),
-    sessions: getInitialSessions(),
-    realms: getInitialRealms(),
+    posts: [],
+    comments: [],
+    chatMessages: [],
+    sessions: [],
+    realms: [],
     userReadStates: {},
     nextPostId: 1,
     nextCommentId: 1,
@@ -630,12 +484,12 @@ function loadInitialStore(): StoredData {
 }
 
 const storedData = loadInitialStore();
-let teams: Team[] = getInitialTeams();
-let matches: Match[] = getInitialMatches();
+let teams: Team[] = [];
+let matches: Match[] = [];
 let posts: Post[] = storedData.posts;
 let comments: Comment[] = storedData.comments;
 let chatMessages: ChatMessage[] = storedData.chatMessages;
-let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : getInitialRealms();
+let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : [];
 
 const userReadStates = new Map<string, Record<string, UserReadState>>();
 if (storedData.userReadStates) {
@@ -666,7 +520,7 @@ for (const c of comments) {
 }
 
 const sessions = new Map<string, Session>();
-for (const s of (storedData.sessions || getInitialSessions())) {
+for (const s of (storedData.sessions || [])) {
   sessions.set(s.id, s);
 }
 const users = new Map<string, any>();
@@ -1865,8 +1719,8 @@ app.post('/api/league/simulate-event', (req, res) => {
 
 // 12. Reset League (Resets matches/standings only, preserving all posts and chat)
 app.post('/api/league/reset', (_req, res) => {
-  teams = getInitialTeams();
-  matches = getInitialMatches();
+  teams = [];
+  matches = [];
   const standings = getStandings();
   res.json({ status: 'reset', standings });
 });
