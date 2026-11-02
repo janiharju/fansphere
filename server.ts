@@ -20,11 +20,11 @@ import {
   fetchAllRealmsFromFirestore,
   saveRealmToFirestore,
   saveUserToFirestore,
-  loadUsersFromFirestore,
+  fetchAllUsersFromFirestore,
   saveNotificationToFirestore,
   updateNotificationReadStatusInFirestore,
   updateAllNotificationsReadStatusInFirestore,
-  loadNotificationsFromFirestore,
+  fetchAllNotificationsFromFirestore,
   updatePostCommentCountInFirestore,
   db,
   storage
@@ -152,16 +152,6 @@ function extractQuotedAuthors(text: string): string[] {
 
 
 
-// ==================== SESSION & PERSISTENT FILE-BACKED DATA STORE ====================
-// Configurable data path: allows persistent volumes (e.g. /app/data, /mnt/data, or custom volume mounts)
-const DATA_DIR = process.env.DATA_DIR 
-  ? path.resolve(process.env.DATA_DIR) 
-  : path.resolve(process.cwd(), 'data');
-const DATA_FILE = process.env.STORE_FILE_PATH 
-  ? path.resolve(process.env.STORE_FILE_PATH) 
-  : path.join(DATA_DIR, 'store.json');
-const BACKUP_FILE = path.join(DATA_DIR, 'store.backup.json');
-
 export interface Session {
   id: string;
   nickname: string;
@@ -172,56 +162,24 @@ export interface Session {
   expires_at: string;
 }
 
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours of inactivity before expiration
-const ACTIVE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes of recent activity for online presence
-
-export interface FlairConfig {
-  default: string;
-  mappings: Record<string, string>;
+export interface UserReadState {
+  last_read_at: string;
+  comment_count: number;
 }
 
-let flairConfig: FlairConfig = {
-  default: 'Arsenal Finland Official Member',
-  mappings: {
-    'tester': 'Testers',
-    'neutral': 'Neutral Football Fan',
-    'arsenal': 'Arsenal Finland Official Member',
-    'gunner': 'Arsenal Finland Official Member',
-    'gooner': 'Arsenal Finland Official Member',
-    'official': 'Arsenal Finland Official Member'
-  }
-};
-
-function loadFlairConfig() {
-  const configPath = path.resolve(DATA_DIR, 'flair-mappings.json');
-  if (fs.existsSync(configPath)) {
-    try {
-      const raw = fs.readFileSync(configPath, 'utf-8');
-      flairConfig = JSON.parse(raw);
-      console.log('Loaded flair mappings from disk');
-    } catch (e) {
-      console.error('Failed to load flair mappings:', e);
-    }
-  }
-}
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+const ACTIVE_WINDOW_MS = 10 * 60 * 1000;
 
 export function normalizeFlair(flair: string | undefined): string {
-  if (!flair) return flairConfig.default;
+  if (!flair) return 'Neutral Football Fan';
   const str = String(flair).trim().toLowerCase();
-  
-  for (const [keyword, normalized] of Object.entries(flairConfig.mappings)) {
-    if (str.includes(keyword.toLowerCase())) return normalized;
-  }
-  
+
   if (typeof realms !== 'undefined' && Array.isArray(realms)) {
     const matched = realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
     if (matched) return matched.name;
   }
-  
-  return flairConfig.default;
+  return 'Neutral Football Fan';
 }
-
-
 
 export interface ClubRealm {
   id: string;
@@ -243,324 +201,46 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-
-
-export interface UserReadState {
-  last_read_at: string;
-  comment_count: number;
-}
-
-interface StoredData {
-  posts: Post[];
-  comments: Comment[];
-  chatMessages: ChatMessage[];
-  sessions?: Session[];
-  realms?: ClubRealm[];
-  userReadStates?: Record<string, Record<string, UserReadState>>;
-  nextPostId: number;
-  nextCommentId: number;
-  nextChatId: number;
-}
-
-const CANDIDATE_FILES = Array.from(new Set([
-  DATA_FILE,
-  BACKUP_FILE,
-  path.resolve(process.cwd(), 'data', 'store.json'),
-  path.resolve(process.cwd(), 'data', 'store.backup.json'),
-  path.resolve('/app/data/store.json'),
-  path.resolve('/app/data/store.backup.json'),
-  path.resolve('/app/applet/data/store.json'),
-  path.resolve('/app/applet/data/store.backup.json'),
-  path.resolve('/tmp/fansphere_store.json'),
-  path.resolve('/tmp/fansphere_store_backup.json')
-]));
-
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-function saveDataSync(data: StoredData) {
-  try {
-    ensureDataDir();
-    const serialized = JSON.stringify(data, null, 2);
-
-    try {
-      const tempFile = `${DATA_FILE}.tmp`;
-      fs.writeFileSync(tempFile, serialized, 'utf-8');
-      fs.renameSync(tempFile, DATA_FILE);
-    } catch (e) {
-      console.error(`Failed to write DATA_FILE at ${DATA_FILE}:`, e);
-    }
-
-    // Mirror to secondary backups and /tmp to ensure data survives any restart
-    for (const target of CANDIDATE_FILES) {
-      if (target === DATA_FILE) continue;
-      try {
-        const dir = path.dirname(target);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        const temp = `${target}.tmp`;
-        fs.writeFileSync(temp, serialized, 'utf-8');
-        fs.renameSync(temp, target);
-      } catch {
-        // non-blocking
-      }
-    }
-  } catch (err) {
-    console.error('Error saving persistent store to disk:', err);
-  }
-}
-
-let saveTimer: NodeJS.Timeout | null = null;
-function scheduleSave() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    saveDataSync({
-      posts,
-      comments,
-      chatMessages,
-      sessions: Array.from(sessions.values()),
-      realms,
-      userReadStates: Object.fromEntries(userReadStates.entries()),
-      nextPostId,
-      nextCommentId,
-      nextChatId,
-    });
-    saveTimer = null;
-  }, 100);
-}
-
-function forceSaveNow() {
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-  }
-  saveDataSync({
-    posts,
-    comments,
-    chatMessages,
-    sessions: Array.from(sessions.values()),
-    realms,
-    userReadStates: Object.fromEntries(userReadStates.entries()),
-    nextPostId,
-    nextCommentId,
-    nextChatId,
-  });
-}
-
-function parseStoreFile(filePath: string): StoredData | null {
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.posts) && Array.isArray(parsed.comments) && Array.isArray(parsed.chatMessages)) {
-      const maxPostId = parsed.posts.reduce((max: number, p: Post) => Math.max(max, p.id || 0), 0);
-      const maxCommentId = parsed.comments.reduce((max: number, c: Comment) => Math.max(max, c.id || 0), 0);
-      const maxChatId = parsed.chatMessages.reduce((max: number, m: ChatMessage) => Math.max(max, m.id || 0), 0);
-      return {
-        posts: parsed.posts,
-        comments: parsed.comments,
-        chatMessages: parsed.chatMessages,
-        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-        realms: Array.isArray(parsed.realms) ? parsed.realms : [],
-        userReadStates: (parsed.userReadStates && typeof parsed.userReadStates === 'object') ? parsed.userReadStates : {},
-        nextPostId: Math.max(parsed.nextPostId || 1, maxPostId + 1),
-        nextCommentId: Math.max(parsed.nextCommentId || 1, maxCommentId + 1),
-        nextChatId: Math.max(parsed.nextChatId || 1, maxChatId + 1),
-      };
-    }
-  } catch (err) {
-    console.error(`Could not parse ${filePath}:`, err);
-  }
-  return null;
-}
-
-function mergeStores(stores: StoredData[]): StoredData {
-  const mergedPostsMap = new Map<number, Post>();
-  const mergedCommentsMap = new Map<number, Comment>();
-  const mergedChatMap = new Map<number, ChatMessage>();
-  const mergedSessionsMap = new Map<string, Session>();
-  const mergedRealmsMap = new Map<string, ClubRealm>();
-  const mergedUserReadStates: Record<string, Record<string, UserReadState>> = {};
-  let maxPostId = 1;
-  let maxCommentId = 1;
-  let maxChatId = 1;
-
-  const SEED_POST_IDS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-  const SEED_COMMENT_IDS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-  const SEED_CHAT_IDS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
-
-  for (const s of stores) {
-    if (!s) continue;
-    if (Array.isArray(s.posts)) {
-      for (const p of s.posts) {
-        if (!p || !p.id || SEED_POST_IDS.has(p.id)) continue;
-        const existing = mergedPostsMap.get(p.id);
-        if (!existing || new Date(p.last_activity_at || p.created_at).getTime() >= new Date(existing.last_activity_at || existing.created_at).getTime()) {
-          mergedPostsMap.set(p.id, p);
-        }
-        maxPostId = Math.max(maxPostId, p.id + 1);
-      }
-    }
-    if (Array.isArray(s.comments)) {
-      for (const c of s.comments) {
-        if (!c || !c.id || SEED_COMMENT_IDS.has(c.id)) continue;
-        mergedCommentsMap.set(c.id, c);
-        maxCommentId = Math.max(maxCommentId, c.id + 1);
-      }
-    }
-    if (Array.isArray(s.chatMessages)) {
-      for (const m of s.chatMessages) {
-        if (!m || !m.id || SEED_CHAT_IDS.has(m.id)) continue;
-        mergedChatMap.set(m.id, m);
-        maxChatId = Math.max(maxChatId, m.id + 1);
-      }
-    }
-    if (Array.isArray(s.sessions)) {
-      for (const sess of s.sessions) {
-        if (!sess || !sess.id) continue;
-        mergedSessionsMap.set(sess.id, sess);
-      }
-    }
-    if (Array.isArray(s.realms)) {
-      for (const r of s.realms) {
-        if (!r || !r.name) continue;
-        const key = r.id || slugify(r.name);
-        if (!mergedRealmsMap.has(key)) {
-          mergedRealmsMap.set(key, { ...r, id: key });
-        }
-      }
-    }
-    if (s.userReadStates && typeof s.userReadStates === 'object') {
-      for (const [userKey, postMap] of Object.entries(s.userReadStates)) {
-        if (!postMap || typeof postMap !== 'object') continue;
-        const uKey = userKey.toLowerCase();
-        if (!mergedUserReadStates[uKey]) mergedUserReadStates[uKey] = {};
-        for (const [postId, stateObj] of Object.entries(postMap)) {
-          if (!stateObj) continue;
-          const existing = mergedUserReadStates[uKey][postId];
-          if (!existing || new Date(stateObj.last_read_at).getTime() >= new Date(existing.last_read_at).getTime()) {
-            mergedUserReadStates[uKey][postId] = stateObj;
-          }
-        }
-      }
-    }
-    maxPostId = Math.max(maxPostId, s.nextPostId || 1);
-    maxCommentId = Math.max(maxCommentId, s.nextCommentId || 1);
-    maxChatId = Math.max(maxChatId, s.nextChatId || 1);
-  }
-
-  if (mergedPostsMap.size === 0) {
-  }
-  if (mergedCommentsMap.size === 0) {
-  }
-  if (mergedChatMap.size === 0) {
-  }
-  if (mergedSessionsMap.size === 0) {
-  }
-  if (mergedRealmsMap.size === 0) {
-  }
-
-  const postsList = Array.from(mergedPostsMap.values()).sort((a, b) => b.id - a.id);
-  const commentsList = Array.from(mergedCommentsMap.values()).sort((a, b) => a.id - b.id);
-  const chatList = Array.from(mergedChatMap.values()).sort((a, b) => a.id - b.id);
-  const sessionList = Array.from(mergedSessionsMap.values());
-  const realmList = Array.from(mergedRealmsMap.values());
-
-  return {
-    posts: postsList,
-    comments: commentsList,
-    chatMessages: chatList,
-    sessions: sessionList,
-    realms: realmList,
-    userReadStates: mergedUserReadStates,
-    nextPostId: Math.max(maxPostId, ...postsList.map(p => p.id + 1), 1),
-    nextCommentId: Math.max(maxCommentId, ...commentsList.map(c => c.id + 1), 1),
-    nextChatId: Math.max(maxChatId, ...chatList.map(m => m.id + 1), 1)
-  };
-}
-
-function loadInitialStore(): StoredData {
-  loadFlairConfig();
-  ensureDataDir();
-
-  const validStores: StoredData[] = [];
-  for (const candidate of CANDIDATE_FILES) {
-    const parsed = parseStoreFile(candidate);
-    if (parsed) validStores.push(parsed);
-  }
-
-  if (validStores.length > 0) {
-    const merged = mergeStores(validStores);
-    console.log(`Loaded and merged ${merged.posts.length} posts, ${merged.comments.length} comments, and ${merged.chatMessages.length} chat messages from ${validStores.length} storage candidate(s)`);
-    saveDataSync(merged);
-    return merged;
-  }
-
-  // 3. Fallback to initial seed only if no store exists anywhere
-  const initial: StoredData = {
-    posts: [],
-    comments: [],
-    chatMessages: [],
-    sessions: [],
-    realms: [],
-    userReadStates: {},
-    nextPostId: 1,
-    nextCommentId: 1,
-    nextChatId: 1,
-  };
-  saveDataSync(initial);
-  console.log(`Initialized persistent store with default seed at ${DATA_FILE}`);
-  return initial;
-}
-
-const storedData = loadInitialStore();
 let teams: Team[] = [];
 let matches: Match[] = [];
-let posts: Post[] = storedData.posts;
-let comments: Comment[] = storedData.comments;
-let chatMessages: ChatMessage[] = storedData.chatMessages;
-let realms: ClubRealm[] = (storedData.realms && storedData.realms.length > 0) ? storedData.realms : [];
-
+let posts: Post[] = [];
+let comments: Comment[] = [];
+let chatMessages: ChatMessage[] = [];
+let realms: ClubRealm[] = [];
 const userReadStates = new Map<string, Record<string, UserReadState>>();
-if (storedData.userReadStates) {
-  for (const [uKey, states] of Object.entries(storedData.userReadStates)) {
-    if (states && typeof states === 'object') {
-      userReadStates.set(uKey.toLowerCase(), states);
-    }
-  }
-}
-
-
-// Sanitize defunct ephemeral upload URLs that no longer exist on container disk
-for (const p of posts) {
-  if (p.image_url && p.image_url.startsWith('/static/uploads/')) {
-    const localPath = path.resolve(process.cwd(), p.image_url.replace(/^\//, ''));
-    if (!fs.existsSync(localPath)) {
-      p.image_url = '';
-    }
-  }
-}
-for (const c of comments) {
-  if (c.image_url && c.image_url.startsWith('/static/uploads/')) {
-    const localPath = path.resolve(process.cwd(), c.image_url.replace(/^\//, ''));
-    if (!fs.existsSync(localPath)) {
-      c.image_url = '';
-    }
-  }
-}
-
 const sessions = new Map<string, Session>();
-for (const s of (storedData.sessions || [])) {
-  sessions.set(s.id, s);
-}
 const users = new Map<string, any>();
+let nextPostId = 1;
+let nextCommentId = 1;
+let nextChatId = 1;
 
-
-let nextPostId = storedData.nextPostId;
-let nextCommentId = storedData.nextCommentId;
-let nextChatId = storedData.nextChatId;
+async function initAppState() {
+  try {
+    posts = await fetchAllPostsFromFirestore();
+    comments = await fetchAllCommentsFromFirestore();
+    chatMessages = await fetchAllChatMessagesFromFirestore();
+    realms = await fetchAllRealmsFromFirestore();
+    
+    const loadedSessions = await fetchAllSessionsFromFirestore();
+    for (const s of loadedSessions) {
+      sessions.set(s.id, s);
+    }
+    
+    const loadedUsers = await fetchAllUsersFromFirestore();
+    for (const u of loadedUsers) {
+      users.set(u.email, u);
+    }
+    
+    nextPostId = Math.max(...posts.map(p => p.id), 0) + 1;
+    nextCommentId = Math.max(...comments.map(c => c.id), 0) + 1;
+    nextChatId = Math.max(...chatMessages.map(m => m.id), 0) + 1;
+    
+    console.log('App state initialized from Firestore');
+  } catch (err) {
+    console.error('Failed to initialize app state from Firestore:', err);
+  }
+}
+initAppState();
 
 function getStandings() {
   const standings = teams.map((team) => {
@@ -671,7 +351,7 @@ function getSessionFromReq(req: express.Request): Session | null {
   // Automatic session refresh on use
   session.last_active_at = new Date(now).toISOString();
   session.expires_at = new Date(now + SESSION_TTL_MS).toISOString();
-  scheduleSave();
+  
 
   return session;
 }
@@ -764,7 +444,7 @@ app.post('/api/admin/store-restore', (req, res) => {
   nextCommentId = payload.nextCommentId || Math.max(0, ...comments.map(c => c.id)) + 1;
   nextChatId = payload.nextChatId || Math.max(0, ...chatMessages.map(m => m.id)) + 1;
 
-  forceSaveNow();
+  
   broadcastPresence();
   res.json({ success: true, message: 'Store restored successfully', postCount: posts.length });
 });
@@ -818,7 +498,7 @@ app.post('/api/auth/session', async (req, res) => {
   };
 
   sessions.set(sessionId, session);
-  forceSaveNow();
+  
   saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session save error:', err));
   saveUserToFirestore({
     email: session.email,
@@ -864,7 +544,7 @@ app.get('/api/auth/session', (req, res) => {
   // Automatic session refresh on reuse
   session.last_active_at = new Date(now).toISOString();
   session.expires_at = new Date(now + SESSION_TTL_MS).toISOString();
-  scheduleSave();
+  
   broadcastPresence();
 
   const active = getActiveSessions();
@@ -925,7 +605,7 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
 
   session.last_active_at = new Date().toISOString();
   session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
-  forceSaveNow();
+  
   saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session update error:', err));
   saveUserToFirestore({
     email: session.email,
@@ -979,7 +659,7 @@ app.post('/api/auth/session/logout', (req, res) => {
 
   if (sessionId && sessions.has(sessionId)) {
     sessions.delete(sessionId);
-    forceSaveNow();
+    
     broadcastPresence();
   }
 
@@ -1174,7 +854,7 @@ app.post('/api/posts', (req, res) => {
     comment_count: 0
   };
 
-  forceSaveNow();
+  
   savePostToFirestore(newPost).catch(err => console.error('[Firestore] Post save error:', err));
   
   const extractedMentions = Array.from(new Set([...extractMentions(newPost.title), ...extractMentions(newPost.content)]));
@@ -1301,7 +981,7 @@ app.get('/api/posts/:id', (req, res) => {
       last_read_at: new Date().toISOString(),
       comment_count: postComments.length
     };
-    scheduleSave();
+    
   }
 
   res.json({
@@ -1342,7 +1022,7 @@ app.post('/api/posts/:id/read', (req, res) => {
       last_read_at: nowIso,
       comment_count: currentCommentCount
     };
-    scheduleSave();
+    
   }
 
   res.json({
@@ -1383,7 +1063,7 @@ app.post('/api/posts/:id/vote', (req, res) => {
     post.downvotes = Math.max(post.downvotes - 1, 0);
   }
 
-  forceSaveNow();
+  
   savePostToFirestore(post).catch(err => console.error('[Firestore] Vote update save error:', err));
 
   broadcast({
@@ -1456,7 +1136,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     comment_count: currentCommentCount
   };
 
-  forceSaveNow();
+  
   saveCommentToFirestore(comment).catch((err: unknown) => console.error('[Firestore] Comment save error:', err));
   updatePostCommentCountInFirestore(postId, currentCommentCount, nowIso).catch((err: unknown) => console.error('[Firestore] Post activity update error:', err));
   
@@ -1504,7 +1184,7 @@ app.post('/api/comments/:id/vote', (req, res) => {
   }
 
   comment.upvotes += 1;
-  scheduleSave();
+  
   saveCommentToFirestore(comment).catch(err => console.error('[Firestore] Comment vote save error:', err));
 
   broadcast({
@@ -1570,7 +1250,7 @@ app.post('/api/chat/message', (req, res) => {
   };
 
   chatMessages.push(msg);
-  forceSaveNow();
+  
   saveChatMessageToFirestore(msg).catch(err => console.error('[Firestore] Chat save error:', err));
   
   if (extractedMentions.length > 0) {
@@ -1661,7 +1341,7 @@ app.post('/api/chat/message/:id/react', (req, res) => {
     msg.reactions[cleanEmoji].push(user);
   }
 
-  forceSaveNow();
+  
   saveChatMessageToFirestore(msg).catch(err => console.error('[Firestore] Reaction save error:', err));
 
   broadcast({
@@ -1859,7 +1539,7 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
   };
 
   realms.push(newRealm);
-  forceSaveNow();
+  
   saveRealmToFirestore(newRealm).catch(err => console.error('[Firestore] Realm save error:', err));
 
   broadcast({
@@ -1898,7 +1578,7 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   };
 
   realms[index] = updatedRealm;
-  forceSaveNow();
+  
   
   // Assuming saveRealmToFirestore handles both create and update
   saveRealmToFirestore(updatedRealm).catch(err => console.error('[Firestore] Realm update error:', err));
@@ -1923,7 +1603,7 @@ app.delete('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   }
 
   const removed = realms.splice(index, 1)[0];
-  forceSaveNow();
+  
 
   broadcast({
     type: 'realms_updated',
@@ -1959,7 +1639,7 @@ app.post('/api/posts/restore', (req, res) => {
     if (!existing) {
       posts.unshift(incoming);
       nextPostId = Math.max(nextPostId, incoming.id + 1);
-      forceSaveNow();
+      
       savePostToFirestore(incoming).catch(err => console.error('[Firestore] Restore post error:', err));
       console.log(`Restored post #${incoming.id} ("${incoming.title}") from client cache`);
     }
@@ -2084,7 +1764,7 @@ wss.on('connection', (ws: WebSocket) => {
             socketSessions.set(ws, sessionId);
             session.last_active_at = new Date().toISOString();
             session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
-            scheduleSave();
+            
             broadcastPresence();
             ws.send(JSON.stringify({ type: 'auth_success', session }));
           }
@@ -2117,7 +1797,7 @@ wss.on('connection', (ws: WebSocket) => {
         // Auto-refresh session on chat activity
         session.last_active_at = new Date().toISOString();
         session.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
-        scheduleSave();
+        
 
         const payload = msg.payload || {};
         const content = (payload.content || '').trim();
@@ -2139,7 +1819,7 @@ wss.on('connection', (ws: WebSocket) => {
             mentions: extractedMentions
           };
           chatMessages.push(newChat);
-          scheduleSave();
+          
           saveChatMessageToFirestore(newChat).catch(err => console.error('[Firestore] WS chat save error:', err));
           
           if (allUsersToNotify.length > 0) {
@@ -2188,12 +1868,12 @@ wss.on('connection', (ws: WebSocket) => {
 });
 
 process.on('SIGTERM', () => {
-  forceSaveNow();
+  
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  forceSaveNow();
+  
   process.exit(0);
 });
 
@@ -2279,7 +1959,7 @@ async function syncLatestDataFromLive() {
         nextPostId = Math.max(nextPostId, ...posts.map(p => p.id + 1));
         nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id + 1));
         nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id + 1));
-        forceSaveNow();
+        
         console.log(`Synced and preserved live community data from ${syncUrl}: ${posts.length} posts, ${comments.length} comments, ${sessions.size} sessions`);
         break;
       }
@@ -2417,7 +2097,7 @@ async function syncWithFirestore() {
       nextPostId = Math.max(nextPostId, ...posts.map(p => p.id + 1));
       nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id + 1));
       nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id + 1));
-      forceSaveNow();
+      
       console.log(`[Firestore] Sync complete. Active posts: ${posts.length}, comments: ${comments.length}, chats: ${chatMessages.length}, sessions: ${sessions.size}`);
     } else {
       console.log(`[Firestore] Sync complete. In-sync with ${posts.length} posts and ${comments.length} comments.`);
