@@ -24,7 +24,7 @@ import {
   saveNotificationToFirestore,
   updateNotificationReadStatusInFirestore,
   updateAllNotificationsReadStatusInFirestore,
-  fetchAllNotificationsFromFirestore,
+  loadNotificationsFromFirestore,
   updatePostCommentCountInFirestore,
   db,
   storage
@@ -401,14 +401,6 @@ function getDynamicCommentCount(postId: number): number {
 app.get('/api/backup', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Content-Type', 'application/json');
-  if (fs.existsSync(DATA_FILE)) {
-    try {
-      const content = fs.readFileSync(DATA_FILE, 'utf-8');
-      return res.send(content);
-    } catch {
-      // fallback to memory
-    }
-  }
   res.json({
     posts,
     comments,
@@ -426,7 +418,7 @@ app.get('/api/admin/store-backup', (_req, res) => {
 });
 
 app.post('/api/admin/store-restore', (req, res) => {
-  const payload = req.body as StoredData;
+  const payload = req.body;
   if (!payload || !Array.isArray(payload.posts)) {
     return res.status(400).json({ error: 'Invalid store payload' });
   }
@@ -1902,7 +1894,7 @@ async function syncLatestDataFromLive() {
       clearTimeout(timer);
       if (!res.ok) continue;
 
-      const data = await res.json() as StoredData;
+      const data = await res.json() as any;
       if (!data || !Array.isArray(data.posts) || data.posts.length === 0) continue;
 
       let updated = false;
