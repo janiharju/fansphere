@@ -687,11 +687,7 @@ export function matchClubRealm(authorFlair: string | undefined, selectedRealm: s
     return a.includes('neutral');
   }
 
-  // Arsenal Finland official club realm
-  const arsenalFinlandVariants = ['Arsenal Finland', 'arsenal', 'gunner', 'gooner', 'official', 'member'];
-  if (arsenalFinlandVariants.some(v => b.includes(v))) {
-    return arsenalFinlandVariants.some(v => a.includes(v));
-  }
+
 
   // Dynamic registered realms matching
   const dynamicRealm = realms.find(r => r.name.toLowerCase() === b || r.id.toLowerCase() === b);
@@ -1719,22 +1715,7 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(staticDir, 'index.html'));
 });
 
-// Catch-all for other non-API routes
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/ws')) {
-    return next();
-  }
-  if (req.path === '/admin' || req.path.startsWith('/admin/')) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    return res.sendFile(path.join(staticDir, 'admin.html'));
-  }
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.sendFile(path.join(staticDir, 'index.html'));
-});
+
 
 // HTTP & WebSocket Server Setup
 const server = http.createServer(app);
@@ -2120,6 +2101,23 @@ app.get('/api/firebase/status', async (_req, res) => {
 
 const PORT = 3000;
 const HOST = '0.0.0.0';
+
+// Catch-all for other non-API routes
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/ws')) {
+    return next();
+  }
+  if (req.path === '/admin' || req.path.startsWith('/admin/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.sendFile(path.join(staticDir, 'admin.html'));
+  }
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(staticDir, 'index.html'));
+});
 
 server.listen(PORT, HOST, () => {
   console.log(`ready - started server on 0.0.0.0:${PORT}, url: http://localhost:${PORT}`);
