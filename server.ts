@@ -30,89 +30,15 @@ import {
   storage
 } from './firestoreService.js';
 import { doc, getDoc } from 'firebase/firestore';
+import { 
+  Team, MatchEvent, Match, Post, Comment, ChatMessage, Notification, 
+  Session, UserReadState, ClubRealm 
+} from './models/types.js';
+import { 
+  state, initAppState, SESSION_TTL_MS, ACTIVE_WINDOW_MS
+} from './services/appState.js';
 
 
-interface Team {
-  id: string;
-  name: string;
-  short_name: string;
-  logo: string;
-  played: number;
-  won: number;
-  drawn: number;
-  lost: number;
-  gf: number;
-  ga: number;
-  points: number;
-  form: string[];
-}
-
-interface MatchEvent {
-  min: number;
-  team: string;
-  player: string;
-  type: string;
-}
-
-interface Match {
-  id: string;
-  home_team_id: string;
-  away_team_id: string;
-  home_score: number;
-  away_score: number;
-  minute: number;
-  status: string;
-  events: MatchEvent[];
-}
-
-interface Post {
-  id: number;
-  title: string;
-  content: string;
-  author: string;
-  author_flair: string;
-  tag: string;
-  upvotes: number;
-  downvotes: number;
-  comment_count?: number;
-  image_url: string;
-  created_at: string;
-  last_activity_at?: string;
-}
-
-interface Comment {
-  id: number;
-  post_id: number;
-  parent_id: number | null;
-  author: string;
-  author_flair: string;
-  content: string;
-  upvotes: number;
-  image_url?: string;
-  created_at: string;
-}
-
-interface ChatMessage {
-  id: number;
-  room: string;
-  author: string;
-  author_flair: string;
-  badge_color: string;
-  content: string;
-  created_at: string;
-  reactions?: Record<string, string[]>;
-  realm?: string;
-  mentions?: string[];
-}
-
-interface Notification {
-  id: string;
-  userId: string;
-  messageId: number;
-  type: 'chat' | 'post' | 'comment';
-  read: boolean;
-  created_at: string;
-}
 
 function extractMentions(text: string): string[] {
   const matches = text.match(/(?:^|\s)@([a-zA-Z0-9_\-\.\u00C0-\u017F]+)/g);
@@ -152,46 +78,19 @@ function extractQuotedAuthors(text: string): string[] {
 
 
 
-export interface Session {
-  id: string;
-  nickname: string;
-  email: string;
-  flair: string;
-  created_at: string;
-  last_active_at: string;
-  expires_at: string;
-}
 
-export interface UserReadState {
-  last_read_at: string;
-  comment_count: number;
-}
-
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
-const ACTIVE_WINDOW_MS = 10 * 60 * 1000;
 
 export function normalizeFlair(flair: string | undefined): string {
   if (!flair) return 'Neutral Football Fan';
   const str = String(flair).trim().toLowerCase();
 
-  if (typeof realms !== 'undefined' && Array.isArray(realms)) {
-    const matched = realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
+  if (typeof state.realms !== 'undefined' && Array.isArray(state.realms)) {
+    const matched = state.realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
     if (matched) return matched.name;
   }
   return 'Neutral Football Fan';
 }
 
-export interface ClubRealm {
-  id: string;
-  name: string;
-  short_name?: string;
-  badge_color: string;
-  icon: string;
-  image_icon?: string;
-  description?: string;
-  is_default?: boolean;
-  created_at: string;
-}
 
 export function slugify(text: string): string {
   return text
@@ -201,49 +100,12 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-let teams: Team[] = [];
-let matches: Match[] = [];
-let posts: Post[] = [];
-let comments: Comment[] = [];
-let chatMessages: ChatMessage[] = [];
-let realms: ClubRealm[] = [];
-const userReadStates = new Map<string, Record<string, UserReadState>>();
-const sessions = new Map<string, Session>();
-const users = new Map<string, any>();
-let nextPostId = 1;
-let nextCommentId = 1;
-let nextChatId = 1;
 
-async function initAppState() {
-  try {
-    posts = await fetchAllPostsFromFirestore();
-    comments = await fetchAllCommentsFromFirestore();
-    chatMessages = await fetchAllChatMessagesFromFirestore();
-    realms = await fetchAllRealmsFromFirestore();
-    
-    const loadedSessions = await fetchAllSessionsFromFirestore();
-    for (const s of loadedSessions) {
-      sessions.set(s.id, s);
-    }
-    
-    const loadedUsers = await fetchAllUsersFromFirestore();
-    for (const u of loadedUsers) {
-      users.set(u.email, u);
-    }
-    
-    nextPostId = Math.max(...posts.map(p => p.id), 0) + 1;
-    nextCommentId = Math.max(...comments.map(c => c.id), 0) + 1;
-    nextChatId = Math.max(...chatMessages.map(m => m.id), 0) + 1;
-    
-    console.log('App state initialized from Firestore');
-  } catch (err) {
-    console.error('Failed to initialize app state from Firestore:', err);
-  }
-}
 initAppState();
+// State accessed directly from state object to ensure reactivity
 
 function getStandings() {
-  const standings = teams.map((team) => {
+  const standings = state.teams.map((team) => {
     const gd = team.gf - team.ga;
     return {
       ...team,
@@ -303,7 +165,7 @@ function getActiveSessions(): Session[] {
   const active: Session[] = [];
   const liveSessionIds = new Set(socketSessions.values());
 
-  for (const session of sessions.values()) {
+  for (const session of state.sessions.values()) {
     const isExpired = new Date(session.expires_at).getTime() <= now;
     if (isExpired) continue;
 
@@ -340,7 +202,7 @@ function getSessionFromReq(req: express.Request): Session | null {
 
   if (!sessionId) return null;
 
-  const session = sessions.get(sessionId);
+  const session = state.sessions.get(sessionId);
   if (!session) return null;
 
   const now = Date.now();
@@ -379,7 +241,7 @@ function getPostLatestActivityTime(post: Post): number {
       latestTime = actTime;
     }
   }
-  for (const c of comments) {
+  for (const c of state.comments) {
     if (c.post_id === post.id) {
       const cTime = new Date(c.created_at).getTime();
       if (!isNaN(cTime) && cTime > latestTime) {
@@ -392,7 +254,7 @@ function getPostLatestActivityTime(post: Post): number {
 
 // Helper to compute comment count dynamically from comments
 function getDynamicCommentCount(postId: number): number {
-  return comments.filter(c => c.post_id === postId).length;
+  return state.comments.filter((c: Comment) => c.post_id === postId).length;
 }
 
 // ==================== REST APIS ====================
@@ -402,14 +264,14 @@ app.get('/api/backup', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Content-Type', 'application/json');
   res.json({
-    posts,
-    comments,
-    chatMessages,
-    sessions: Array.from(sessions.values()),
-    userReadStates: Object.fromEntries(userReadStates.entries()),
-    nextPostId,
-    nextCommentId,
-    nextChatId
+    posts: state.posts,
+    comments: state.comments,
+    chatMessages: state.chatMessages,
+    sessions: Array.from(state.sessions.values()),
+    userReadStates: Object.fromEntries(state.userReadStates.entries()),
+    nextPostId: state.nextPostId,
+    nextCommentId: state.nextCommentId,
+    nextChatId: state.nextChatId
   });
 });
 
@@ -423,22 +285,22 @@ app.post('/api/admin/store-restore', (req, res) => {
     return res.status(400).json({ error: 'Invalid store payload' });
   }
 
-  posts = payload.posts;
-  comments = Array.isArray(payload.comments) ? payload.comments : [];
-  chatMessages = Array.isArray(payload.chatMessages) ? payload.chatMessages : [];
+  state.posts = payload.posts;
+  state.comments = Array.isArray(payload.comments) ? payload.comments : [];
+  state.chatMessages = Array.isArray(payload.chatMessages) ? payload.chatMessages : [];
   if (Array.isArray(payload.sessions)) {
-    sessions.clear();
+    state.sessions.clear();
     for (const s of payload.sessions) {
-      sessions.set(s.id, s);
+      state.sessions.set(s.id, s);
     }
   }
-  nextPostId = payload.nextPostId || Math.max(0, ...posts.map(p => p.id)) + 1;
-  nextCommentId = payload.nextCommentId || Math.max(0, ...comments.map(c => c.id)) + 1;
-  nextChatId = payload.nextChatId || Math.max(0, ...chatMessages.map(m => m.id)) + 1;
+  state.nextPostId = payload.nextPostId || Math.max(0, ...state.posts.map(p => p.id)) + 1;
+  state.nextCommentId = payload.nextCommentId || Math.max(0, ...state.comments.map(c => c.id)) + 1;
+  state.nextChatId = payload.nextChatId || Math.max(0, ...state.chatMessages.map(m => m.id)) + 1;
 
   
   broadcastPresence();
-  res.json({ success: true, message: 'Store restored successfully', postCount: posts.length });
+  res.json({ success: true, message: 'Store restored successfully', postCount: state.posts.length });
 });
 
 // 0. Session & Authentication Endpoints
@@ -489,7 +351,7 @@ app.post('/api/auth/session', async (req, res) => {
     expires_at: new Date(now + SESSION_TTL_MS).toISOString()
   };
 
-  sessions.set(sessionId, session);
+  state.sessions.set(sessionId, session);
   
   saveSessionToFirestore(session).catch(err => console.error('[Firestore] Session save error:', err));
   saveUserToFirestore({
@@ -523,7 +385,7 @@ app.get('/api/auth/session', (req, res) => {
     return res.status(401).json({ detail: 'No session ID provided', valid: false });
   }
 
-  const session = sessions.get(sessionId);
+  const session = state.sessions.get(sessionId);
   if (!session) {
     return res.status(401).json({ detail: 'Session not found', valid: false });
   }
@@ -649,8 +511,8 @@ app.post('/api/auth/session/logout', (req, res) => {
     sessionId = req.body.session_id;
   }
 
-  if (sessionId && sessions.has(sessionId)) {
-    sessions.delete(sessionId);
+  if (sessionId && state.sessions.has(sessionId)) {
+    state.sessions.delete(sessionId);
     
     broadcastPresence();
   }
@@ -690,7 +552,7 @@ export function matchClubRealm(authorFlair: string | undefined, selectedRealm: s
 
 
   // Dynamic registered realms matching
-  const dynamicRealm = realms.find(r => r.name.toLowerCase() === b || r.id.toLowerCase() === b);
+  const dynamicRealm = state.realms.find(r => r.name.toLowerCase() === b || r.id.toLowerCase() === b);
   if (dynamicRealm) {
     const dynName = dynamicRealm.name.toLowerCase();
     const dynId = dynamicRealm.id.toLowerCase();
@@ -706,7 +568,7 @@ app.get('/api/posts', (req, res) => {
   const realm = req.query.realm as string | undefined;
   const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
 
-  let filtered = [...posts];
+  let filtered = [...state.posts];
   if (tag && tag.toLowerCase() !== 'all') {
     filtered = filtered.filter(p => p.tag.toLowerCase() === tag.toLowerCase());
   }
@@ -720,7 +582,7 @@ app.get('/api/posts', (req, res) => {
     filtered = filtered.filter(p => {
       const titleMatch = p.title.toLowerCase().includes(q);
       const contentMatch = p.content.toLowerCase().includes(q);
-      const postComments = comments.filter(c => c.post_id === p.id && c.content.toLowerCase().includes(q));
+      const postComments = state.comments.filter(c => c.post_id === p.id && c.content.toLowerCase().includes(q));
       if (postComments.length > 0) {
         matchingCommentsMap.set(p.id, postComments);
       }
@@ -730,7 +592,7 @@ app.get('/api/posts', (req, res) => {
 
   const session = getSessionFromReq(req);
   const userKey = getUserIdentifier(req, session);
-  const userStates = userKey ? (userReadStates.get(userKey) || {}) : null;
+  const userStates = userKey ? (state.userReadStates.get(userKey) || {}) : null;
   const userNickname = session ? session.nickname.toLowerCase() : (typeof req.headers['x-user-nickname'] === 'string' ? req.headers['x-user-nickname'].trim().toLowerCase() : '');
 
   // Always sort forum feed by latest changes, taking comments into account
@@ -743,7 +605,7 @@ app.get('/api/posts', (req, res) => {
     let unreadCommentsCount = 0;
 
     if (userKey) {
-      const postComments = comments.filter(c => c.post_id === p.id);
+      const postComments = state.comments.filter(c => c.post_id === p.id);
       const readState = userStates ? userStates[String(p.id)] : null;
       const isAuthor = Boolean(userNickname && p.author.toLowerCase() === userNickname);
 
@@ -812,8 +674,8 @@ app.post('/api/posts', (req, res) => {
   }
 
   const nowIso = new Date().toISOString();
-  const assignedPostId = Math.max(nextPostId++, ...posts.map(p => p.id + 1), 1);
-  nextPostId = assignedPostId + 1;
+  const assignedPostId = Math.max(state.nextPostId++, ...state.posts.map(p => p.id + 1), 1);
+  state.nextPostId = assignedPostId + 1;
   const newPost: Post = {
     id: assignedPostId,
     title: title.trim(),
@@ -828,14 +690,14 @@ app.post('/api/posts', (req, res) => {
     last_activity_at: nowIso
   };
 
-  posts.unshift(newPost);
+  state.posts.unshift(newPost);
 
   // Automatically mark thread as read for its creator
   const creatorKey = (session.email || session.nickname).toLowerCase();
-  let creatorMap = userReadStates.get(creatorKey);
+  let creatorMap = state.userReadStates.get(creatorKey);
   if (!creatorMap) {
     creatorMap = {};
-    userReadStates.set(creatorKey, creatorMap);
+    state.userReadStates.set(creatorKey, creatorMap);
   }
   creatorMap[String(assignedPostId)] = {
     last_read_at: nowIso,
@@ -860,7 +722,7 @@ app.post('/api/posts', (req, res) => {
       
       // Broadcast to specific user if connected
       for (const [ws, sessionId] of socketSessions.entries()) {
-        const sess = sessions.get(sessionId);
+        const sess = state.sessions.get(sessionId);
         if (sess && sess.nickname === mentionNick && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'new_notification', data: notification }));
         }
@@ -944,13 +806,13 @@ app.post('/api/admin/upload-realm-icon', requireAdminAuth, upload.single('image'
 
 app.get('/api/posts/:id', (req, res) => {
   const postId = parseInt(req.params.id, 10);
-  const post = posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId);
 
   if (!post) {
     return res.status(404).json({ detail: 'Post not found' });
   }
 
-  const postComments = comments
+  const postComments = state.comments
     .filter(c => c.post_id === postId)
     .sort((a, b) => {
       if (b.upvotes !== a.upvotes) return b.upvotes - a.upvotes;
@@ -960,10 +822,10 @@ app.get('/api/posts/:id', (req, res) => {
   const session = getSessionFromReq(req);
   const userKey = getUserIdentifier(req, session);
   if (userKey) {
-    let uMap = userReadStates.get(userKey);
+    let uMap = state.userReadStates.get(userKey);
     if (!uMap) {
       uMap = {};
-      userReadStates.set(userKey, uMap);
+      state.userReadStates.set(userKey, uMap);
     }
     uMap[String(postId)] = {
       last_read_at: new Date().toISOString(),
@@ -992,19 +854,19 @@ app.post('/api/posts/:id/read', (req, res) => {
     return res.status(400).json({ error: 'Invalid post ID' });
   }
 
-  const post = posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId);
   if (!post) {
     return res.status(404).json({ error: 'Post not found' });
   }
 
-  const currentCommentCount = comments.filter(c => c.post_id === postId).length;
+  const currentCommentCount = state.comments.filter(c => c.post_id === postId).length;
   const nowIso = new Date().toISOString();
 
   if (userKey) {
-    let userMap = userReadStates.get(userKey);
+    let userMap = state.userReadStates.get(userKey);
     if (!userMap) {
       userMap = {};
-      userReadStates.set(userKey, userMap);
+      state.userReadStates.set(userKey, userMap);
     }
     userMap[String(postId)] = {
       last_read_at: nowIso,
@@ -1016,7 +878,7 @@ app.post('/api/posts/:id/read', (req, res) => {
   res.json({
     success: true,
     post_id: postId,
-    read_state: userKey ? (userReadStates.get(userKey)?.[String(postId)] || null) : null
+    read_state: userKey ? (state.userReadStates.get(userKey)?.[String(postId)] || null) : null
   });
 });
 
@@ -1027,14 +889,14 @@ app.get('/api/posts-read-states', (req, res) => {
   if (!userKey) {
     return res.json({ read_states: {} });
   }
-  const userMap = userReadStates.get(userKey) || {};
+  const userMap = state.userReadStates.get(userKey) || {};
   res.json({ read_states: userMap });
 });
 
 // 4. Vote on Post
 app.post('/api/posts/:id/vote', (req, res) => {
   const postId = parseInt(req.params.id, 10);
-  const post = posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId);
 
   if (!post) {
     return res.status(404).json({ detail: 'Post not found' });
@@ -1077,7 +939,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
   }
 
   const postId = parseInt(req.params.id, 10);
-  const post = posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId);
 
   if (!post) {
     return res.status(404).json({ detail: 'Post not found' });
@@ -1093,8 +955,8 @@ app.post('/api/posts/:id/comments', (req, res) => {
     return res.status(400).json({ detail: 'Direct Base64 images are not supported. Please upload images via the upload endpoint.' });
   }
 
-  const assignedCommentId = Math.max(nextCommentId++, ...comments.map(c => c.id + 1), 1);
-  nextCommentId = assignedCommentId + 1;
+  const assignedCommentId = Math.max(state.nextCommentId++, ...state.comments.map(c => c.id + 1), 1);
+  state.nextCommentId = assignedCommentId + 1;
   const comment: Comment = {
     id: assignedCommentId,
     post_id: postId,
@@ -1107,17 +969,17 @@ app.post('/api/posts/:id/comments', (req, res) => {
     created_at: new Date().toISOString()
   };
 
-  comments.push(comment);
+  state.comments.push(comment);
   const nowIso = comment.created_at;
   post.last_activity_at = nowIso;
   const currentCommentCount = getDynamicCommentCount(postId);
 
   // Automatically mark thread as read for commenter up to current comments count
   const commenterKey = (session.email || session.nickname).toLowerCase();
-  let commenterMap = userReadStates.get(commenterKey);
+  let commenterMap = state.userReadStates.get(commenterKey);
   if (!commenterMap) {
     commenterMap = {};
-    userReadStates.set(commenterKey, commenterMap);
+    state.userReadStates.set(commenterKey, commenterMap);
   }
   commenterMap[String(postId)] = {
     last_read_at: nowIso,
@@ -1143,7 +1005,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
       
       // Broadcast to specific user if connected
       for (const [ws, sessionId] of socketSessions.entries()) {
-        const sess = sessions.get(sessionId);
+        const sess = state.sessions.get(sessionId);
         if (sess && sess.nickname === mentionNick && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'new_notification', data: notification }));
         }
@@ -1165,7 +1027,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
 // 6. Vote on Comment
 app.post('/api/comments/:id/vote', (req, res) => {
   const commentId = parseInt(req.params.id, 10);
-  const comment = comments.find(c => c.id === commentId);
+  const comment = state.comments.find(c => c.id === commentId);
 
   if (!comment) {
     return res.status(404).json({ detail: 'Comment not found' });
@@ -1219,8 +1081,8 @@ app.post('/api/chat/message', (req, res) => {
     return res.status(400).json({ detail: 'Chat content cannot be empty' });
   }
 
-  const assignedChatId = Math.max(nextChatId++, ...chatMessages.map(m => m.id + 1), 1);
-  nextChatId = assignedChatId + 1;
+  const assignedChatId = Math.max(state.nextChatId++, ...state.chatMessages.map(m => m.id + 1), 1);
+  state.nextChatId = assignedChatId + 1;
   const trimmedContent = content.trim();
   const extractedMentions: string[] = extractMentions(trimmedContent);
 
@@ -1237,7 +1099,7 @@ app.post('/api/chat/message', (req, res) => {
     mentions: extractedMentions
   };
 
-  chatMessages.push(msg);
+  state.chatMessages.push(msg);
   
   saveChatMessageToFirestore(msg).catch(err => console.error('[Firestore] Chat save error:', err));
   
@@ -1303,7 +1165,7 @@ app.post('/api/chat/message/:id/react', (req, res) => {
   }
 
   const cleanEmoji = emoji.trim();
-  const msg = chatMessages.find(m => m.id === messageId);
+  const msg = state.chatMessages.find(m => m.id === messageId);
   if (!msg) {
     return res.status(404).json({ detail: 'Chat message not found' });
   }
@@ -1353,9 +1215,9 @@ app.get('/api/league/standings', (_req, res) => {
 
 // 10. League Fixtures
 app.get('/api/league/fixtures', (_req, res) => {
-  const fixtures = matches.map(m => {
-    const homeTeam = teams.find(t => t.id === m.home_team_id);
-    const awayTeam = teams.find(t => t.id === m.away_team_id);
+  const fixtures = state.matches.map(m => {
+    const homeTeam = state.teams.find(t => t.id === m.home_team_id);
+    const awayTeam = state.teams.find(t => t.id === m.away_team_id);
     return {
       ...m,
       home_team: homeTeam ? { name: homeTeam.name, short_name: homeTeam.short_name, logo: homeTeam.logo } : { name: m.home_team_id, logo: '⚽' },
@@ -1369,7 +1231,7 @@ app.get('/api/league/fixtures', (_req, res) => {
 app.post('/api/league/simulate-event', (req, res) => {
   const { match_id, scoring_team, player, event_type = 'GOAL' } = req.body;
 
-  const match = matches.find(m => m.id === match_id);
+  const match = state.matches.find(m => m.id === match_id);
   if (!match) {
     return res.status(404).json({ detail: 'Match not found' });
   }
@@ -1389,8 +1251,8 @@ app.post('/api/league/simulate-event', (req, res) => {
   }
 
   // Update team stats
-  const homeTeam = teams.find(t => t.id === home_id);
-  const awayTeam = teams.find(t => t.id === away_id);
+  const homeTeam = state.teams.find(t => t.id === home_id);
+  const awayTeam = state.teams.find(t => t.id === away_id);
 
   if (homeTeam && awayTeam) {
     if (scoring_team === home_id) {
@@ -1417,10 +1279,10 @@ app.post('/api/league/simulate-event', (req, res) => {
   });
 });
 
-// 12. Reset League (Resets matches/standings only, preserving all posts and chat)
+// 12. Reset League (Resets state.matches/standings only, preserving all posts and chat)
 app.post('/api/league/reset', (_req, res) => {
-  teams = [];
-  matches = [];
+  state.teams = [];
+  state.matches = [];
   const standings = getStandings();
   res.json({ status: 'reset', standings });
 });
@@ -1488,7 +1350,7 @@ app.post('/api/admin/logout', (req, res) => {
 // Public: Get All Club Realms
 app.get('/api/realms', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.json({ realms });
+  res.json({ realms: state.realms });
 });
 
 // Admin: Add New Club Realm
@@ -1501,7 +1363,7 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
   const cleanName = name.trim();
   const id = slugify(cleanName) || `realm-${Date.now()}`;
 
-  if (realms.some(r => r.id === id || r.name.toLowerCase() === cleanName.toLowerCase())) {
+  if (state.realms.some(r => r.id === id || r.name.toLowerCase() === cleanName.toLowerCase())) {
     return res.status(400).json({ detail: `A club realm with the name "${cleanName}" already exists` });
   }
 
@@ -1526,22 +1388,22 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
     created_at: new Date().toISOString()
   };
 
-  realms.push(newRealm);
+  state.realms.push(newRealm);
   
   saveRealmToFirestore(newRealm).catch(err => console.error('[Firestore] Realm save error:', err));
 
   broadcast({
     type: 'realms_updated',
-    realms
+    realms: state.realms
   });
 
-  res.status(201).json({ success: true, realm: newRealm, realms });
+  res.status(201).json({ success: true, realm: newRealm, realms: state.realms });
 });
 
 // Admin: Update Club Realm
 app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   const targetIdStr = String(req.params.id || '').trim().toLowerCase();
-  const index = realms.findIndex(r => r.id.toLowerCase() === targetIdStr);
+  const index = state.realms.findIndex(r => r.id.toLowerCase() === targetIdStr);
   
   if (index === -1) {
     return res.status(404).json({ detail: 'Club realm not found' });
@@ -1556,16 +1418,16 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
   
   const updatedRealm = {
-    ...realms[index],
-    name: name ? name.trim() : realms[index].name,
-    badge_color: badge_color && hexRegex.test(badge_color.trim()) ? badge_color.trim() : realms[index].badge_color,
-    icon: icon && typeof icon === 'string' && icon.trim().length > 0 ? icon.trim().slice(0, 8) : realms[index].icon,
-    image_icon: image_icon !== undefined && typeof image_icon === 'string' ? image_icon.trim() : realms[index].image_icon,
-    short_name: short_name !== undefined && typeof short_name === 'string' ? short_name.trim().slice(0, 16) : realms[index].short_name,
-    description: description !== undefined && typeof description === 'string' ? description.trim() : realms[index].description
+    ...state.realms[index],
+    name: name ? name.trim() : state.realms[index].name,
+    badge_color: badge_color && hexRegex.test(badge_color.trim()) ? badge_color.trim() : state.realms[index].badge_color,
+    icon: icon && typeof icon === 'string' && icon.trim().length > 0 ? icon.trim().slice(0, 8) : state.realms[index].icon,
+    image_icon: image_icon !== undefined && typeof image_icon === 'string' ? image_icon.trim() : state.realms[index].image_icon,
+    short_name: short_name !== undefined && typeof short_name === 'string' ? short_name.trim().slice(0, 16) : state.realms[index].short_name,
+    description: description !== undefined && typeof description === 'string' ? description.trim() : state.realms[index].description
   };
 
-  realms[index] = updatedRealm;
+  state.realms[index] = updatedRealm;
   
   
   // Assuming saveRealmToFirestore handles both create and update
@@ -1573,10 +1435,10 @@ app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   
   broadcast({
     type: 'realms_updated',
-    realms
+    realms: state.realms
   });
   
-  res.json({ success: true, realm: updatedRealm, realms });
+  res.json({ success: true, realm: updatedRealm, realms: state.realms });
 });
 
 // Admin: Remove Club Realm
@@ -1584,22 +1446,22 @@ app.delete('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   const targetParam = req.params.id;
   const targetId = Array.isArray(targetParam) ? targetParam[0] : targetParam;
   const targetIdStr = String(targetId || '').trim().toLowerCase();
-  const index = realms.findIndex(r => r.id.toLowerCase() === targetIdStr || r.name.toLowerCase() === targetIdStr);
+  const index = state.realms.findIndex((r: ClubRealm) => r.id.toLowerCase() === targetIdStr || r.name.toLowerCase() === targetIdStr);
 
   if (index === -1) {
     return res.status(404).json({ detail: 'Club realm not found' });
   }
 
-  const removed = realms.splice(index, 1)[0];
+  const removed = state.realms.splice(index, 1)[0];
   
 
   broadcast({
     type: 'realms_updated',
-    realms,
+    realms: state.realms,
     deleted_id: removed.id
   });
 
-  res.json({ success: true, deleted: removed, realms });
+  res.json({ success: true, deleted: removed, realms: state.realms });
 });
 
 // 13. Full Persistent Data Backup (For deployment migration, restart sync, and automated backup)
@@ -1608,14 +1470,14 @@ app.get('/api/backup', (_req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.json({
-    posts,
-    comments,
-    chatMessages,
-    sessions: Array.from(sessions.values()),
-    realms,
-    nextPostId,
-    nextCommentId,
-    nextChatId,
+    posts: state.posts,
+    comments: state.comments,
+    chatMessages: state.chatMessages,
+    sessions: Array.from(state.sessions.values()),
+    realms: state.realms,
+    nextPostId: state.nextPostId,
+    nextCommentId: state.nextCommentId,
+    nextChatId: state.nextChatId,
   });
 });
 
@@ -1623,10 +1485,10 @@ app.get('/api/backup', (_req, res) => {
 app.post('/api/posts/restore', (req, res) => {
   const incoming = req.body as Post;
   if (incoming && incoming.id && incoming.title && incoming.content) {
-    const existing = posts.find(p => p.id === incoming.id);
+    const existing = state.posts.find(p => p.id === incoming.id);
     if (!existing) {
-      posts.unshift(incoming);
-      nextPostId = Math.max(nextPostId, incoming.id + 1);
+      state.posts.unshift(incoming);
+      state.nextPostId = Math.max(state.nextPostId, incoming.id + 1);
       
       savePostToFirestore(incoming).catch(err => console.error('[Firestore] Restore post error:', err));
       console.log(`Restored post #${incoming.id} ("${incoming.title}") from client cache`);
@@ -1731,8 +1593,8 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (msg.type === 'auth') {
         const sessionId = msg.sessionId || msg.session_id;
-        if (sessionId && sessions.has(sessionId)) {
-          const session = sessions.get(sessionId)!;
+        if (sessionId && state.sessions.has(sessionId)) {
+          const session = state.sessions.get(sessionId)!;
           if (new Date(session.expires_at).getTime() > Date.now()) {
             socketSessions.set(ws, sessionId);
             session.last_active_at = new Date().toISOString();
@@ -1744,8 +1606,8 @@ wss.on('connection', (ws: WebSocket) => {
         }
       } else if (msg.type === 'ping') {
         const sessionId = socketSessions.get(ws);
-        if (sessionId && sessions.has(sessionId)) {
-          const s = sessions.get(sessionId)!;
+        if (sessionId && state.sessions.has(sessionId)) {
+          const s = state.sessions.get(sessionId)!;
           s.last_active_at = new Date().toISOString();
           s.expires_at = new Date(Date.now() + SESSION_TTL_MS).toISOString();
         }
@@ -1754,8 +1616,8 @@ wss.on('connection', (ws: WebSocket) => {
         // Resolve authenticated session
         let session: Session | undefined;
         const sessionId = socketSessions.get(ws) || msg.sessionId || msg.payload?.sessionId;
-        if (sessionId && sessions.has(sessionId)) {
-          const candidate = sessions.get(sessionId)!;
+        if (sessionId && state.sessions.has(sessionId)) {
+          const candidate = state.sessions.get(sessionId)!;
           if (new Date(candidate.expires_at).getTime() > Date.now()) {
             session = candidate;
             socketSessions.set(ws, sessionId);
@@ -1780,7 +1642,7 @@ wss.on('connection', (ws: WebSocket) => {
           const allUsersToNotify = Array.from(new Set([...extractedMentions, ...extractedQuotes]));
 
           const newChat: ChatMessage = {
-            id: nextChatId++,
+            id: state.nextChatId++,
             room: payload.room || 'general',
             author: session.nickname,
             author_flair: session.flair || 'Neutral Football Fan',
@@ -1791,7 +1653,7 @@ wss.on('connection', (ws: WebSocket) => {
             realm: session.flair || 'Neutral Football Fan',
             mentions: extractedMentions
           };
-          chatMessages.push(newChat);
+          state.chatMessages.push(newChat);
           
           saveChatMessageToFirestore(newChat).catch(err => console.error('[Firestore] WS chat save error:', err));
           
@@ -1809,7 +1671,7 @@ wss.on('connection', (ws: WebSocket) => {
               
               // Broadcast to specific user if connected
               for (const [ws, sessionId] of socketSessions.entries()) {
-                const sess = sessions.get(sessionId);
+                const sess = state.sessions.get(sessionId);
                 if (sess && sess.nickname === notifyNick && ws.readyState === WebSocket.OPEN) {
                   ws.send(JSON.stringify({ type: 'new_notification', data: notification }));
                 }
@@ -1879,31 +1741,31 @@ async function syncLatestDataFromLive() {
       if (!data || !Array.isArray(data.posts) || data.posts.length === 0) continue;
 
       let updated = false;
-      const existingPostIds = new Set(posts.map(p => p.id));
+      const existingPostIds = new Set(state.posts.map(p => p.id));
       for (const post of data.posts) {
         if (!existingPostIds.has(post.id)) {
-          posts.push(post);
+          state.posts.push(post);
           existingPostIds.add(post.id);
           updated = true;
         }
       }
 
-      const existingCommentIds = new Set(comments.map(c => c.id));
+      const existingCommentIds = new Set(state.comments.map(c => c.id));
       if (Array.isArray(data.comments)) {
         for (const comment of data.comments) {
           if (!existingCommentIds.has(comment.id)) {
-            comments.push(comment);
+            state.comments.push(comment);
             existingCommentIds.add(comment.id);
             updated = true;
           }
         }
       }
 
-      const existingChatIds = new Set(chatMessages.map(m => m.id));
+      const existingChatIds = new Set(state.chatMessages.map(m => m.id));
       if (Array.isArray(data.chatMessages)) {
         for (const chat of data.chatMessages) {
           if (!existingChatIds.has(chat.id)) {
-            chatMessages.push(chat);
+            state.chatMessages.push(chat);
             existingChatIds.add(chat.id);
             updated = true;
           }
@@ -1912,8 +1774,8 @@ async function syncLatestDataFromLive() {
 
       if (Array.isArray(data.sessions)) {
         for (const s of data.sessions) {
-          if (!sessions.has(s.id)) {
-            sessions.set(s.id, s);
+          if (!state.sessions.has(s.id)) {
+            state.sessions.set(s.id, s);
             updated = true;
           }
         }
@@ -1921,19 +1783,19 @@ async function syncLatestDataFromLive() {
 
       if (Array.isArray(data.realms)) {
         for (const r of data.realms) {
-          if (r && r.name && !realms.some(existing => existing.id === r.id || existing.name.toLowerCase() === r.name.toLowerCase())) {
-            realms.push(r);
+          if (r && r.name && !state.realms.some(existing => existing.id === r.id || existing.name.toLowerCase() === r.name.toLowerCase())) {
+            state.realms.push(r);
             updated = true;
           }
         }
       }
 
       if (updated) {
-        nextPostId = Math.max(nextPostId, ...posts.map(p => p.id + 1));
-        nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id + 1));
-        nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id + 1));
+        state.nextPostId = Math.max(state.nextPostId, ...state.posts.map((p: Post) => p.id + 1));
+        state.nextCommentId = Math.max(state.nextCommentId, ...state.comments.map(c => c.id + 1));
+        state.nextChatId = Math.max(state.nextChatId, ...state.chatMessages.map(m => m.id + 1));
         
-        console.log(`Synced and preserved live community data from ${syncUrl}: ${posts.length} posts, ${comments.length} comments, ${sessions.size} sessions`);
+        console.log(`Synced and preserved live community data from ${syncUrl}: ${state.posts.length} posts, ${state.comments.length} comments, ${state.sessions.size} sessions`);
         break;
       }
     } catch {
@@ -1957,20 +1819,20 @@ async function syncWithFirestore() {
 
     // 1. Sync Posts
     if (fsPosts.status === 'fulfilled' && Array.isArray(fsPosts.value) && fsPosts.value.length > 0) {
-      const existingPostIds = new Set(posts.map(p => p.id));
+      const existingPostIds = new Set(state.posts.map(p => p.id));
       for (const p of fsPosts.value) {
         if (!existingPostIds.has(p.id)) {
-          posts.push(p);
+          state.posts.push(p);
           existingPostIds.add(p.id);
           updated = true;
         } else {
-          const localIndex = posts.findIndex(lp => lp.id === p.id);
+          const localIndex = state.posts.findIndex(lp => lp.id === p.id);
           if (localIndex !== -1) {
-            const local = posts[localIndex];
+            const local = state.posts[localIndex];
             const localTime = new Date(local.last_activity_at || local.created_at).getTime();
             const remoteTime = new Date(p.last_activity_at || p.created_at).getTime();
             if (remoteTime > localTime || p.upvotes > local.upvotes) {
-              posts[localIndex] = p;
+              state.posts[localIndex] = p;
               updated = true;
             }
           }
@@ -1982,7 +1844,7 @@ async function syncWithFirestore() {
     const firestorePostIds = new Set(
       (fsPosts.status === 'fulfilled' && Array.isArray(fsPosts.value)) ? fsPosts.value.map(p => p.id) : []
     );
-    for (const p of posts) {
+    for (const p of state.posts) {
       if (!firestorePostIds.has(p.id)) {
         savePostToFirestore(p).catch(e => console.warn('[Firestore] Failed seeding post:', e));
       }
@@ -1990,10 +1852,10 @@ async function syncWithFirestore() {
 
     // 2. Sync Comments
     if (fsComments.status === 'fulfilled' && Array.isArray(fsComments.value) && fsComments.value.length > 0) {
-      const existingCommentIds = new Set(comments.map(c => c.id));
+      const existingCommentIds = new Set(state.comments.map(c => c.id));
       for (const c of fsComments.value) {
         if (!existingCommentIds.has(c.id)) {
-          comments.push(c);
+          state.comments.push(c);
           existingCommentIds.add(c.id);
           updated = true;
         }
@@ -2002,7 +1864,7 @@ async function syncWithFirestore() {
     const firestoreCommentIds = new Set(
       (fsComments.status === 'fulfilled' && Array.isArray(fsComments.value)) ? fsComments.value.map(c => c.id) : []
     );
-    for (const c of comments) {
+    for (const c of state.comments) {
       if (!firestoreCommentIds.has(c.id)) {
         saveCommentToFirestore(c).catch(e => console.warn('[Firestore] Failed seeding comment:', e));
       }
@@ -2010,21 +1872,21 @@ async function syncWithFirestore() {
 
     // 3. Sync Chat Messages
     if (fsChats.status === 'fulfilled' && Array.isArray(fsChats.value) && fsChats.value.length > 0) {
-      const existingChatIds = new Set(chatMessages.map(m => m.id));
+      const existingChatIds = new Set(state.chatMessages.map(m => m.id));
       for (const m of fsChats.value) {
         if (m && m.content && m.content.includes('Arsenal Finland FanSphere')) {
           m.content = m.content.replace(/Arsenal Finland FanSphere/g, 'Fansphere');
           saveChatMessageToFirestore(m).catch(() => {});
         }
         if (!existingChatIds.has(m.id)) {
-          chatMessages.push(m);
+          state.chatMessages.push(m);
           existingChatIds.add(m.id);
           updated = true;
         }
       }
     }
     // Ensure all existing in-memory chat messages are sanitized
-    for (const m of chatMessages) {
+    for (const m of state.chatMessages) {
       if (m && m.content && m.content.includes('Arsenal Finland FanSphere')) {
         m.content = m.content.replace(/Arsenal Finland FanSphere/g, 'Fansphere');
         updated = true;
@@ -2034,7 +1896,7 @@ async function syncWithFirestore() {
     const firestoreChatIds = new Set(
       (fsChats.status === 'fulfilled' && Array.isArray(fsChats.value)) ? fsChats.value.map(m => m.id) : []
     );
-    for (const m of chatMessages) {
+    for (const m of state.chatMessages) {
       if (!firestoreChatIds.has(m.id)) {
         saveChatMessageToFirestore(m).catch(e => console.warn('[Firestore] Failed seeding chat:', e));
       }
@@ -2043,37 +1905,37 @@ async function syncWithFirestore() {
     // 4. Sync Sessions
     if (fsSessions.status === 'fulfilled' && Array.isArray(fsSessions.value) && fsSessions.value.length > 0) {
       for (const s of fsSessions.value) {
-        if (!sessions.has(s.id)) {
-          sessions.set(s.id, s);
+        if (!state.sessions.has(s.id)) {
+          state.sessions.set(s.id, s);
           updated = true;
         }
       }
     }
-    for (const s of sessions.values()) {
+    for (const s of state.sessions.values()) {
       saveSessionToFirestore(s).catch(e => console.warn('[Firestore] Failed seeding session:', e));
     }
 
     // 5. Sync Realms
     if (fsRealms.status === 'fulfilled' && Array.isArray(fsRealms.value) && fsRealms.value.length > 0) {
       for (const r of fsRealms.value) {
-        if (!realms.some(existing => existing.id === r.id || existing.name.toLowerCase() === r.name.toLowerCase())) {
-          realms.push(r);
+        if (!state.realms.some(existing => existing.id === r.id || existing.name.toLowerCase() === r.name.toLowerCase())) {
+          state.realms.push(r);
           updated = true;
         }
       }
     }
-    for (const r of realms) {
+    for (const r of state.realms) {
       saveRealmToFirestore(r).catch(e => console.warn('[Firestore] Failed seeding realm:', e));
     }
 
     if (updated) {
-      nextPostId = Math.max(nextPostId, ...posts.map(p => p.id + 1));
-      nextCommentId = Math.max(nextCommentId, ...comments.map(c => c.id + 1));
-      nextChatId = Math.max(nextChatId, ...chatMessages.map(m => m.id + 1));
+      state.nextPostId = Math.max(state.nextPostId, ...state.posts.map(p => p.id + 1));
+      state.nextCommentId = Math.max(state.nextCommentId, ...state.comments.map((c: Comment) => c.id + 1));
+      state.nextChatId = Math.max(state.nextChatId, ...state.chatMessages.map((m: ChatMessage) => m.id + 1));
       
-      console.log(`[Firestore] Sync complete. Active posts: ${posts.length}, comments: ${comments.length}, chats: ${chatMessages.length}, sessions: ${sessions.size}`);
+      console.log(`[Firestore] Sync complete. Active posts: ${state.posts.length}, comments: ${state.comments.length}, chats: ${state.chatMessages.length}, sessions: ${state.sessions.size}`);
     } else {
-      console.log(`[Firestore] Sync complete. In-sync with ${posts.length} posts and ${comments.length} comments.`);
+      console.log(`[Firestore] Sync complete. In-sync with ${state.posts.length} posts and ${state.comments.length} comments.`);
     }
   } catch (err) {
     console.error('[Firestore] Error during Firestore sync:', err);
@@ -2092,10 +1954,10 @@ app.get('/api/firebase/status', async (_req, res) => {
   res.json({
     connected: true,
     firestore_database_id: 'ai-studio-fansphere-0efd3258-52ad-4cbd-8135-986aaf14b0c7',
-    posts_count: posts.length,
-    comments_count: comments.length,
-    chat_messages_count: chatMessages.length,
-    realms_count: realms.length
+    posts_count: state.posts.length,
+    comments_count: state.comments.length,
+    chat_messages_count: state.chatMessages.length,
+    realms_count: state.realms.length
   });
 });
 
