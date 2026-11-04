@@ -59,7 +59,8 @@ service cloud.firestore {
              data.id is string && data.id.size() <= 128 &&
              data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 100 &&
              (!('email' in data) || (data.email is string && data.email.size() <= 255)) &&
-             (data.keys().hasAny(['realm']) || data.keys().hasAny(['flair'])) &&
+             ((!('realm' in data) || (data.realm is string && data.realm.size() <= 100)) &&
+              (!('flair' in data) || (data.flair is string && data.flair.size() <= 100))) &&
              data.created_at is string && data.created_at.size() <= 100 &&
              (!('last_active_at' in data) || (data.last_active_at is string && data.last_active_at.size() <= 100)) &&
              data.expires_at is string && data.expires_at.size() <= 100;
@@ -84,7 +85,8 @@ service cloud.firestore {
              data.keys().hasOnly(['email', 'nickname', 'realm', 'flair', 'created_at', 'last_updated_at']) &&
              data.email is string && data.email.size() <= 255 &&
              data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 100 &&
-             (data.keys().hasAny(['realm']) || data.keys().hasAny(['flair'])) &&
+             ((!('realm' in data) || (data.realm is string && data.realm.size() <= 100)) &&
+              (!('flair' in data) || (data.flair is string && data.flair.size() <= 100))) &&
              data.created_at is string && data.created_at.size() <= 100 &&
              (!('last_updated_at' in data) || (data.last_updated_at is string && data.last_updated_at.size() <= 100));
     }
