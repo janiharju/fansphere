@@ -36,7 +36,7 @@ export interface Post {
   title: string;
   content: string;
   author: string;
-  author_flair: string;
+  author_realm: string;
   tag: string;
   upvotes: number;
   downvotes: number;
@@ -51,7 +51,7 @@ export interface Comment {
   post_id: number;
   parent_id: number | null;
   author: string;
-  author_flair: string;
+  author_realm: string;
   content: string;
   upvotes: number;
   image_url?: string;
@@ -62,7 +62,7 @@ export interface ChatMessage {
   id: number;
   room: string;
   author: string;
-  author_flair: string;
+  author_realm: string;
   badge_color: string;
   content: string;
   created_at: string;
@@ -84,7 +84,7 @@ export interface Session {
   id: string;
   nickname: string;
   email: string;
-  flair: string;
+  realm: string;
   created_at: string;
   last_active_at: string;
   expires_at: string;

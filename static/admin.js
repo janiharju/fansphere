@@ -485,6 +485,7 @@ async function createRealm(e) {
 
   if (!nameInput) return;
   const name = nameInput.value.trim();
+  const id = name.toLowerCase().replace(/\s+/g, '-');
   const badge_color = colorInput ? colorInput.value.trim() : '#EF4444';
   const icon = iconInput ? iconInput.value.trim() : '🛡️';
   const short_name = shortNameInput ? shortNameInput.value.trim().slice(0, 16) : '';
@@ -513,7 +514,7 @@ async function createRealm(e) {
         'x-admin-token': adminState.token,
         'Authorization': `Bearer ${adminState.token}`
       },
-      body: JSON.stringify({ name, badge_color, icon, image_icon, short_name, description })
+      body: JSON.stringify({ id, name, badge_color, icon, image_icon, short_name, description })
     });
 
     const data = await res.json().catch(() => ({}));

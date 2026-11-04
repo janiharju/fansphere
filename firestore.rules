@@ -12,12 +12,12 @@ service cloud.firestore {
 
     function isValidPost(data) {
       return data.keys().hasAll(['id', 'title', 'content', 'author', 'created_at']) &&
-             data.keys().hasOnly(['id', 'title', 'content', 'author', 'author_flair', 'tag', 'upvotes', 'downvotes', 'image_url', 'created_at', 'last_activity_at']) &&
+             data.keys().hasOnly(['id', 'title', 'content', 'author', 'author_realm', 'tag', 'upvotes', 'downvotes', 'image_url', 'created_at', 'last_activity_at']) &&
              data.id is number &&
              data.title is string && data.title.size() >= 3 && data.title.size() <= 300 &&
              data.content is string && data.content.size() >= 5 && data.content.size() <= 10000 &&
              data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
-             (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
+             (!('author_realm' in data) || (data.author_realm is string && data.author_realm.size() <= 100)) &&
              (!('tag' in data) || (data.tag is string && data.tag.size() <= 50)) &&
              (!('upvotes' in data) || data.upvotes is number) &&
              (!('downvotes' in data) || data.downvotes is number) &&
@@ -28,12 +28,12 @@ service cloud.firestore {
 
     function isValidComment(data) {
       return data.keys().hasAll(['id', 'post_id', 'author', 'content', 'created_at']) &&
-             data.keys().hasOnly(['id', 'post_id', 'parent_id', 'author', 'author_flair', 'content', 'upvotes', 'image_url', 'created_at']) &&
+             data.keys().hasOnly(['id', 'post_id', 'parent_id', 'author', 'author_realm', 'content', 'upvotes', 'image_url', 'created_at']) &&
              data.id is number &&
              data.post_id is number &&
              (!('parent_id' in data) || data.parent_id == null || data.parent_id is number) &&
              data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
-             (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
+             (!('author_realm' in data) || (data.author_realm is string && data.author_realm.size() <= 100)) &&
              data.content is string && data.content.size() >= 1 && data.content.size() <= 2000 &&
              (!('upvotes' in data) || data.upvotes is number) &&
              (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 2048)) &&
@@ -42,11 +42,11 @@ service cloud.firestore {
 
     function isValidChatMessage(data) {
       return data.keys().hasAll(['id', 'room', 'author', 'content', 'created_at']) &&
-             data.keys().hasOnly(['id', 'room', 'author', 'author_flair', 'badge_color', 'content', 'created_at', 'reactions']) &&
+             data.keys().hasOnly(['id', 'room', 'author', 'author_realm', 'badge_color', 'content', 'created_at', 'reactions', 'realm', 'mentions']) &&
              data.id is number &&
              data.room is string && data.room.size() <= 50 &&
              data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
-             (!('author_flair' in data) || (data.author_flair is string && data.author_flair.size() <= 100)) &&
+             (!('author_realm' in data) || (data.author_realm is string && data.author_realm.size() <= 100)) &&
              (!('badge_color' in data) || (data.badge_color is string && data.badge_color.size() <= 20)) &&
              data.content is string && data.content.size() >= 1 && data.content.size() <= 5000 &&
              data.created_at is string && data.created_at.size() <= 100 &&
@@ -54,12 +54,12 @@ service cloud.firestore {
     }
 
     function isValidSession(data) {
-      return data.keys().hasAll(['id', 'nickname', 'flair', 'created_at', 'expires_at']) &&
-             data.keys().hasOnly(['id', 'nickname', 'email', 'flair', 'created_at', 'last_active_at', 'expires_at']) &&
+      return data.keys().hasAll(['id', 'nickname', 'created_at', 'expires_at']) &&
+             data.keys().hasOnly(['id', 'nickname', 'email', 'realm', 'flair', 'created_at', 'last_active_at', 'expires_at']) &&
              data.id is string && data.id.size() <= 128 &&
              data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 100 &&
              (!('email' in data) || (data.email is string && data.email.size() <= 255)) &&
-             data.flair is string && data.flair.size() <= 100 &&
+             (data.keys().hasAny(['realm']) || data.keys().hasAny(['flair'])) &&
              data.created_at is string && data.created_at.size() <= 100 &&
              (!('last_active_at' in data) || (data.last_active_at is string && data.last_active_at.size() <= 100)) &&
              data.expires_at is string && data.expires_at.size() <= 100;
@@ -81,10 +81,10 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['email', 'nickname', 'created_at']) &&
-             data.keys().hasOnly(['email', 'nickname', 'flair', 'created_at', 'last_updated_at']) &&
+             data.keys().hasOnly(['email', 'nickname', 'realm', 'flair', 'created_at', 'last_updated_at']) &&
              data.email is string && data.email.size() <= 255 &&
              data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 100 &&
-             (!('flair' in data) || (data.flair is string && data.flair.size() <= 100)) &&
+             (data.keys().hasAny(['realm']) || data.keys().hasAny(['flair'])) &&
              data.created_at is string && data.created_at.size() <= 100 &&
              (!('last_updated_at' in data) || (data.last_updated_at is string && data.last_updated_at.size() <= 100));
     }

@@ -80,9 +80,9 @@ function extractQuotedAuthors(text: string): string[] {
 
 
 
-export function normalizeFlair(flair: string | undefined): string {
-  if (!flair) return 'Neutral Football Fan';
-  const str = String(flair).trim().toLowerCase();
+export function normalizeRealm(realm: string | undefined): string {
+  if (!realm) return 'Neutral Football Fan';
+  const str = String(realm).trim().toLowerCase();
 
   if (typeof state.realms !== 'undefined' && Array.isArray(state.realms)) {
     const matched = state.realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
@@ -186,7 +186,7 @@ function broadcastPresence() {
     type: 'presence',
     online_count: active.length,
     active_nicknames: active.map(s => s.nickname),
-    active_users: active.map(s => ({ nickname: s.nickname, flair: s.flair }))
+    active_users: active.map(s => ({ nickname: s.nickname, realm: s.realm }))
   });
 }
 
@@ -323,7 +323,7 @@ app.post('/api/auth/session', async (req, res) => {
 
   const cleanNickname = nickname.trim().toLowerCase();
   const cleanEmail = email.trim().toLowerCase();
-  const cleanFlair = normalizeFlair(flair);
+  const cleanRealm = normalizeRealm(flair);
 
   // Check Email-Nickname Link in Firestore
   try {
@@ -345,7 +345,7 @@ app.post('/api/auth/session', async (req, res) => {
     id: sessionId,
     nickname: cleanNickname,
     email: cleanEmail,
-    flair: cleanFlair,
+    realm: cleanRealm,
     created_at: new Date(now).toISOString(),
     last_active_at: new Date(now).toISOString(),
     expires_at: new Date(now + SESSION_TTL_MS).toISOString()
@@ -357,7 +357,7 @@ app.post('/api/auth/session', async (req, res) => {
   saveUserToFirestore({
     email: session.email,
     nickname: session.nickname,
-    flair: session.flair,
+    realm: session.realm,
     created_at: session.created_at
   }).catch(err => console.error('[Firestore] User profile save error:', err));
 
@@ -418,7 +418,7 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
     return res.status(401).json({ detail: 'Session expired or not found', expired: true, valid: false });
   }
 
-  const { nickname, email, flair } = req.body;
+  const { nickname, email, realm } = req.body;
 
   if (nickname !== undefined) {
     if (typeof nickname !== 'string' || nickname.trim().length < 2 || nickname.trim().length > 30) {
@@ -453,8 +453,8 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
   }
 
 
-  if (flair !== undefined && typeof flair === 'string' && flair.trim().length > 0) {
-    session.flair = normalizeFlair(flair);
+  if (realm !== undefined && typeof realm === 'string' && realm.trim().length > 0) {
+    session.realm = normalizeRealm(realm);
   }
 
   session.last_active_at = new Date().toISOString();
@@ -464,7 +464,7 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
   saveUserToFirestore({
     email: session.email,
     nickname: session.nickname,
-    flair: session.flair,
+    realm: session.realm,
     created_at: session.created_at
   }).catch(err => console.error('[Firestore] User profile update error:', err));
   broadcastPresence();
@@ -526,29 +526,18 @@ app.get('/api/presence', (_req, res) => {
   res.json({
     online_count: active.length,
     active_nicknames: active.map(s => s.nickname),
-    active_users: active.map(s => ({ nickname: s.nickname, flair: s.flair }))
+    active_users: active.map(s => ({ nickname: s.nickname, realm: s.realm }))
   });
 });
 
-// Helper to determine if an author's club tag/flair matches a selected Realm
-export function matchClubRealm(authorFlair: string | undefined, selectedRealm: string | undefined): boolean {
+// Helper to determine if an author's club tag/realm matches a selected Realm
+export function matchClubRealm(authorRealm: string | undefined, selectedRealm: string | undefined): boolean {
   if (!selectedRealm || selectedRealm.toLowerCase() === 'all') return true;
-  if (!authorFlair) return false;
+  if (!authorRealm) return false;
 
-  const a = authorFlair.trim().toLowerCase();
+  const a = authorRealm.trim().toLowerCase();
   const b = selectedRealm.trim().toLowerCase();
   if (a === b) return true;
-
-  // Testers realm
-  if (b.includes('tester')) {
-    return a.includes('tester');
-  }
-
-  // Neutral Football Fan realm
-  if (b.includes('neutral')) {
-    return a.includes('neutral');
-  }
-
 
 
   // Dynamic registered realms matching
@@ -573,7 +562,7 @@ app.get('/api/posts', (req, res) => {
     filtered = filtered.filter(p => p.tag.toLowerCase() === tag.toLowerCase());
   }
   if (realm && realm.toLowerCase() !== 'all') {
-    filtered = filtered.filter(p => matchClubRealm(p.author_flair, realm));
+    filtered = filtered.filter(p => matchClubRealm(p.author_realm, realm));
   }
 
   // Filter posts and comments by search keywords within the selected realm
@@ -640,7 +629,7 @@ app.get('/api/posts', (req, res) => {
       matched_comments: matchedComments.map(c => ({
         id: c.id,
         author: c.author,
-        author_flair: c.author_flair,
+        author_realm: c.author_realm,
         content: c.content,
         created_at: c.created_at
       }))
@@ -681,7 +670,7 @@ app.post('/api/posts', (req, res) => {
     title: title.trim(),
     content: content.trim(),
     author: session.nickname,
-    author_flair: session.flair || 'Neutral Football Fan',
+    author_realm: session.realm || 'Neutral Football Fan',
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
@@ -962,7 +951,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
     author: session.nickname,
-    author_flair: session.flair || 'Neutral Football Fan',
+    author_realm: session.realm || 'Neutral Football Fan',
     content: content.trim(),
     upvotes: 1,
     image_url: cleanCommentImageUrl,
@@ -1090,12 +1079,12 @@ app.post('/api/chat/message', (req, res) => {
     id: assignedChatId,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
-    author_flair: session.flair || 'Neutral Football Fan',
+    author_realm: session.realm || 'Neutral Football Fan',
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: trimmedContent,
     created_at: new Date().toISOString(),
     reactions: {},
-    realm: session.flair || 'Neutral Football Fan',
+    realm: session.realm || 'Neutral Football Fan',
     mentions: extractedMentions
   };
 
@@ -1361,7 +1350,7 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
   }
 
   const cleanName = name.trim();
-  const id = slugify(cleanName) || `realm-${Date.now()}`;
+  const id = (req.body.id as string) || slugify(cleanName) || `realm-${Date.now()}`;
 
   if (state.realms.some(r => r.id === id || r.name.toLowerCase() === cleanName.toLowerCase())) {
     return res.status(400).json({ detail: `A club realm with the name "${cleanName}" already exists` });
@@ -1645,12 +1634,12 @@ wss.on('connection', (ws: WebSocket) => {
             id: state.nextChatId++,
             room: payload.room || 'general',
             author: session.nickname,
-            author_flair: session.flair || 'Neutral Football Fan',
+            author_realm: session.realm || 'Neutral Football Fan',
             badge_color: payload.badge_color || '#EF4444',
             content,
             created_at: new Date().toISOString(),
             reactions: {},
-            realm: session.flair || 'Neutral Football Fan',
+            realm: session.realm || 'Neutral Football Fan',
             mentions: extractedMentions
           };
           state.chatMessages.push(newChat);

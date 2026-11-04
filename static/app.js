@@ -2,31 +2,24 @@
 
 let currentRealms = [];
 
-function normalizeFlair(flair) {
-  if (!flair) return 'Neutral Football Fan';
-  const str = String(flair).trim().toLowerCase();
-  if (str.includes('tester')) return 'Testers';
-  if (str.includes('neutral')) return 'Neutral Football Fan';
-  if (str.includes('arsenal finland') || str.includes('gunner') || str.includes('gooner') || str.includes('arsenal') || str.includes('official')) {
-    return 'Arsenal Finland Official Member';
-  }
+function normalizeRealm(realm) {
+  if (!realm) return 'Neutral Football Fan';
+  const str = String(realm).trim().toLowerCase();
+  
   if (Array.isArray(currentRealms)) {
     const matched = currentRealms.find(r => r.name.toLowerCase() === str || r.id === str);
     if (matched) return matched.name;
   }
-  return 'Arsenal Finland Official Member';
+  return 'Neutral Football Fan';
 }
 
-function getFlairBadgeColor(flair) {
-  const norm = normalizeFlair(flair);
-  if (norm === 'Testers') return '#A855F7';
-  if (norm === 'Neutral Football Fan') return '#94A3B8';
-  if (norm === 'Arsenal Finland Official Member') return '#EF4444';
+function getRealmBadgeColor(realm) {
+  const norm = normalizeRealm(realm);
   if (Array.isArray(currentRealms)) {
     const matched = currentRealms.find(r => r.name === norm || r.id === norm);
     if (matched && matched.badge_color) return matched.badge_color;
   }
-  return '#EF4444';
+  return '#94A3B8';
 }
 
 // State
@@ -36,8 +29,8 @@ const state = {
   user: {
     handle: localStorage.getItem('fansphere_handle') || '',
     email: localStorage.getItem('fansphere_email') || '',
-    flair: normalizeFlair(localStorage.getItem('fansphere_flair')),
-    badgeColor: getFlairBadgeColor(localStorage.getItem('fansphere_flair'))
+    realm: normalizeRealm(localStorage.getItem('fansphere_realm')),
+    badgeColor: getRealmBadgeColor(localStorage.getItem('fansphere_realm'))
   },
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
@@ -160,16 +153,16 @@ loadLocalReadStates();
 
 function getEffectiveRealm() {
   if (state.selectedRealm === 'user_club') {
-    return state.user.flair || 'Arsenal Finland Official Member';
+    return state.user.realm || 'Arsenal Finland Official Member';
   }
   return state.selectedRealm;
 }
 
 function getRealmDisplayName(realm) {
   if (realm === 'user_club') {
-    return `My Club (${getRealmDisplayName(state.user.flair || 'Arsenal Finland Official Member')})`;
+    return `My Club (${getRealmDisplayName(state.user.realm || 'Arsenal Finland Official Member')})`;
   }
-  const norm = normalizeFlair(realm);
+  const norm = normalizeRealm(realm);
   if (norm === 'Arsenal Finland Official Member') return 'Arsenal Finland Official Member';
   if (norm === 'Neutral Football Fan') return 'Neutral Football Fan';
   if (norm === 'Testers') return 'Testers';
@@ -181,7 +174,7 @@ function matchClubRealm(authorFlair, targetRealm) {
   if (!authorFlair) return false;
 
   const a = authorFlair.trim().toLowerCase();
-  const effective = (targetRealm === 'user_club' ? (state.user.flair || 'Arsenal Finland Official Member') : targetRealm).trim().toLowerCase();
+  const effective = (targetRealm === 'user_club' ? (state.user.realm || 'Arsenal Finland Official Member') : targetRealm).trim().toLowerCase();
   if (a === effective) return true;
 
   // Testers realm
@@ -216,7 +209,7 @@ function matchClubRealm(authorFlair, targetRealm) {
 function updateRealmIndicators() {
   const flairInput = document.getElementById('profileFlairInput');
   if (flairInput) {
-    flairInput.value = normalizeFlair(state.user.flair);
+    flairInput.value = normalizeRealm(state.user.realm);
   }
 }
 
@@ -265,7 +258,7 @@ function updateGateState() {
     if (gateNick && !gateNick.value) gateNick.value = localStorage.getItem('fansphere_handle') || '';
     if (gateEmail && !gateEmail.value) gateEmail.value = localStorage.getItem('fansphere_email') || '';
     if (gateRealm && (!gateRealm.value || gateRealm.value === '')) {
-      const savedRealm = localStorage.getItem('fansphere_realm') || localStorage.getItem('fansphere_flair');
+      const savedRealm = localStorage.getItem('fansphere_realm') || localStorage.getItem('fansphere_realm');
       if (savedRealm && savedRealm !== 'All') {
         gateRealm.value = savedRealm;
       }
@@ -276,8 +269,8 @@ function updateGateState() {
 function setRealmFilter(realm) {
   state.selectedRealm = realm;
   if (realm !== 'All') {
-    state.user.flair = realm;
-    localStorage.setItem('fansphere_flair', realm);
+    state.user.realm = realm;
+    localStorage.setItem('fansphere_realm', realm);
   }
   localStorage.setItem('fansphere_realm', realm);
   updateRealmIndicators();
@@ -318,12 +311,12 @@ function updateRealmSelectDropdowns() {
         <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
       `).join('')}
     `;
-    profileSelect.value = (state.selectedRealm === 'All') ? 'All' : normalizeFlair(state.user.flair);
+    profileSelect.value = (state.selectedRealm === 'All') ? 'All' : normalizeRealm(state.user.realm);
   }
 
   const sessionSelect = document.getElementById('sessionFlairInput');
   if (sessionSelect) {
-    const currentSessionVal = sessionSelect.value || normalizeFlair(state.user.flair);
+    const currentSessionVal = sessionSelect.value || normalizeRealm(state.user.realm);
     sessionSelect.innerHTML = state.realms.map(r => `
       <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
     `).join('');
@@ -494,9 +487,9 @@ function initUserProfile(force = false) {
   if (handleEl) handleEl.textContent = currentNickname;
 
   // Normalize user flair to ensure only allowed supporter flairs are used
-  state.user.flair = normalizeFlair(state.user.flair);
-  state.user.badgeColor = getFlairBadgeColor(state.user.flair);
-  localStorage.setItem('fansphere_flair', state.user.flair);
+  state.user.realm = normalizeRealm(state.user.realm);
+  state.user.badgeColor = getRealmBadgeColor(state.user.realm);
+  localStorage.setItem('fansphere_realm', state.user.realm);
 
   // CRITICAL: NEVER overwrite inputs if the modal is currently open, unless explicitly forced on opening
   const isModalOpen = profileModal && profileModal.open;
@@ -505,7 +498,7 @@ function initUserProfile(force = false) {
     const emailDisplay = document.getElementById('profileEmailDisplay');
     if (handleDisplay) handleDisplay.textContent = state.user.handle || '';
     if (emailDisplay) emailDisplay.textContent = state.user.email || '';
-    if (inputFlair) inputFlair.value = (state.selectedRealm === 'All') ? 'All' : state.user.flair;
+    if (inputFlair) inputFlair.value = (state.selectedRealm === 'All') ? 'All' : state.user.realm;
   }
 
   if (sessionIdDisplay) {
@@ -561,14 +554,14 @@ function applySession(session, skipWsAuth = false) {
   state.sessionId = session.id;
   state.user.handle = session.nickname;
   state.user.email = session.email;
-  state.user.flair = normalizeFlair(session.flair);
-  state.user.badgeColor = getFlairBadgeColor(state.user.flair);
+  state.user.realm = normalizeRealm(session.flair);
+  state.user.badgeColor = getRealmBadgeColor(state.user.realm);
   state.selectedRealm = session.flair || state.selectedRealm;
 
   localStorage.setItem('fansphere_session_id', session.id);
   localStorage.setItem('fansphere_handle', session.nickname);
   localStorage.setItem('fansphere_email', session.email);
-  localStorage.setItem('fansphere_flair', state.user.flair);
+  localStorage.setItem('fansphere_realm', state.user.realm);
   if (state.selectedRealm) {
     localStorage.setItem('fansphere_realm', state.selectedRealm);
   }
@@ -706,7 +699,7 @@ function openSessionPromptModal(reason = 'new') {
   // Pre-fill previous values from local storage
   if (nickInput && !nickInput.value) nickInput.value = localStorage.getItem('fansphere_handle') || '';
   if (emailInput && !emailInput.value) emailInput.value = localStorage.getItem('fansphere_email') || '';
-  if (flairInput && localStorage.getItem('fansphere_flair')) flairInput.value = localStorage.getItem('fansphere_flair');
+  if (flairInput && localStorage.getItem('fansphere_realm')) flairInput.value = localStorage.getItem('fansphere_realm');
 
   if (reason === 'expired') {
     if (titleEl) titleEl.textContent = 'Session Expired';
@@ -1100,7 +1093,7 @@ function getFilteredPosts() {
   }
   const effective = getEffectiveRealm();
   if (state.selectedRealm !== 'All') {
-    list = list.filter(p => matchClubRealm(p.author_flair, effective));
+    list = list.filter(p => matchClubRealm(p.author_realm, effective));
   }
   const q = (state.searchQuery || '').trim().toLowerCase();
   if (q) {
@@ -1437,7 +1430,7 @@ function renderPostCardHtml(post) {
           </span>
           <span class="text-slate-400 font-medium truncate max-w-[90px]">${escapeHtml(post.author)}</span>
           <span class="bg-slate-700/50 text-slate-300 text-[8px] px-1 py-0.2 rounded border border-slate-600/40 truncate max-w-[100px]">
-            ${escapeHtml(post.author_flair || 'Gunner')}
+            ${escapeHtml(post.author_realm || 'Gunner')}
           </span>
           <span class="text-slate-500">• ${formatRelativeTime(post.created_at)}</span>
           ${unreadCommentsCount > 0 ? `
@@ -1658,7 +1651,7 @@ function renderCommentHtml(comment) {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="font-bold text-slate-200">${escapeHtml(comment.author)}</span>
-          <span class="bg-slate-700/40 text-slate-300 text-[10px] px-1.5 py-0.5 rounded">${escapeHtml(comment.author_flair || 'Gunner')}</span>
+          <span class="bg-slate-700/40 text-slate-300 text-[10px] px-1.5 py-0.5 rounded">${escapeHtml(comment.author_realm || 'Gunner')}</span>
           <span class="text-slate-500 text-[11px]">• ${formatRelativeTime(comment.created_at)}</span>
         </div>
       </div>
@@ -1773,7 +1766,7 @@ function renderChatStream() {
   const effective = getEffectiveRealm();
   const filtered = state.selectedRealm === 'All'
     ? state.allChatMessages
-    : state.allChatMessages.filter(msg => matchClubRealm(msg.author_flair, effective));
+    : state.allChatMessages.filter(msg => matchClubRealm(msg.author_realm, effective));
 
   // If already rendered with exactly the same message IDs, avoid wiping and re-rendering
   const currentRenderedIds = Array.from(state.renderedChatIds);
@@ -1840,7 +1833,7 @@ function handleIncomingChatMessage(chatData) {
     }
   }
   const effective = getEffectiveRealm();
-  if (state.selectedRealm === 'All' || matchClubRealm(chatData.author_flair, effective)) {
+  if (state.selectedRealm === 'All' || matchClubRealm(chatData.author_realm, effective)) {
     appendChatMessage(chatData, true, true);
     initLucide();
     if (!chatData._isMentionHighlight) {
@@ -1913,7 +1906,7 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
 
   // Mention validation: ONLY inside selected club realm!
   const effectiveRealm = getEffectiveRealm();
-  const isSenderInRealm = matchClubRealm(msg.author_flair, effectiveRealm);
+  const isSenderInRealm = matchClubRealm(msg.author_realm, effectiveRealm);
   const isUserInRealm = matchClubRealm(state.user?.flair, effectiveRealm);
   const currentNick = state.user?.handle;
   let isMentioned = false;
@@ -1945,7 +1938,7 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : (isMentioned ? 'text-amber-300' : '')}">${escapeHtml(msg.author)}</span>
-      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_flair || 'Arsenal Finland Official Member')}</span>
+      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_realm || 'Arsenal Finland Official Member')}</span>
       <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
 
@@ -2195,7 +2188,7 @@ function sendChatMessage(text) {
     room: 'general',
     sessionId: state.sessionId,
     author: state.user.handle,
-    author_flair: state.user.flair,
+    author_realm: state.user.realm,
     badge_color: state.user.badgeColor,
     content: text.trim()
   };
@@ -2785,7 +2778,7 @@ function initEventHandlers() {
           try {
             localStorage.setItem('fansphere_cached_posts', JSON.stringify(state.posts));
           } catch {}
-          if (state.selectedRealm !== 'All' && !matchClubRealm(createdPost.author_flair, getEffectiveRealm())) {
+          if (state.selectedRealm !== 'All' && !matchClubRealm(createdPost.author_realm, getEffectiveRealm())) {
             setRealmFilter('All');
           } else {
             renderPosts();
@@ -3072,13 +3065,13 @@ function initEventHandlers() {
     if (!handleDisplay || !emailDisplay) return false;
     const newHandle = handleDisplay.textContent.trim();
     const newEmail = emailDisplay.textContent.trim();
-    const newFlair = flairInput ? normalizeFlair(flairInput.value) : normalizeFlair(state.user.flair);
+    const newFlair = flairInput ? normalizeRealm(flairInput.value) : normalizeRealm(state.user.realm);
 
 
     if (newFlair) {
-      const prevFlair = state.user.flair;
-      state.user.flair = newFlair;
-      localStorage.setItem('fansphere_flair', newFlair);
+      const prevFlair = state.user.realm;
+      state.user.realm = newFlair;
+      localStorage.setItem('fansphere_realm', newFlair);
       if (prevFlair !== newFlair && state.selectedRealm === 'user_club') {
         renderPosts();
         renderChatStream();
@@ -3255,7 +3248,7 @@ function initEventHandlers() {
 
     const nickname = nickInput.value.trim();
     const email = emailInput.value.trim();
-    const flair = flairInput ? normalizeFlair(flairInput.value) : 'Arsenal Finland Official Member';
+    const flair = flairInput ? normalizeRealm(flairInput.value) : 'Arsenal Finland Official Member';
 
     if (nickname.length < 2) {
       if (errEl) {
@@ -3919,7 +3912,7 @@ function getFansInSelectedRealm() {
     for (const nick of state.activeNicknames) {
       if (nick && !fanMap.has(nick.toLowerCase())) {
         const msg = state.allChatMessages.find(m => m.author.toLowerCase() === nick.toLowerCase());
-        const flair = msg ? msg.author_flair : effective;
+        const flair = msg ? msg.author_realm : effective;
         if (matchClubRealm(flair, effective)) {
           fanMap.set(nick.toLowerCase(), {
             nickname: nick,
@@ -3934,12 +3927,12 @@ function getFansInSelectedRealm() {
   // 3. Add users from recent chat messages in this realm
   if (Array.isArray(state.allChatMessages)) {
     for (const m of state.allChatMessages) {
-      if (m && m.author && matchClubRealm(m.author_flair, effective)) {
+      if (m && m.author && matchClubRealm(m.author_realm, effective)) {
         const key = m.author.toLowerCase();
         if (!fanMap.has(key)) {
           fanMap.set(key, {
             nickname: m.author,
-            flair: m.author_flair,
+            flair: m.author_realm,
             isOnline: state.activeNicknames?.some(n => n.toLowerCase() === key) || false
           });
         }
@@ -3950,12 +3943,12 @@ function getFansInSelectedRealm() {
   // 4. Add users from forum posts/comments in this realm
   if (Array.isArray(state.posts)) {
     for (const p of state.posts) {
-      if (p && p.author && matchClubRealm(p.author_flair, effective)) {
+      if (p && p.author && matchClubRealm(p.author_realm, effective)) {
         const key = p.author.toLowerCase();
         if (!fanMap.has(key)) {
           fanMap.set(key, {
             nickname: p.author,
-            flair: p.author_flair,
+            flair: p.author_realm,
             isOnline: state.activeNicknames?.some(n => n.toLowerCase() === key) || false
           });
         }
@@ -4011,7 +4004,7 @@ function initChatMentions() {
 
     list.innerHTML = currentCandidates.map((fan, idx) => {
       const isSelected = idx === activeIndex;
-      const badgeColor = getFlairBadgeColor(fan.flair);
+      const badgeColor = getRealmBadgeColor(fan.flair);
       return `
         <div 
           class="mention-item flex items-center gap-2 p-1.5 rounded-xl cursor-pointer transition select-none ${
