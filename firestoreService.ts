@@ -10,7 +10,9 @@ import {
   where,
   orderBy,
   limit,
-  Firestore
+  Firestore,
+  Query,
+  CollectionReference
 } from 'firebase/firestore';
 import {
   db,
@@ -149,9 +151,13 @@ export async function persistChatMessageToFirestore(msg: any) {
   }
 }
 
-export async function loadChatMessagesFromFirestore(): Promise<any[]> {
+export async function loadChatMessagesFromFirestore(realmId?: string): Promise<any[]> {
   try {
-    const snapshot = await getDocs(collection(db, 'chat_messages'));
+    let q: Query | CollectionReference = collection(db, 'chat_messages');
+    if (realmId) {
+      q = query(q, where('author_realm', '==', realmId));
+    }
+    const snapshot = await getDocs(q);
     const list: any[] = [];
     snapshot.forEach(docSnap => {
       list.push(docSnap.data());

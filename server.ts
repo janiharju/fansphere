@@ -1053,7 +1053,7 @@ app.get('/api/chat/history', async (req, res) => {
   const realm = req.query.realm as string | undefined;
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
-  const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore();
+  const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore(realm);
   chatMessagesFromFirestore.sort((a, b) => a.id - b.id);
   let roomMessages = chatMessagesFromFirestore.filter(m => m.room === room);
   if (realm && realm.toLowerCase() !== 'all') {
