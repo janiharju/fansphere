@@ -559,27 +559,57 @@ export function matchClubRealm(authorRealm: string | undefined, selectedRealm: s
   return targetId === authId;
 }
 
+// Helper to get the user's realm from request (query param, session, or default)
+function getUserRealm(req: express.Request): string {
+  // Check query parameter first
+  if (req.query.realm && typeof req.query.realm === 'string') {
+    return normalizeRealm(req.query.realm);
+  }
+  
+  // Check session
+  const session = getSessionFromReq(req);
+  if (session?.realm) {
+    return normalizeRealm(session.realm);
+  }
+  
+  // Default to the default realm
+  return getDefaultRealmId();
+}
+
+// Helper to filter entities by realm
+function filterByRealm<T extends { author_realm?: string }>(entities: T[], realm: string): T[] {
+  return entities.filter(e => matchClubRealm(e.author_realm, realm));
+}
+
 // 1. Posts List (Always sorted by latest changes including comments, filterable by tag, club realm, and search query)
 app.get('/api/posts', (req, res) => {
   const tag = req.query.tag as string | undefined;
-  const realm = req.query.realm as string | undefined;
+  const queryRealm = req.query.realm as string | undefined;
   const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
 
+  // Get the user's realm (from query param, session, or default)
+  const userRealm = getUserRealm(req);
+  
   let filtered = [...state.posts];
+  // Always filter by user's realm
+  filtered = filterByRealm(filtered, userRealm);
+  
   if (tag && tag.toLowerCase() !== 'all') {
     filtered = filtered.filter(p => p.tag.toLowerCase() === tag.toLowerCase());
   }
-  if (realm && realm.toLowerCase() !== 'all') {
-    filtered = filtered.filter(p => matchClubRealm(p.author_realm, realm));
+  // If explicit realm query param is provided, use it for additional filtering
+  if (queryRealm && queryRealm.toLowerCase() !== 'all') {
+    filtered = filtered.filter(p => matchClubRealm(p.author_realm, queryRealm));
   }
 
   // Filter posts and comments by search keywords within the selected realm
   const matchingCommentsMap = new Map<number, Comment[]>();
+  const userRealmComments = filterByRealm(state.comments, userRealm);
   if (q) {
     filtered = filtered.filter(p => {
       const titleMatch = p.title.toLowerCase().includes(q);
       const contentMatch = p.content.toLowerCase().includes(q);
-      const postComments = state.comments.filter(c => c.post_id === p.id && c.content.toLowerCase().includes(q));
+      const postComments = userRealmComments.filter(c => c.post_id === p.id && c.content.toLowerCase().includes(q));
       if (postComments.length > 0) {
         matchingCommentsMap.set(p.id, postComments);
       }
@@ -602,7 +632,7 @@ app.get('/api/posts', (req, res) => {
     let unreadCommentsCount = 0;
 
     if (userKey) {
-      const postComments = state.comments.filter(c => c.post_id === p.id);
+      const postComments = userRealmComments.filter(c => c.post_id === p.id);
       const readState = userStates ? userStates[String(p.id)] : null;
       const isAuthor = Boolean(userNickname && p.author.toLowerCase() === userNickname);
 
@@ -803,13 +833,17 @@ app.post('/api/admin/upload-realm-icon', requireAdminAuth, upload.single('image'
 
 app.get('/api/posts/:id', (req, res) => {
   const postId = parseInt(req.params.id, 10);
-  const post = state.posts.find(p => p.id === postId);
+  const userRealm = getUserRealm(req);
+  
+  // Find post in user's realm
+  const post = state.posts.find(p => p.id === postId && matchClubRealm(p.author_realm, userRealm));
 
   if (!post) {
     return res.status(404).json({ detail: 'Post not found' });
   }
 
-  const postComments = state.comments
+  const userRealmComments = filterByRealm(state.comments, userRealm);
+  const postComments = userRealmComments
     .filter(c => c.post_id === postId)
     .sort((a, b) => {
       if (b.upvotes !== a.upvotes) return b.upvotes - a.upvotes;
@@ -846,17 +880,19 @@ app.post('/api/posts/:id/read', (req, res) => {
   const session = getSessionFromReq(req);
   const userKey = getUserIdentifier(req, session);
   const postId = parseInt(req.params.id, 10);
+  const userRealm = getUserRealm(req);
 
   if (isNaN(postId)) {
     return res.status(400).json({ error: 'Invalid post ID' });
   }
 
-  const post = state.posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId && matchClubRealm(p.author_realm, userRealm));
   if (!post) {
     return res.status(404).json({ error: 'Post not found' });
   }
 
-  const currentCommentCount = state.comments.filter(c => c.post_id === postId).length;
+  const userRealmComments = filterByRealm(state.comments, userRealm);
+  const currentCommentCount = userRealmComments.filter(c => c.post_id === postId).length;
   const nowIso = new Date().toISOString();
 
   if (userKey) {
@@ -887,13 +923,25 @@ app.get('/api/posts-read-states', (req, res) => {
     return res.json({ read_states: {} });
   }
   const userMap = state.userReadStates.get(userKey) || {};
-  res.json({ read_states: userMap });
+  const userRealm = getUserRealm(req);
+  
+  // Filter read states to only include posts that belong to the user's realm
+  const filteredReadStates: Record<string, UserReadState> = {};
+  const userRealmPosts = filterByRealm(state.posts, userRealm);
+  for (const [postId, state] of Object.entries(userMap)) {
+    const postExists = userRealmPosts.some(p => String(p.id) === postId);
+    if (postExists) {
+      filteredReadStates[postId] = state;
+    }
+  }
+  res.json({ read_states: filteredReadStates });
 });
 
 // 4. Vote on Post
 app.post('/api/posts/:id/vote', (req, res) => {
   const postId = parseInt(req.params.id, 10);
-  const post = state.posts.find(p => p.id === postId);
+  const userRealm = getUserRealm(req);
+  const post = state.posts.find(p => p.id === postId && matchClubRealm(p.author_realm, userRealm));
 
   if (!post) {
     return res.status(404).json({ detail: 'Post not found' });
@@ -935,8 +983,9 @@ app.post('/api/posts/:id/comments', (req, res) => {
     return res.status(401).json({ detail: 'Session required. Please enter your nickname and email to comment.', session_required: true });
   }
 
+  const userRealm = getUserRealm(req);
   const postId = parseInt(req.params.id, 10);
-  const post = state.posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId && matchClubRealm(p.author_realm, userRealm));
 
   if (!post) {
     return res.status(404).json({ detail: 'Post not found' });
@@ -1024,7 +1073,8 @@ app.post('/api/posts/:id/comments', (req, res) => {
 // 6. Vote on Comment
 app.post('/api/comments/:id/vote', (req, res) => {
   const commentId = parseInt(req.params.id, 10);
-  const comment = state.comments.find(c => c.id === commentId);
+  const userRealm = getUserRealm(req);
+  const comment = state.comments.find(c => c.id === commentId && matchClubRealm(c.author_realm, userRealm));
 
   if (!comment) {
     return res.status(404).json({ detail: 'Comment not found' });
@@ -1050,14 +1100,22 @@ app.post('/api/comments/:id/vote', (req, res) => {
 app.get('/api/chat/history', async (req, res) => {
   console.log('API Request: /api/chat/history', req.query);
   const room = (req.query.room as string) || 'general';
-  const realm = req.query.realm as string | undefined;
+  const queryRealm = req.query.realm as string | undefined;
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
-  const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore(realm);
+  // Get the user's realm (from query param, session, or default)
+  const userRealm = getUserRealm(req);
+
+  const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore();
   chatMessagesFromFirestore.sort((a, b) => a.id - b.id);
   let roomMessages = chatMessagesFromFirestore.filter(m => m.room === room);
-  if (realm && realm.toLowerCase() !== 'all') {
-    roomMessages = roomMessages.filter(m => matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, realm));
+  
+  // Always filter by user's realm
+  roomMessages = roomMessages.filter(m => matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, userRealm));
+  
+  // If explicit realm query param is provided, use it for additional filtering
+  if (queryRealm && queryRealm.toLowerCase() !== 'all') {
+    roomMessages = roomMessages.filter(m => matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, queryRealm));
   }
   // Last `limit` messages in chronological order
   const slice = roomMessages.slice(-limit);
@@ -1154,6 +1212,7 @@ app.post('/api/chat/message/:id/react', (req, res) => {
     return res.status(401).json({ detail: 'Session required to react. Please sign in or set your nickname.', session_required: true });
   }
 
+  const userRealm = getUserRealm(req);
   const messageId = parseInt(req.params.id, 10);
   const { emoji } = req.body;
 
@@ -1162,7 +1221,7 @@ app.post('/api/chat/message/:id/react', (req, res) => {
   }
 
   const cleanEmoji = emoji.trim();
-  const msg = state.chatMessages.find(m => m.id === messageId);
+  const msg = state.chatMessages.find(m => m.id === messageId && matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, userRealm));
   if (!msg) {
     return res.status(404).json({ detail: 'Chat message not found' });
   }
