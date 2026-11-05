@@ -215,7 +215,7 @@ function renderRealmsList() {
     card.className = 'p-3.5 sm:p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-slate-700/80 transition flex items-center justify-between gap-3 shadow-sm';
     card.dataset.realmId = realm.id;
 
-    const isOfficial = realm.name.toLowerCase().includes('arsenalfinland');
+    const isOfficial = Boolean(realm.id && (realm.id.includes('official') || realm.is_default));
 
     const iconDisplay = realm.image_icon 
       ? `<img src="${escapeHtml(realm.image_icon)}" alt="${escapeHtml(realm.name)}" class="w-8 h-8 object-cover rounded-lg" />`
@@ -247,7 +247,7 @@ function renderRealmsList() {
 
       <div class="flex items-center gap-2 shrink-0">
         <a 
-          href="/?realm=${encodeURIComponent(realm.name)}" 
+          href="/?realm=${encodeURIComponent(realm.id)}" 
           target="_blank" 
           class="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-750 p-2 rounded-xl border border-slate-700 transition"
           title="Open this realm in Fansphere main view"
@@ -485,7 +485,7 @@ async function createRealm(e) {
 
   if (!nameInput) return;
   const name = nameInput.value.trim();
-  const id = name.toLowerCase().replace(/\s+/g, '-');
+  const id = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `realm-${Date.now()}`;
   const badge_color = colorInput ? colorInput.value.trim() : '#EF4444';
   const icon = iconInput ? iconInput.value.trim() : '🛡️';
   const short_name = shortNameInput ? shortNameInput.value.trim().slice(0, 16) : '';

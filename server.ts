@@ -80,17 +80,14 @@ function extractQuotedAuthors(text: string): string[] {
 
 
 
-export function normalizeRealm(realm: string | undefined): string {
-  if (!realm) return 'Neutral Football Fan';
-  const str = String(realm).trim().toLowerCase();
-
-  if (typeof state.realms !== 'undefined' && Array.isArray(state.realms)) {
-    const matched = state.realms.find(r => r.name.toLowerCase() === str || r.id.toLowerCase() === str);
-    if (matched) return matched.name;
+export function getDefaultRealmId(): string {
+  if (typeof state.realms !== 'undefined' && Array.isArray(state.realms) && state.realms.length > 0) {
+    const def = state.realms.find(r => r.is_default);
+    if (def) return def.id;
+    return state.realms[0].id;
   }
-  return 'Neutral Football Fan';
+  return 'neutral-football-fan';
 }
-
 
 export function slugify(text: string): string {
   return text
@@ -98,6 +95,26 @@ export function slugify(text: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+export function normalizeRealm(realm: string | undefined): string {
+  if (!realm || realm.toLowerCase() === 'all') return getDefaultRealmId();
+  const str = String(realm).trim().toLowerCase();
+
+  if (typeof state.realms !== 'undefined' && Array.isArray(state.realms) && state.realms.length > 0) {
+    const exactId = state.realms.find(r => r.id.toLowerCase() === str);
+    if (exactId) return exactId.id;
+
+    const exactName = state.realms.find(r => r.name.toLowerCase() === str);
+    if (exactName) return exactName.id;
+
+    const slugName = state.realms.find(r => slugify(r.name) === str);
+    if (slugName) return slugName.id;
+
+    const fuzzy = state.realms.find(r => str.includes(r.id.toLowerCase()) || str.includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(str));
+    if (fuzzy) return fuzzy.id;
+  }
+  return getDefaultRealmId();
 }
 
 
@@ -310,7 +327,8 @@ app.post('/api/auth/session', async (req, res) => {
   if (req.headers['x-session-id']) {
     return handleSessionUpdate(req, res);
   }
-  const { nickname, email, flair } = req.body;
+  const { nickname, email } = req.body;
+  const rawRealm = req.body.realm !== undefined ? req.body.realm : req.body.flair;
 
   if (!nickname || typeof nickname !== 'string' || nickname.trim().length < 2 || nickname.trim().length > 30) {
     return res.status(400).json({ detail: 'Nickname must be between 2 and 30 characters' });
@@ -323,7 +341,7 @@ app.post('/api/auth/session', async (req, res) => {
 
   const cleanNickname = nickname.trim().toLowerCase();
   const cleanEmail = email.trim().toLowerCase();
-  const cleanRealm = normalizeRealm(flair);
+  const cleanRealm = normalizeRealm(rawRealm);
 
   // Check Email-Nickname Link in Firestore
   try {
@@ -453,8 +471,9 @@ const handleSessionUpdate = async (req: express.Request, res: express.Response) 
   }
 
 
-  if (realm !== undefined && typeof realm === 'string' && realm.trim().length > 0) {
-    session.realm = normalizeRealm(realm);
+  const rawRealm = req.body.realm !== undefined ? req.body.realm : req.body.flair;
+  if (rawRealm !== undefined && typeof rawRealm === 'string' && rawRealm.trim().length > 0) {
+    session.realm = normalizeRealm(rawRealm);
   }
 
   session.last_active_at = new Date().toISOString();
@@ -535,20 +554,9 @@ export function matchClubRealm(authorRealm: string | undefined, selectedRealm: s
   if (!selectedRealm || selectedRealm.toLowerCase() === 'all') return true;
   if (!authorRealm) return false;
 
-  const a = authorRealm.trim().toLowerCase();
-  const b = selectedRealm.trim().toLowerCase();
-  if (a === b) return true;
-
-
-  // Dynamic registered realms matching
-  const dynamicRealm = state.realms.find(r => r.name.toLowerCase() === b || r.id.toLowerCase() === b);
-  if (dynamicRealm) {
-    const dynName = dynamicRealm.name.toLowerCase();
-    const dynId = dynamicRealm.id.toLowerCase();
-    return a === dynName || a === dynId || slugify(a) === dynId || a.includes(dynName) || dynName.includes(a);
-  }
-
-  return a.includes(b) || b.includes(a);
+  const targetId = normalizeRealm(selectedRealm);
+  const authId = normalizeRealm(authorRealm);
+  return targetId === authId;
 }
 
 // 1. Posts List (Always sorted by latest changes including comments, filterable by tag, club realm, and search query)
@@ -670,7 +678,7 @@ app.post('/api/posts', (req, res) => {
     title: title.trim(),
     content: content.trim(),
     author: session.nickname,
-    author_realm: session.realm || 'Neutral Football Fan',
+    author_realm: normalizeRealm(session.realm),
     tag: tag ? String(tag).trim() : 'Discussion',
     upvotes: 1,
     downvotes: 0,
@@ -951,7 +959,7 @@ app.post('/api/posts/:id/comments', (req, res) => {
     post_id: postId,
     parent_id: parent_id ? parseInt(parent_id, 10) : null,
     author: session.nickname,
-    author_realm: session.realm || 'Neutral Football Fan',
+    author_realm: normalizeRealm(session.realm),
     content: content.trim(),
     upvotes: 1,
     image_url: cleanCommentImageUrl,
@@ -1049,7 +1057,7 @@ app.get('/api/chat/history', async (req, res) => {
   chatMessagesFromFirestore.sort((a, b) => a.id - b.id);
   let roomMessages = chatMessagesFromFirestore.filter(m => m.room === room);
   if (realm && realm.toLowerCase() !== 'all') {
-    roomMessages = roomMessages.filter(m => matchClubRealm(m.author_flair, realm));
+    roomMessages = roomMessages.filter(m => matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, realm));
   }
   // Last `limit` messages in chronological order
   const slice = roomMessages.slice(-limit);
@@ -1079,12 +1087,12 @@ app.post('/api/chat/message', (req, res) => {
     id: assignedChatId,
     room: room ? String(room).trim() : 'general',
     author: session.nickname,
-    author_realm: session.realm || 'Neutral Football Fan',
+    author_realm: normalizeRealm(session.realm),
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
     content: trimmedContent,
     created_at: new Date().toISOString(),
     reactions: {},
-    realm: session.realm || 'Neutral Football Fan',
+    realm: normalizeRealm(session.realm),
     mentions: extractedMentions
   };
 
@@ -1634,12 +1642,12 @@ wss.on('connection', (ws: WebSocket) => {
             id: state.nextChatId++,
             room: payload.room || 'general',
             author: session.nickname,
-            author_realm: session.realm || 'Neutral Football Fan',
+            author_realm: normalizeRealm(session.realm),
             badge_color: payload.badge_color || '#EF4444',
             content,
             created_at: new Date().toISOString(),
             reactions: {},
-            realm: session.realm || 'Neutral Football Fan',
+            realm: normalizeRealm(session.realm),
             mentions: extractedMentions
           };
           state.chatMessages.push(newChat);

@@ -2,26 +2,6 @@
 
 let currentRealms = [];
 
-function normalizeRealm(realm) {
-  if (!realm) return 'Neutral Football Fan';
-  const str = String(realm).trim().toLowerCase();
-  
-  if (Array.isArray(currentRealms)) {
-    const matched = currentRealms.find(r => r.name.toLowerCase() === str || r.id === str);
-    if (matched) return matched.name;
-  }
-  return 'Neutral Football Fan';
-}
-
-function getRealmBadgeColor(realm) {
-  const norm = normalizeRealm(realm);
-  if (Array.isArray(currentRealms)) {
-    const matched = currentRealms.find(r => r.name === norm || r.id === norm);
-    if (matched && matched.badge_color) return matched.badge_color;
-  }
-  return '#94A3B8';
-}
-
 // State
 const state = {
   sessionId: localStorage.getItem('fansphere_session_id') || null,
@@ -29,8 +9,8 @@ const state = {
   user: {
     handle: localStorage.getItem('fansphere_handle') || '',
     email: localStorage.getItem('fansphere_email') || '',
-    realm: normalizeRealm(localStorage.getItem('fansphere_realm')),
-    badgeColor: getRealmBadgeColor(localStorage.getItem('fansphere_realm'))
+    realm: localStorage.getItem('fansphere_realm') || '',
+    badgeColor: '#94A3B8'
   },
   soundEnabled: localStorage.getItem('fansphere_sound') !== 'false',
   currentSort: 'new',
@@ -55,7 +35,73 @@ const state = {
   userReadStates: {}
 };
 
+function getDefaultRealmId() {
+  const realmsList = (Array.isArray(state?.realms) && state.realms.length > 0)
+    ? state.realms
+    : (Array.isArray(currentRealms) && currentRealms.length > 0 ? currentRealms : []);
+  const def = realmsList.find(r => r.is_default);
+  if (def) return def.id;
+  if (realmsList.length > 0) return realmsList[0].id;
+  return 'neutral-football-fan';
+}
+
+function getRealm(realmIdOrName) {
+  if (!realmIdOrName) return null;
+  const str = String(realmIdOrName).trim().toLowerCase();
+  const realmsList = (Array.isArray(state?.realms) && state.realms.length > 0)
+    ? state.realms
+    : (Array.isArray(currentRealms) && currentRealms.length > 0 ? currentRealms : []);
+
+  // 1. Exact ID match (case-insensitive)
+  let found = realmsList.find(r => r.id.toLowerCase() === str);
+  if (found) return found;
+
+  // 2. Exact Name match
+  found = realmsList.find(r => r.name.toLowerCase() === str);
+  if (found) return found;
+
+  // 3. Slugified Name match
+  found = realmsList.find(r => r.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') === str);
+  if (found) return found;
+
+  // 4. Substring fallback for legacy titles
+  found = realmsList.find(r => str.includes(r.id.toLowerCase()) || str.includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(str));
+  return found || null;
+}
+
+function normalizeRealm(realm) {
+  if (!realm || realm === 'All' || realm === 'all') return realm || getDefaultRealmId();
+  const matched = getRealm(realm);
+  if (matched) return matched.id;
+  const str = String(realm).trim().toLowerCase();
+  if (/^[a-z0-9-]+$/.test(str)) {
+    return str;
+  }
+  return getDefaultRealmId();
+}
+
+function getRealmDisplayName(realm) {
+  if (!realm || realm === 'All' || realm === 'all') return 'All';
+  if (realm === 'user_club') {
+    const userRealmObj = getRealm(state.user?.realm);
+    return `My Club (${userRealmObj ? userRealmObj.name : 'My Club'})`;
+  }
+  const matched = getRealm(realm);
+  return matched ? matched.name : realm;
+}
+
+function getRealmBadgeColor(realm) {
+  const matched = getRealm(realm);
+  return (matched && matched.badge_color) ? matched.badge_color : '#94A3B8';
+}
+
+function getRealmIcon(realm) {
+  const matched = getRealm(realm);
+  return (matched && matched.icon) ? matched.icon : '🛡️';
+}
+
 // ==================== USER READ STATES (ISOLATED PER USER) ====================
+
 
 function getUserReadStorageKey() {
   const email = (state.user?.email || '').trim().toLowerCase();
@@ -153,57 +199,19 @@ loadLocalReadStates();
 
 function getEffectiveRealm() {
   if (state.selectedRealm === 'user_club') {
-    return state.user.realm || 'Arsenal Finland Official Member';
+    return normalizeRealm(state.user.realm);
   }
-  return state.selectedRealm;
-}
-
-function getRealmDisplayName(realm) {
-  if (realm === 'user_club') {
-    return `My Club (${getRealmDisplayName(state.user.realm || 'Arsenal Finland Official Member')})`;
-  }
-  const norm = normalizeRealm(realm);
-  if (norm === 'Arsenal Finland Official Member') return 'Arsenal Finland Official Member';
-  if (norm === 'Neutral Football Fan') return 'Neutral Football Fan';
-  if (norm === 'Testers') return 'Testers';
-  return realm;
+  return state.selectedRealm ? normalizeRealm(state.selectedRealm) : getDefaultRealmId();
 }
 
 function matchClubRealm(authorFlair, targetRealm) {
   if (!targetRealm || targetRealm === 'All' || targetRealm === 'all') return true;
   if (!authorFlair) return false;
 
-  const a = authorFlair.trim().toLowerCase();
-  const effective = (targetRealm === 'user_club' ? (state.user.realm || 'Arsenal Finland Official Member') : targetRealm).trim().toLowerCase();
-  if (a === effective) return true;
+  const targetId = (targetRealm === 'user_club') ? normalizeRealm(state.user.realm) : normalizeRealm(targetRealm);
+  const authorId = normalizeRealm(authorFlair);
 
-  // Testers realm
-  if (effective.includes('tester')) {
-    return a.includes('tester');
-  }
-
-  // Neutral Football Fan realm
-  if (effective.includes('neutral')) {
-    return a.includes('neutral');
-  }
-
-  // Arsenal Finland official club realm
-  const arsenalFinlandVariants = ['arsenal finland', 'arsenal', 'gunner', 'gooner', 'official', 'member'];
-  if (arsenalFinlandVariants.some(v => effective.includes(v))) {
-    return arsenalFinlandVariants.some(v => a.includes(v));
-  }
-
-  // Dynamic registered realms matching
-  if (Array.isArray(state.realms)) {
-    const dynamicRealm = state.realms.find(r => r.name.toLowerCase() === effective || r.id.toLowerCase() === effective);
-    if (dynamicRealm) {
-      const dynName = dynamicRealm.name.toLowerCase();
-      const dynId = dynamicRealm.id.toLowerCase();
-      return a === dynName || a === dynId || a.includes(dynName) || dynName.includes(a);
-    }
-  }
-
-  return a.includes(effective) || effective.includes(a);
+  return targetId === authorId;
 }
 
 function updateRealmIndicators() {
@@ -211,12 +219,28 @@ function updateRealmIndicators() {
   if (flairInput) {
     flairInput.value = normalizeRealm(state.user.realm);
   }
+
+  const navUserBadge = document.getElementById('navUserBadge');
+  if (navUserBadge) {
+    navUserBadge.style.backgroundColor = getRealmBadgeColor(state.user.realm);
+  }
+
+  // Update dynamic sidebar realm card
+  const userRealmObj = getRealm(state.user?.realm);
+  const iconEl = document.getElementById('sidebarRealmIcon');
+  const nameEl = document.getElementById('sidebarRealmName');
+  const descEl = document.getElementById('sidebarRealmDesc');
+  if (userRealmObj) {
+    if (iconEl) iconEl.textContent = userRealmObj.icon || '🛡️';
+    if (nameEl) nameEl.textContent = userRealmObj.name;
+    if (descEl) descEl.textContent = userRealmObj.description || userRealmObj.short_name || 'Supporters Club';
+  }
 }
 
 // Session & Realm Gate: Enforce that page contents are only visible if there is both an active session and a selected realm
 function hasActiveSessionAndRealm() {
   const hasSession = !!(state.sessionId && state.session);
-  const realm = (state.selectedRealm || (state.session && state.session.flair) || '').trim();
+  const realm = (state.selectedRealm || (state.session && (state.session.realm || state.session.flair)) || '').trim();
   const hasRealm = !!(realm && realm.length > 0 && realm !== 'undefined' && realm !== 'null');
   return hasSession && hasRealm;
 }
@@ -257,22 +281,25 @@ function updateGateState() {
     const gateRealm = document.getElementById('gateRealmInput');
     if (gateNick && !gateNick.value) gateNick.value = localStorage.getItem('fansphere_handle') || '';
     if (gateEmail && !gateEmail.value) gateEmail.value = localStorage.getItem('fansphere_email') || '';
-    if (gateRealm && (!gateRealm.value || gateRealm.value === '')) {
-      const savedRealm = localStorage.getItem('fansphere_realm') || localStorage.getItem('fansphere_realm');
+    if (gateRealm) {
+      const savedRealm = localStorage.getItem('fansphere_realm');
       if (savedRealm && savedRealm !== 'All') {
-        gateRealm.value = savedRealm;
+        const normId = normalizeRealm(savedRealm);
+        if (normId) gateRealm.value = normId;
       }
     }
   }
 }
 
 function setRealmFilter(realm) {
-  state.selectedRealm = realm;
-  if (realm !== 'All') {
-    state.user.realm = realm;
-    localStorage.setItem('fansphere_realm', realm);
+  const realmId = (realm === 'All' || realm === 'all') ? 'All' : normalizeRealm(realm);
+  state.selectedRealm = realmId;
+  if (realmId !== 'All') {
+    state.user.realm = realmId;
+    state.user.badgeColor = getRealmBadgeColor(realmId);
+    localStorage.setItem('fansphere_realm', realmId);
   }
-  localStorage.setItem('fansphere_realm', realm);
+  localStorage.setItem('fansphere_realm', realmId);
   updateRealmIndicators();
   updateGateState();
   state.currentPage = 1;
@@ -293,7 +320,18 @@ async function loadRealms() {
     if (Array.isArray(data.realms) && data.realms.length > 0) {
       currentRealms = data.realms;
       state.realms = data.realms;
+      if (state.user && state.user.realm) {
+        state.user.realm = normalizeRealm(state.user.realm);
+        state.user.badgeColor = getRealmBadgeColor(state.user.realm);
+      } else if (state.user) {
+        state.user.realm = getDefaultRealmId();
+        state.user.badgeColor = getRealmBadgeColor(state.user.realm);
+      }
+      if (state.selectedRealm && state.selectedRealm !== 'All') {
+        state.selectedRealm = normalizeRealm(state.selectedRealm);
+      }
       updateRealmSelectDropdowns();
+      updateRealmIndicators();
     }
   } catch (err) {
     console.debug('Error loading club realms', err);
@@ -301,37 +339,48 @@ async function loadRealms() {
 }
 
 function updateRealmSelectDropdowns() {
-  if (!Array.isArray(state.realms) || state.realms.length === 0) return;
+  const realmsList = (Array.isArray(state.realms) && state.realms.length > 0)
+    ? state.realms
+    : (Array.isArray(currentRealms) && currentRealms.length > 0 ? currentRealms : []);
+
+  if (realmsList.length === 0) return;
+
+  const defaultId = getDefaultRealmId();
+  const activeUserRealmId = (state.user?.realm ? normalizeRealm(state.user.realm) : '') || defaultId;
 
   const profileSelect = document.getElementById('profileFlairInput');
   if (profileSelect) {
-    const currentVal = profileSelect.value || state.selectedRealm;
-    profileSelect.innerHTML = `
-      ${state.realms.map(r => `
-        <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
-      `).join('')}
-    `;
-    profileSelect.value = (state.selectedRealm === 'All') ? 'All' : normalizeRealm(state.user.realm);
+    profileSelect.innerHTML = realmsList.map(r => `
+      <option value="${escapeHtml(r.id)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
+    `).join('');
+    profileSelect.value = activeUserRealmId;
   }
 
   const sessionSelect = document.getElementById('sessionFlairInput');
   if (sessionSelect) {
-    const currentSessionVal = sessionSelect.value || normalizeRealm(state.user.realm);
-    sessionSelect.innerHTML = state.realms.map(r => `
-      <option value="${escapeHtml(r.name)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
+    sessionSelect.innerHTML = realmsList.map(r => `
+      <option value="${escapeHtml(r.id)}">${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
     `).join('');
-    if (currentSessionVal) sessionSelect.value = currentSessionVal;
+    const curVal = sessionSelect.value ? normalizeRealm(sessionSelect.value) : activeUserRealmId;
+    sessionSelect.value = curVal || defaultId;
   }
 
   const gateSelect = document.getElementById('gateRealmInput');
   if (gateSelect) {
-    const currentGateVal = gateSelect.value;
+    const savedRealm = localStorage.getItem('fansphere_realm');
+    const targetGateId = (savedRealm && savedRealm !== 'All') 
+      ? normalizeRealm(savedRealm) 
+      : (gateSelect.value ? normalizeRealm(gateSelect.value) : defaultId);
+
     gateSelect.innerHTML = `
-      <option value="" disabled ${!currentGateVal ? 'selected' : ''}>Select your Club Realm...</option>
-      ${state.realms.map(r => `
-        <option value="${escapeHtml(r.name)}" ${currentGateVal === r.name ? 'selected' : ''}>${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
+      <option value="" disabled ${!targetGateId ? 'selected' : ''}>Select your Club Realm...</option>
+      ${realmsList.map(r => `
+        <option value="${escapeHtml(r.id)}" ${r.id === targetGateId ? 'selected' : ''}>${escapeHtml(r.icon || '🛡️')} ${escapeHtml(r.name)}</option>
       `).join('')}
     `;
+    if (targetGateId) {
+      gateSelect.value = targetGateId;
+    }
   }
 }
 
@@ -350,11 +399,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadPresence();
   initPWA();
 
-  // Immediately enforce gate: hide page contents until verified active session & selected realm
-  updateGateState();
-
-  // Always load club realms first so gate dropdown has the dynamic realms ready
+  // Always load club realms first so gate and profile dropdowns have the dynamic realms ready
   await loadRealms();
+
+  // Support direct realm deep-linking via ?realm=query
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlRealm = urlParams.get('realm');
+  if (urlRealm) {
+    const matchedId = normalizeRealm(urlRealm);
+    if (matchedId) {
+      state.selectedRealm = matchedId;
+      state.user.realm = matchedId;
+      localStorage.setItem('fansphere_realm', matchedId);
+      updateRealmSelectDropdowns();
+    }
+  }
+
+  // Enforce gate: hide page contents until verified active session & selected realm
+  updateGateState();
 
   // Check or initialize fan session (reuses if valid, prompts if new or expired)
   const isSessionValid = await checkSession();
@@ -477,8 +539,6 @@ function initModalLightDismiss() {
 // User Profile & Session UI
 function initUserProfile(force = false) {
   const handleEl = document.getElementById('navUsername');
-  const inputHandle = document.getElementById('profileHandleInput');
-  const inputEmail = document.getElementById('profileEmailInput');
   const inputFlair = document.getElementById('profileFlairInput');
   const sessionIdDisplay = document.getElementById('profileSessionIdDisplay');
   const profileModal = document.getElementById('userProfileModal');
@@ -486,7 +546,7 @@ function initUserProfile(force = false) {
   const currentNickname = state.user.handle || 'Guest Fan';
   if (handleEl) handleEl.textContent = currentNickname;
 
-  // Normalize user flair to ensure only allowed supporter flairs are used
+  // Normalize active realm 
   state.user.realm = normalizeRealm(state.user.realm);
   state.user.badgeColor = getRealmBadgeColor(state.user.realm);
   localStorage.setItem('fansphere_realm', state.user.realm);
@@ -498,7 +558,7 @@ function initUserProfile(force = false) {
     const emailDisplay = document.getElementById('profileEmailDisplay');
     if (handleDisplay) handleDisplay.textContent = state.user.handle || '';
     if (emailDisplay) emailDisplay.textContent = state.user.email || '';
-    if (inputFlair) inputFlair.value = (state.selectedRealm === 'All') ? 'All' : state.user.realm;
+    if (inputFlair) inputFlair.value = state.user.realm || getDefaultRealmId();
   }
 
   if (sessionIdDisplay) {
@@ -507,6 +567,7 @@ function initUserProfile(force = false) {
   }
 
   updateRealmIndicators();
+  updateRealmSelectDropdowns();
 }
 
 // ==================== SESSION MANAGEMENT ====================
@@ -554,17 +615,15 @@ function applySession(session, skipWsAuth = false) {
   state.sessionId = session.id;
   state.user.handle = session.nickname;
   state.user.email = session.email;
-  state.user.realm = normalizeRealm(session.flair);
-  state.user.badgeColor = getRealmBadgeColor(state.user.realm);
-  state.selectedRealm = session.flair || state.selectedRealm;
+  const sessionRealm = normalizeRealm(session.realm || session.flair);
+  state.user.realm = sessionRealm;
+  state.user.badgeColor = getRealmBadgeColor(sessionRealm);
+  state.selectedRealm = sessionRealm || state.selectedRealm;
 
   localStorage.setItem('fansphere_session_id', session.id);
   localStorage.setItem('fansphere_handle', session.nickname);
   localStorage.setItem('fansphere_email', session.email);
-  localStorage.setItem('fansphere_realm', state.user.realm);
-  if (state.selectedRealm) {
-    localStorage.setItem('fansphere_realm', state.selectedRealm);
-  }
+  localStorage.setItem('fansphere_realm', sessionRealm);
 
   initUserProfile();
   loadLocalReadStates();
@@ -644,6 +703,9 @@ async function refreshAllContent() {
               ${post.tag}
             </span>
             <span class="text-xs text-slate-300 font-semibold">${escapeHtml(post.author)}</span>
+            <span class="bg-slate-700/50 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600/40">
+              ${escapeHtml(getRealmDisplayName(post.author_realm || post.author_flair))}
+            </span>
             <span class="text-slate-500 text-xs">• ${formatRelativeTime(post.created_at)}</span>
           `;
         }
@@ -699,7 +761,9 @@ function openSessionPromptModal(reason = 'new') {
   // Pre-fill previous values from local storage
   if (nickInput && !nickInput.value) nickInput.value = localStorage.getItem('fansphere_handle') || '';
   if (emailInput && !emailInput.value) emailInput.value = localStorage.getItem('fansphere_email') || '';
-  if (flairInput && localStorage.getItem('fansphere_realm')) flairInput.value = localStorage.getItem('fansphere_realm');
+  if (flairInput && localStorage.getItem('fansphere_realm')) {
+    flairInput.value = normalizeRealm(localStorage.getItem('fansphere_realm'));
+  }
 
   if (reason === 'expired') {
     if (titleEl) titleEl.textContent = 'Session Expired';
@@ -982,6 +1046,7 @@ function handleWebSocketMessage(msg) {
         currentRealms = msg.realms;
         state.realms = msg.realms;
         updateRealmSelectDropdowns();
+        updateRealmIndicators();
         renderPosts();
         renderChatStream();
       }
@@ -1430,7 +1495,7 @@ function renderPostCardHtml(post) {
           </span>
           <span class="text-slate-400 font-medium truncate max-w-[90px]">${escapeHtml(post.author)}</span>
           <span class="bg-slate-700/50 text-slate-300 text-[8px] px-1 py-0.2 rounded border border-slate-600/40 truncate max-w-[100px]">
-            ${escapeHtml(post.author_realm || 'Gunner')}
+            ${escapeHtml(getRealmDisplayName(post.author_realm || post.author_flair))}
           </span>
           <span class="text-slate-500">• ${formatRelativeTime(post.created_at)}</span>
           ${unreadCommentsCount > 0 ? `
@@ -1603,6 +1668,9 @@ async function openPostDetailModal(postId) {
         ${post.tag}
       </span>
       <span class="text-xs text-slate-300 font-semibold">${escapeHtml(post.author)}</span>
+      <span class="bg-slate-700/50 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600/40">
+        ${escapeHtml(getRealmDisplayName(post.author_realm || post.author_flair))}
+      </span>
       <span class="text-slate-500 text-xs">• ${formatRelativeTime(post.created_at)}</span>
     `;
 
@@ -1651,7 +1719,7 @@ function renderCommentHtml(comment) {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="font-bold text-slate-200">${escapeHtml(comment.author)}</span>
-          <span class="bg-slate-700/40 text-slate-300 text-[10px] px-1.5 py-0.5 rounded">${escapeHtml(comment.author_realm || 'Gunner')}</span>
+          <span class="bg-slate-700/40 text-slate-300 text-[10px] px-1.5 py-0.5 rounded">${escapeHtml(getRealmDisplayName(comment.author_realm || comment.author_flair))}</span>
           <span class="text-slate-500 text-[11px]">• ${formatRelativeTime(comment.created_at)}</span>
         </div>
       </div>
@@ -1938,7 +2006,7 @@ function appendChatMessage(msg, autoScroll = true, isNew = false) {
     <div class="flex items-center gap-1.5 text-[10px]">
       <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${msg.badge_color || '#EF4444'}"></span>
       <span class="font-bold text-slate-200 truncate ${isSelf ? 'text-red-400 font-extrabold' : (isMentioned ? 'text-amber-300' : '')}">${escapeHtml(msg.author)}</span>
-      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(msg.author_realm || 'Arsenal Finland Official Member')}</span>
+      <span class="bg-slate-700/40 text-slate-400 text-[8px] px-1 py-0.2 rounded truncate max-w-[100px]">${escapeHtml(getRealmDisplayName(msg.author_realm || msg.author_flair || msg.realm))}</span>
       <span class="text-slate-500 text-[9px] ml-auto shrink-0">${formatRelativeTime(msg.created_at)}</span>
     </div>
 
@@ -3131,7 +3199,8 @@ function initEventHandlers() {
 
     // Ensure all required fields exist for new session creation if needed
     if (!payload.nickname) payload.nickname = newHandle || state.user.handle || 'GuestFan';
-    if (!payload.email) payload.email = emailRegex.test(newEmail) ? newEmail : (state.user.email || 'fan@arsenalfinland.fi');
+    if (!payload.email) payload.email = emailRegex.test(newEmail) ? newEmail : (state.user.email || 'fan@fansphere.app');
+    if (!payload.realm) payload.realm = newFlair;
     if (!payload.flair) payload.flair = newFlair;
 
     try {
@@ -3160,7 +3229,8 @@ function initEventHandlers() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             nickname: newHandle || 'GuestFan',
-            email: emailRegex.test(newEmail) ? newEmail : 'fan@arsenalfinland.fi',
+            email: emailRegex.test(newEmail) ? newEmail : (state.user.email || 'fan@fansphere.app'),
+            realm: newFlair,
             flair: newFlair
           })
         });
@@ -3248,7 +3318,7 @@ function initEventHandlers() {
 
     const nickname = nickInput.value.trim();
     const email = emailInput.value.trim();
-    const flair = flairInput ? normalizeRealm(flairInput.value) : 'Arsenal Finland Official Member';
+    const flair = flairInput ? normalizeRealm(flairInput.value) : getDefaultRealmId();
 
     if (nickname.length < 2) {
       if (errEl) {
@@ -3275,7 +3345,7 @@ function initEventHandlers() {
       const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, email, flair })
+        body: JSON.stringify({ nickname, email, realm: flair, flair })
       });
 
       if (!res.ok) {
@@ -3317,7 +3387,7 @@ function initEventHandlers() {
 
     const nickname = nickInput.value.trim();
     const email = emailInput.value.trim();
-    const flair = realmInput.value.trim();
+    const realmId = normalizeRealm(realmInput.value.trim());
 
     if (errBox) errBox.classList.add('hidden');
 
@@ -3337,7 +3407,7 @@ function initEventHandlers() {
       return;
     }
 
-    if (!flair) {
+    if (!realmId) {
       if (errBox && errText) {
         errText.textContent = 'Please select your Club Realm';
         errBox.classList.remove('hidden');
@@ -3354,7 +3424,7 @@ function initEventHandlers() {
       const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, email, flair })
+        body: JSON.stringify({ nickname, email, realm: realmId, flair: realmId })
       });
 
       const data = await res.json().catch(() => ({}));
@@ -3362,8 +3432,8 @@ function initEventHandlers() {
         throw new Error(data.detail || 'Failed to create session');
       }
 
-      state.selectedRealm = flair;
-      localStorage.setItem('fansphere_realm', flair);
+      state.selectedRealm = realmId;
+      localStorage.setItem('fansphere_realm', realmId);
       applySession(data.session);
       updateGateState();
       playChime(523.25, 0.2);

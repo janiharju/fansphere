@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fansphere | Live Sports Fan Community</title>
-  <meta name="description" content="Live sports fan community for Finnish Arsenal and football supporters with real-time match chatter, tactical analysis, and active debate.">
+  <meta name="description" content="Live sports fan community for football and sports supporters across club realms with real-time match chatter, tactical analysis, and active debate.">
   <meta property="og:title" content="Fansphere">
-  <meta property="og:description" content="Live sports fan community for Finnish Arsenal and football supporters with real-time match chatter, tactical analysis, and active debate.">
+  <meta property="og:description" content="Live sports fan community for football and sports supporters across club realms with real-time match chatter, tactical analysis, and active debate.">
   <!-- PWA & Mobile Web App Meta Tags -->
   <meta name="theme-color" content="#0B1120">
   <meta name="mobile-web-app-capable" content="yes">
@@ -109,7 +109,7 @@
         <!-- User Profile Pill / Switcher (Visible only with active session & realm) -->
         <button id="openProfileModalBtn" class="hidden flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded-lg text-xs transition cursor-pointer select-none">
           <span id="navUserBadge" class="w-2 h-2 rounded-full bg-red-500"></span>
-          <span id="navUsername" class="font-medium text-slate-200">GunnerFIN</span>
+          <span id="navUsername" class="font-medium text-slate-200">Fan</span>
           <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
         </button>
       </div>
@@ -156,7 +156,7 @@
             type="text" 
             id="gateNicknameInput" 
             class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-red-500 font-medium placeholder:text-slate-500"
-            placeholder="e.g. HelsinkiGunner"
+            placeholder="e.g. FootballFan"
             required
             minlength="2"
             maxlength="30"
@@ -173,7 +173,7 @@
             type="email" 
             id="gateEmailInput" 
             class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-red-500 font-medium placeholder:text-slate-500"
-            placeholder="e.g. gunner@example.com"
+            placeholder="e.g. fan@example.com"
             required
             autocomplete="email"
           />
@@ -182,7 +182,7 @@
 
         <div>
           <label for="gateRealmInput" class="block font-semibold text-slate-200 mb-1.5">
-            Club Realm & Supporter Flair <span class="text-red-400">*</span>
+            Club Realm<span class="text-red-400">*</span>
           </label>
           <select id="gateRealmInput" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-red-500 font-medium cursor-pointer" required>
             <option value="" disabled selected>Select your Club Realm...</option>
@@ -212,10 +212,10 @@
       <!-- Fan Club Card (Compact) -->
       <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/80 shadow-sm shrink-0">
         <div class="flex items-center gap-2.5 mb-2">
-          <div class="text-2xl">🔴⚪</div>
+          <div id="sidebarRealmIcon" class="text-2xl">🛡️</div>
           <div class="min-w-0">
-            <h2 class="font-bold text-slate-100 text-sm truncate">Club Realm</h2>
-            <p class="text-[10px] text-slate-400 truncate">Finnish Arsenal Supporters Club</p>
+            <h2 id="sidebarRealmName" class="font-bold text-slate-100 text-sm truncate">Club Realm</h2>
+            <p id="sidebarRealmDesc" class="text-[10px] text-slate-400 truncate">Supporters Club</p>
           </div>
         </div>
         <p class="text-[11px] text-slate-300 leading-snug mb-2.5">
@@ -722,11 +722,11 @@
           <p class="text-[10px] text-slate-400">Your registered contact email address.</p>
         </div>
 
-        <!-- Field 3: Supporter Flair & Realm Selector -->
+        <!-- Field 3: Realm Selector -->
         <div class="space-y-1">
           <div class="flex items-center justify-between">
             <label for="profileFlairInput" class="text-slate-200 font-semibold flex items-center gap-1">
-              <span>🛡️ Club Realm & Supporter Flair</span>
+              <span>🛡️ Club Realm</span>
             </label>
             <span class="text-[10px] text-slate-400">Selects team realm</span>
           </div>
@@ -775,7 +775,7 @@
           type="text" 
           id="sessionNicknameInput" 
           class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 font-medium text-xs placeholder:text-slate-500"
-          placeholder="e.g. HelsinkiGunner"
+          placeholder="e.g. FootballFan"
           required
           minlength="2"
           maxlength="30"
@@ -792,7 +792,7 @@
           type="email" 
           id="sessionEmailInput" 
           class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 font-medium text-xs placeholder:text-slate-500"
-          placeholder="e.g. gunner@example.com"
+          placeholder="e.g. fan@example.com"
           required
           autocomplete="email"
         />
@@ -801,7 +801,7 @@
 
       <div>
         <label for="sessionFlairInput" class="block text-slate-200 font-semibold mb-1">
-          Supporter Flair
+          Club Realm
         </label>
         <select id="sessionFlairInput" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 text-xs">
 

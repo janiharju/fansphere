@@ -90,7 +90,7 @@
           </div>
           <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">Administrator Access</h1>
           <p class="text-xs text-slate-400 leading-relaxed">
-            Please enter the administrator password to manage club realms, supporter flairs, and community settings.
+            Please enter the administrator password to manage club realms, and community settings.
           </p>
         </div>
 
@@ -286,7 +286,7 @@
                 />
                 <!-- Quick Color Swatches -->
                 <div class="flex flex-wrap gap-1 items-center">
-                  <button type="button" class="color-swatch-btn w-6 h-6 rounded-full bg-[#EF4444] border border-white/20 hover:scale-110 transition" data-color="#EF4444" title="Arsenal Red"></button>
+                  <button type="button" class="color-swatch-btn w-6 h-6 rounded-full bg-[#EF4444] border border-white/20 hover:scale-110 transition" data-color="#EF4444" title="Red"></button>
                   <button type="button" class="color-swatch-btn w-6 h-6 rounded-full bg-[#3B82F6] border border-white/20 hover:scale-110 transition" data-color="#3B82F6" title="Blue"></button>
                   <button type="button" class="color-swatch-btn w-6 h-6 rounded-full bg-[#06B6D4] border border-white/20 hover:scale-110 transition" data-color="#06B6D4" title="Cyan"></button>
                   <button type="button" class="color-swatch-btn w-6 h-6 rounded-full bg-[#10B981] border border-white/20 hover:scale-110 transition" data-color="#10B981" title="Emerald"></button>
@@ -427,10 +427,13 @@
     </div>
 
     <form id="editRealmForm" class="py-4 text-xs text-slate-300 space-y-3">
-      <input type="hidden" id="editRealmIdInput" />
       <div>
-        <label for="editRealmNameInput" class="block text-slate-400 mb-1">Name</label>
-        <input type="text" id="editRealmNameInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" required readonly />
+        <label for="editRealmIdInput" class="block text-slate-400 mb-1">Realm ID (Static Identifier)</label>
+        <input type="text" id="editRealmIdInput" class="w-full bg-slate-900 border border-slate-800 text-slate-400 rounded-xl px-3 py-2 text-xs font-mono select-all cursor-not-allowed" readonly />
+      </div>
+      <div>
+        <label for="editRealmNameInput" class="block text-slate-400 mb-1">Realm Name</label>
+        <input type="text" id="editRealmNameInput" class="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500" required minlength="2" maxlength="50" />
       </div>
       <div>
         <label for="editRealmIconInput" class="block text-slate-400 mb-1">Icon</label>
