@@ -162,7 +162,6 @@ export async function loadChatMessagesFromFirestore(realmId?: string): Promise<a
     snapshot.forEach(docSnap => {
       list.push(docSnap.data());
     });
-    console.info('[Firestore] Fetched:', list.length, " from ", realmId );
     return list;
   } catch (err) {
     console.warn('[Firestore] Could not load chat messages collection:', err);
