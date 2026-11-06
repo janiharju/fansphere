@@ -599,16 +599,17 @@ app.get('/api/posts', (req, res) => {
   // Get the user's realm (from query param, session, or default)
   const userRealm = getUserRealm(req);
   
-  let filtered = [...state.posts];
   // Always filter by user's realm
-  filtered = filterByRealm(filtered, userRealm);
+  const filteredByUserRealm = filterByRealm(state.posts, userRealm);
+  
+  let filtered = [...filteredByUserRealm];
   
   if (tag && tag.toLowerCase() !== 'all') {
     filtered = filtered.filter(p => p.tag.toLowerCase() === tag.toLowerCase());
   }
   // If explicit realm query param is provided, use it for additional filtering
   if (queryRealm && queryRealm.toLowerCase() !== 'all') {
-    filtered = filtered.filter(p => matchClubRealm(p.author_realm, queryRealm));
+    filtered = filtered.filter(p => matchClubRealm((p as any).author_realm || (p as any).author_flair, queryRealm));
   }
 
   // Filter posts and comments by search keywords within the selected realm
@@ -1139,7 +1140,12 @@ app.get('/api/chat/history', async (req, res) => {
   // Last `limit` messages in chronological order
   const slice = roomMessages.slice(-limit);
 
-  res.json(slice);
+  res.json({ 
+    messages: slice, 
+    debugCount: chatMessagesFromFirestore.length,
+    userRealm: userRealm,
+    firstMsgRealm: chatMessagesFromFirestore.length > 0 ? chatMessagesFromFirestore[0].author_realm : 'none'
+  });
 });
 
 // 8. Post Chat Message

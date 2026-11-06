@@ -153,6 +153,7 @@ export async function persistChatMessageToFirestore(msg: any) {
 
 export async function loadChatMessagesFromFirestore(realmId?: string): Promise<any[]> {
   try {
+    console.log(`[Firestore DEBUG] Fetching chat messages for realm: "${realmId}"`);
     let q: Query | CollectionReference = collection(db, 'chat_messages');
     if (realmId) {
       q = query(q, where('author_realm', '==', realmId));
@@ -162,6 +163,7 @@ export async function loadChatMessagesFromFirestore(realmId?: string): Promise<a
     snapshot.forEach(docSnap => {
       list.push(docSnap.data());
     });
+    console.log(`[Firestore DEBUG] Fetched ${list.length} messages`);
     return list;
   } catch (err) {
     console.warn('[Firestore] Could not load chat messages collection:', err);
