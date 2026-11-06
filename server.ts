@@ -577,8 +577,13 @@ function getUserRealm(req: express.Request): string {
 }
 
 // Helper to filter entities by realm
-function filterByRealm<T extends { author_realm?: string, author_flair?: string }>(entities: T[], realm: string): T[] {
-  return entities.filter(e => matchClubRealm(e.author_realm || e.author_flair, realm));
+function filterByRealm<T extends { author_realm?: string, author_flair?: string, realm?: string }>(entities: T[], realm: string): T[] {
+  return entities.filter(e => {
+    // For backward compatibility: entities without realm info are treated as neutral realm
+    const entityRealm = e.author_realm || e.author_flair || e.realm;
+    const effectiveRealm = entityRealm || getDefaultRealmId();
+    return matchClubRealm(effectiveRealm, realm);
+  });
 }
 
 // 1. Posts List (Always sorted by latest changes including comments, filterable by tag, club realm, and search query)
@@ -1111,11 +1116,21 @@ app.get('/api/chat/history', async (req, res) => {
   let roomMessages = chatMessagesFromFirestore.filter(m => m.room === room);
   
   // Always filter by user's realm
-  roomMessages = roomMessages.filter(m => matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, userRealm));
+  // For backward compatibility: messages without realm info are treated as neutral realm
+  roomMessages = roomMessages.filter(m => {
+    const messageRealm = m.author_realm || (m as any).author_flair || m.realm;
+    // If no realm info, treat as neutral realm (default) for backward compatibility
+    const effectiveRealm = messageRealm || getDefaultRealmId();
+    return matchClubRealm(effectiveRealm, userRealm);
+  });
   
   // If explicit realm query param is provided, use it for additional filtering
   if (queryRealm && queryRealm.toLowerCase() !== 'all') {
-    roomMessages = roomMessages.filter(m => matchClubRealm(m.author_realm || (m as any).author_flair || m.realm, queryRealm));
+    roomMessages = roomMessages.filter(m => {
+      const messageRealm = m.author_realm || (m as any).author_flair || m.realm;
+      const effectiveRealm = messageRealm || getDefaultRealmId();
+      return matchClubRealm(effectiveRealm, queryRealm);
+    });
   }
   // Last `limit` messages in chronological order
   const slice = roomMessages.slice(-limit);
