@@ -577,8 +577,8 @@ function getUserRealm(req: express.Request): string {
 }
 
 // Helper to filter entities by realm
-function filterByRealm<T extends { author_realm?: string }>(entities: T[], realm: string): T[] {
-  return entities.filter(e => matchClubRealm(e.author_realm, realm));
+function filterByRealm<T extends { author_realm?: string, author_flair?: string }>(entities: T[], realm: string): T[] {
+  return entities.filter(e => matchClubRealm(e.author_realm || e.author_flair, realm));
 }
 
 // 1. Posts List (Always sorted by latest changes including comments, filterable by tag, club realm, and search query)
