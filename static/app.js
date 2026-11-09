@@ -1821,7 +1821,7 @@ function renderChatStream() {
 
 async function loadChatHistory() {
   try {
-    const res = await fetch(window.location.origin + '/api/chat/history?room=general&limit=1000');
+    const res = await fetch(window.location.origin + '/api/chat/history?limit=1000');
     if (!res.ok) throw new Error('Failed to load chat');
     const messages = await res.json();
     state.allChatMessages = Array.isArray(messages) ? messages.slice(-1000) : [];
@@ -2195,7 +2195,6 @@ function sendChatMessage(text) {
   }
 
   const payload = {
-    room: 'general',
     sessionId: state.sessionId,
     author: state.user.handle,
     author_realm: state.user.realm,

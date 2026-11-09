@@ -120,11 +120,6 @@
           "type": "number",
           "description": "Numeric message ID"
         },
-        "room": {
-          "type": "string",
-          "maxLength": 50,
-          "description": "Chat room identifier"
-        },
         "author": {
           "type": "string",
           "maxLength": 100,
@@ -155,7 +150,7 @@
           "description": "ISO timestamp"
         }
       },
-      "required": ["id", "room", "author", "content", "created_at"]
+      "required": ["id", "author", "content", "created_at"]
     },
     "Session": {
       "title": "Session",

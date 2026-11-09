@@ -137,7 +137,6 @@ export async function persistChatMessageToFirestore(msg: any) {
     const ref = doc(db, 'chat_messages', String(msg.id));
     const cleanMsg = {
       id: Number(msg.id),
-      room: String(msg.room || 'general').trim(),
       author: String(msg.author || 'Anonymous').trim(),
       author_realm: String(msg.author_realm || 'neutral-football-fan').trim(),
       badge_color: String(msg.badge_color || '#EF4444').trim(),

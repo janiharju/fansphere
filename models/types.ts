@@ -60,7 +60,6 @@ export interface Comment {
 
 export interface ChatMessage {
   id: number;
-  room: string;
   author: string;
   author_realm: string;
   badge_color: string;

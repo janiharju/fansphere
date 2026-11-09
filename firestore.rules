@@ -41,10 +41,9 @@ service cloud.firestore {
     }
 
     function isValidChatMessage(data) {
-      return data.keys().hasAll(['id', 'room', 'author', 'content', 'created_at']) &&
-             data.keys().hasOnly(['id', 'room', 'author', 'author_realm', 'badge_color', 'content', 'created_at', 'reactions', 'realm', 'mentions']) &&
+      return data.keys().hasAll(['id', 'author', 'content', 'created_at']) &&
+             data.keys().hasOnly(['id', 'author', 'author_realm', 'badge_color', 'content', 'created_at', 'reactions', 'realm', 'mentions']) &&
              data.id is number &&
-             data.room is string && data.room.size() <= 50 &&
              data.author is string && data.author.size() >= 1 && data.author.size() <= 100 &&
              (!('author_realm' in data) || (data.author_realm is string && data.author_realm.size() <= 100)) &&
              (!('badge_color' in data) || (data.badge_color is string && data.badge_color.size() <= 20)) &&

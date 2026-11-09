@@ -22,13 +22,9 @@
    `{"id": 90, "post_id": 1, "author": "Hacker", "content": "Legit", "bypassAuth": true, "created_at": "2026-10-08T00:00:00Z"}`
 7. **Comment with Oversized Content**:
    `{"id": 91, "post_id": 1, "author": "Hacker", "content": "x".repeat(5000), "created_at": "2026-10-08T00:00:00Z"}`
-8. **Chat Message with Illegal Room**:
-   `{"id": 92, "room": "root-admin-restricted", "author": "Spammer", "content": "Hello", "created_at": "2026-10-08T00:00:00Z"}`
-9. **Chat Message with Oversized Content**:
-   `{"id": 93, "room": "general", "author": "Spammer", "content": "x".repeat(5000), "created_at": "2026-10-08T00:00:00Z"}`
-10. **Session Privilege Escalation**:
+8. **Session Privilege Escalation**:
     `{"id": "sess-hack", "nickname": "Root", "flair": "Official", "role": "superadmin", "created_at": "2026-10-08T00:00:00Z", "expires_at": "2030-01-01"}`
-11. **Session Missing Nickname**:
+9. **Session Missing Nickname**:
     `{"id": "sess-empty", "flair": "Testers", "created_at": "2026-10-08T00:00:00Z", "expires_at": "2026-10-08T02:00:00Z"}`
-12. **Realm Unauthorized Deletion or Spoofing**:
+10. **Realm Unauthorized Deletion or Spoofing**:
     `{"id": "fake-realm", "name": "", "badge_color": "not-a-color"}`

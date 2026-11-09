@@ -1109,7 +1109,6 @@ app.post('/api/comments/:id/vote', (req, res) => {
 // 7. Chat History (Filterable by room and club realm)
 app.get('/api/chat/history', async (req, res) => {
   console.log('API Request: /api/chat/history', req.query);
-  const room = (req.query.room as string) || 'general';
   const queryRealm = req.query.realm as string | undefined;
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
@@ -1118,7 +1117,7 @@ app.get('/api/chat/history', async (req, res) => {
 
   const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore(userRealm);
   chatMessagesFromFirestore.sort((a, b) => a.id - b.id);
-  let roomMessages = chatMessagesFromFirestore.filter(m => m.room === room);
+  let roomMessages = chatMessagesFromFirestore;
   
   // Always filter by user's realm
   // For backward compatibility: messages without realm info are treated as neutral realm
@@ -1150,7 +1149,7 @@ app.post('/api/chat/message', (req, res) => {
     return res.status(401).json({ detail: 'Session required. Please enter your nickname and email to chat.', session_required: true });
   }
 
-  const { content, badge_color, room } = req.body;
+  const { content, badge_color } = req.body;
 
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
     return res.status(400).json({ detail: 'Chat content cannot be empty' });
@@ -1163,7 +1162,6 @@ app.post('/api/chat/message', (req, res) => {
 
   const msg: ChatMessage = {
     id: assignedChatId,
-    room: room ? String(room).trim() : 'general',
     author: session.nickname,
     author_realm: normalizeRealm(session.realm),
     badge_color: badge_color ? String(badge_color).trim() : '#EF4444',
@@ -1719,7 +1717,6 @@ wss.on('connection', (ws: WebSocket) => {
 
           const newChat: ChatMessage = {
             id: state.nextChatId++,
-            room: payload.room || 'general',
             author: session.nickname,
             author_realm: normalizeRealm(session.realm),
             badge_color: payload.badge_color || '#EF4444',
