@@ -1821,9 +1821,17 @@ function renderChatStream() {
 
 async function loadChatHistory() {
   try {
-    const res = await fetch(window.location.origin + '/api/chat/history?limit=1000');
+    const realm = state.user.realm || '';
+    const url = window.location.origin + `/api/chat/history?limit=1000${realm ? `&realm=${encodeURIComponent(realm)}` : ''}`;
+    console.log(`[Frontend DEBUG] Fetching chat history from: ${url}`);
+    const res = await fetch(url, {
+      headers: {
+        'x-session-id': state.sessionId || ''
+      }
+    });
     if (!res.ok) throw new Error('Failed to load chat');
     const messages = await res.json();
+    console.log(`[Frontend DEBUG] Fetched ${Array.isArray(messages) ? messages.length : 0} messages`);
     state.allChatMessages = Array.isArray(messages) ? messages.slice(-1000) : [];
     renderChatStream();
     try {
