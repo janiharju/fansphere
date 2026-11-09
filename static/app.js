@@ -391,7 +391,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initLucide();
   initModalLightDismiss();
   initMobileTabs();
-  initOnlineFansPopup();
   initSessionAutoRefresh();
   initEventHandlers();
   initChatMentions();
@@ -803,7 +802,7 @@ function updateOnlinePresence(count, nicknames = [], activeUsers = []) {
     : (state.activeNicknames && state.activeNicknames.length > 0 ? state.activeNicknames.length : 1);
 
   if (countEl) {
-    countEl.textContent = `${fansCount} ${fansCount === 1 ? 'Fan' : 'Fans'} Online`;
+    countEl.textContent = `${fansCount} ${fansCount === 1 ? 'Fan' : 'Fans'} Here`;
   }
   if (tooltipCount) {
     tooltipCount.textContent = fansCount;
@@ -835,45 +834,7 @@ function updateOnlinePresence(count, nicknames = [], activeUsers = []) {
   }
 }
 
-// Online fans pill & popup interactivity (hover + click toggle + outside click + esc dismiss)
-function initOnlineFansPopup() {
-  const pill = document.getElementById('onlineFansPill');
-  const tooltip = document.getElementById('onlineFansTooltip');
-  const wrapper = document.getElementById('onlineFansWrapper');
-  if (!pill || !tooltip) return;
 
-  const showPopup = () => {
-    tooltip.classList.remove('closed');
-    tooltip.classList.add('show');
-    pill.setAttribute('aria-expanded', 'true');
-  };
-
-  const hidePopup = () => {
-    tooltip.classList.remove('show');
-    tooltip.classList.add('closed');
-    pill.setAttribute('aria-expanded', 'false');
-  };
-
-  const togglePopup = () => {
-    const isShowing = tooltip.classList.contains('show') ||
-      (wrapper && wrapper.matches(':hover') && !tooltip.classList.contains('closed'));
-    if (isShowing) {
-      hidePopup();
-    } else {
-      showPopup();
-    }
-  };
-
-  pill.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    togglePopup();
-  });
-
-  // When mouse leaves the wrapper, reset the 'closed' flag so subsequent hovers show the tooltip
-  wrapper?.addEventListener('mouseleave', () => {
-    tooltip.classList.remove('closed');
-  });
 
   // Keep open when clicking inside the popup
   tooltip.addEventListener('click', (e) => {
