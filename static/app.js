@@ -3077,15 +3077,6 @@ function initEventHandlers() {
     const newFlair = flairInput ? normalizeRealm(flairInput.value) : normalizeRealm(state.user.realm);
 
 
-    if (newFlair) {
-      const prevFlair = state.user.realm;
-      state.user.realm = newFlair;
-      localStorage.setItem('fansphere_realm', newFlair);
-      if (prevFlair !== newFlair && state.selectedRealm === 'user_club') {
-        renderPosts();
-        renderChatStream();
-      }
-    }
 
     // Build the payload with whatever changed fields are valid
     const payload = {};
@@ -3095,7 +3086,7 @@ function initEventHandlers() {
     if (emailRegex.test(newEmail) && (!state.session || newEmail !== state.session.email)) {
       payload.email = newEmail;
     }
-    if (newFlair && (!state.session || newFlair !== state.session.flair)) {
+    if (newFlair && (!state.session || newFlair !== state.session.flair) && !options.isBlur) {
       payload.flair = newFlair;
     }
 
@@ -3183,12 +3174,19 @@ function initEventHandlers() {
       }
 
       const data = await res.json();
+      const realmChanged = data.session.realm !== state.user.realm;
+
       applySession(data.session);
       updateOnlinePresence(data.online_count, data.active_nicknames);
 
       // Re-authenticate WebSocket if open
       if (state.ws && state.ws.readyState === WebSocket.OPEN) {
         state.ws.send(JSON.stringify({ type: 'auth', sessionId: data.session.id }));
+      }
+      
+      if (realmChanged) {
+        renderPosts();
+        renderChatStream();
       }
 
       if (successEl) {
