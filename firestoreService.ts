@@ -160,7 +160,9 @@ export async function loadChatMessagesFromFirestore(realmId?: string): Promise<a
     const snapshot = await getDocs(q);
     const list: any[] = [];
     snapshot.forEach(docSnap => {
-      list.push(docSnap.data());
+      const data = docSnap.data();
+      console.log(`[Firestore DEBUG] Message ID ${data.id}, Author Realm: "${data.author_realm}"`);
+      list.push(data);
     });
     console.log(`[Firestore DEBUG] Fetched ${list.length} messages`);
     return list;
@@ -312,8 +314,11 @@ export async function loadNotificationsFromFirestore(userId: string): Promise<an
     const snapshot = await getDocs(q);
     const list: any[] = [];
     snapshot.forEach(docSnap => {
-      list.push(docSnap.data());
+      const data = docSnap.data();
+      console.log(`[Firestore DEBUG] Message ID ${data.id}, Author Realm: "${data.author_realm}"`);
+      list.push(data);
     });
+    console.log(`[Firestore DEBUG] Fetched ${list.length} messages`);
     return list;
   } catch (err) {
     console.warn('[Firestore] Could not load notifications collection:', err);

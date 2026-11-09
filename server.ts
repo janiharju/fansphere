@@ -212,6 +212,7 @@ function broadcastPresence() {
 }
 
 function getSessionFromReq(req: express.Request): Session | null {
+  console.log('[DEBUG] Request headers:', JSON.stringify(req.headers));
   const authHeader = req.headers['authorization'];
   let sessionId = req.headers['x-session-id'] as string | undefined;
   if (!sessionId && authHeader && authHeader.startsWith('Bearer ')) {
@@ -224,6 +225,7 @@ function getSessionFromReq(req: express.Request): Session | null {
   if (!sessionId) return null;
 
   const session = state.sessions.get(sessionId);
+  console.log(`[DEBUG] Session lookup for ${sessionId}: ${session ? 'found' : 'not found'}`);
   if (!session) return null;
 
   const now = Date.now();
@@ -572,12 +574,15 @@ function getUserRealm(req: express.Request): string {
   
   // Check session
   const session = getSessionFromReq(req);
+  console.log(`[DEBUG] getUserRealm session found: ${session ? session.id : 'none'}, realm: ${session?.realm}`);
   if (session?.realm) {
     return normalizeRealm(session.realm);
   }
   
   // Default to the default realm
-  return getDefaultRealmId();
+  const defaultRealm = getDefaultRealmId();
+  console.log(`[DEBUG] getUserRealm falling back to default: ${defaultRealm}`);
+  return defaultRealm;
 }
 
 // Helper to filter entities by realm
@@ -1113,6 +1118,7 @@ app.get('/api/chat/history', async (req, res) => {
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
   // Get the user's realm (from query param, session, or default)
+  const session = getSessionFromReq(req);
   const userRealm = getUserRealm(req);
 
   const chatMessagesFromFirestore = await fetchAllChatMessagesFromFirestore(userRealm);
