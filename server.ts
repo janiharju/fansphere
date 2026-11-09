@@ -1140,12 +1140,7 @@ app.get('/api/chat/history', async (req, res) => {
   // Last `limit` messages in chronological order
   const slice = roomMessages.slice(-limit);
 
-  res.json({ 
-    messages: slice, 
-    debugCount: chatMessagesFromFirestore.length,
-    userRealm: userRealm,
-    firstMsgRealm: chatMessagesFromFirestore.length > 0 ? chatMessagesFromFirestore[0].author_realm : 'none'
-  });
+  res.json(slice);
 });
 
 // 8. Post Chat Message

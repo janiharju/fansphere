@@ -836,25 +836,6 @@ function updateOnlinePresence(count, nicknames = [], activeUsers = []) {
 
 
 
-  // Keep open when clicking inside the popup
-  tooltip.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
-
-  // Dismiss popup on outside click
-  document.addEventListener('click', (e) => {
-    if (wrapper && !wrapper.contains(e.target)) {
-      hidePopup();
-    }
-  });
-
-  // Dismiss on Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      hidePopup();
-    }
-  });
-}
 
 // Fetch initial presence immediately on load
 async function loadPresence() {
