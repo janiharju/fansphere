@@ -567,6 +567,21 @@ function initUserProfile(force = false) {
 
   updateRealmIndicators();
   updateRealmSelectDropdowns();
+  updateHeaderRealmIcon();
+}
+
+function updateHeaderRealmIcon() {
+  const iconEl = document.getElementById('headerRealmIcon');
+  if (!iconEl) return;
+  
+  const realmId = state.user.realm;
+  const realm = getRealm(realmId);
+  
+  if (realm && realm.image_icon && realm.image_icon.trim().length > 0) {
+    iconEl.src = realm.image_icon;
+  } else {
+    iconEl.src = '/static/icon.svg'; // Default icon
+  }
 }
 
 // ==================== SESSION MANAGEMENT ====================
