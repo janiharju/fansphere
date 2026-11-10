@@ -3734,6 +3734,7 @@ function initPWA() {
   if ('serviceWorker' in navigator) {
     // Reload page when new service worker activates and claims clients
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      console.log('[PWA] controllerchange event fired, refreshing:', refreshing, 'hasActiveSession:', hasActiveSessionAndRealm());
       if (!refreshing) {
         refreshing = true;
         if (hasActiveSessionAndRealm()) {
