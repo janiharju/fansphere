@@ -35,7 +35,7 @@ steps:
         done
 
         # Compare and merge all available stores (remote live + workspace local) so no posts are ever lost
-        python3 -c "
+python3 -c "
 import json, os
 
 def load(f):
@@ -48,6 +48,7 @@ def load(f):
         except Exception:
             pass
     return None
+"
 
 files = ['/workspace/backup_check/remote_store.json', 'data/store.json', 'data/store.backup.json']
 stores = [s for s in [load(f) for f in files] if s]
