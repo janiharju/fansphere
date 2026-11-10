@@ -658,7 +658,8 @@ function applySession(session, skipWsAuth = false) {
  */
 async function updateSidebarMemberCount() {
   try {
-    const res = await fetch('/api/users/count');
+    const realm = state.user.realm || '';
+    const res = await fetch(`/api/users/count?realm=${encodeURIComponent(realm)}`);
     if (res.ok) {
       const data = await res.json();
       const el = document.getElementById('sidebarMemberCount');

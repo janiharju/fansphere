@@ -1482,7 +1482,11 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
 
 // Users Count
 app.get('/api/users/count', async (req, res) => {
-  const users = await fetchAllUsersFromFirestore();
+  const realm = req.query.realm as string | undefined;
+  let users = await fetchAllUsersFromFirestore();
+  if (realm) {
+    users = users.filter(u => u.realm === realm);
+  }
   res.json({ count: users.length });
 });
 
