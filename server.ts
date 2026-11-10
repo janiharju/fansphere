@@ -1480,6 +1480,12 @@ app.post('/api/admin/realms', requireAdminAuth, (req, res) => {
   res.status(201).json({ success: true, realm: newRealm, realms: state.realms });
 });
 
+// Users Count
+app.get('/api/users/count', async (req, res) => {
+  const users = await fetchAllUsersFromFirestore();
+  res.json({ count: users.length });
+});
+
 // Admin: Update Club Realm
 app.put('/api/admin/realms/:id', requireAdminAuth, (req, res) => {
   const targetIdStr = String(req.params.id || '').trim().toLowerCase();

@@ -656,7 +656,21 @@ function applySession(session, skipWsAuth = false) {
  * - Refreshes active post detail modal if open
  * - Synchronizes realm indicators and profile inputs
  */
+async function updateSidebarMemberCount() {
+  try {
+    const res = await fetch('/api/users/count');
+    if (res.ok) {
+      const data = await res.json();
+      const el = document.getElementById('sidebarMemberCount');
+      if (el) el.textContent = data.count.toLocaleString();
+    }
+  } catch (err) {
+    console.warn('Failed to fetch user count:', err);
+  }
+}
+
 async function refreshAllContent() {
+  updateSidebarMemberCount();
   // Clear feed and chat render keys/caches to force a fresh render
   const postsContainer = document.getElementById('postsList');
   if (postsContainer) {
@@ -3695,6 +3709,12 @@ function initPWA() {
           <div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           <span>Updating...</span>
         `;
+        // Hide the banner immediately when update starts
+        if (updateBanner) {
+          updateBanner.classList.add('hidden');
+          updateBanner.classList.remove('flex');
+        }
+        
         if (worker) {
           worker.postMessage({ type: 'SKIP_WAITING' });
         } else if (swRegistration && swRegistration.waiting) {
