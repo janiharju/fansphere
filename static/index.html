@@ -290,35 +290,22 @@
     <!-- ================= COLUMN 2: CENTER (REDDIT-LIKE FORUM, PAGINATED ZERO-SCROLL) ================= -->
     <section id="centerForum" class="col-span-1 lg:col-span-4 flex flex-col gap-2 h-full min-h-0 overflow-hidden">
       
-      <!-- Forum Top Bar: Create Post CTA -->
-      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm shrink-0">
-        <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-red-600/30 text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
-            ✍️
-          </div>
-          <button id="openCreatePostBtn" class="flex-1 bg-slate-900/80 hover:bg-slate-900 text-slate-400 hover:text-slate-200 text-left px-3 py-1.5 rounded-xl border border-slate-700 text-xs transition flex items-center justify-between">
-            <span class="truncate">Share thoughts, tactics, news...</span>
-            <span class="bg-red-600 text-white font-semibold text-[10px] px-2 py-0.5 rounded-md shadow-sm ml-1 shrink-0">Post</span>
-          </button>
-          <!-- Active Tag Badge / Reset (shown when filtering by category) -->
-          <div id="activeTagIndicator" class="hidden text-[10px] text-slate-400 items-center gap-1 bg-slate-700/60 px-2 py-1 rounded-lg shrink-0">
-            <span>Topic:</span>
-            <span id="activeTagName" class="text-red-400 font-semibold truncate max-w-[80px]">Match</span>
-            <button id="clearTagFilterBtn" class="text-slate-400 hover:text-white font-bold ml-0.5">✕</button>
-          </div>
-        </div>
-      </div>
+      <!-- Forum Top Bar: Horizontal Layout -->
+      <div class="flex flex-row gap-2 shrink-0">
+        <!-- New Post Button -->
+        <button id="openCreatePostBtn" class="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-xl border border-red-500 shadow-sm transition h-10 w-10 shrink-0">
+          <i data-lucide="pencil" class="w-4 h-4"></i>
+        </button>
 
-      <!-- Forum Search Bar: Filter posts & comments in current realm with type filters -->
-      <div id="forumSearchBarWrapper" class="bg-slate-800/95 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm shrink-0 flex flex-col gap-2">
-        <!-- Top Search Row: Input + Type Dropdown -->
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1 flex items-center">
+        <!-- Forum Search Bar -->
+        <div id="forumSearchBarWrapper" class="flex-1 bg-slate-800/95 rounded-2xl p-2.5 border border-slate-700/80 shadow-sm flex flex-col gap-2">
+          <!-- Top Search Row: Input -->
+          <div class="relative flex items-center">
             <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none"></i>
             <input 
               type="text" 
               id="forumSearchInput" 
-              placeholder="Search posts & comments in this realm..." 
+              placeholder="Search posts..." 
               class="w-full bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 rounded-xl pl-8 pr-8 py-1.5 text-xs focus:outline-none focus:border-red-500 transition shadow-inner"
               autocomplete="off"
               spellcheck="false"
@@ -332,23 +319,25 @@
               ✕
             </button>
           </div>
-          <div class="shrink-0 flex items-center">
-            <select id="forumSearchTypeSelect" class="bg-slate-900 border border-slate-700/80 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-red-500 cursor-pointer font-medium transition shadow-inner" title="Filter by post type">
-              <option value="All">All Types</option>
-              <option value="Match Thread">🔥 Match Thread</option>
-              <option value="Discussion">💬 Discussion</option>
-              <option value="Tactics">📋 Tactics</option>
-              <option value="Transfers">🔄 Transfers</option>
-              <option value="Meetups">🍻 Meetups</option>
-              <option value="Memes">😂 Memes</option>
-            </select>
+          
+          <!-- Search Status & Quick Reset -->
+          <div id="forumSearchStats" class="hidden items-center justify-between text-[10px] text-slate-400 px-1 pt-1 border-t border-slate-700/50">
+            <span id="forumSearchStatsText">Found 0 discussions</span>
+            <button type="button" id="resetForumSearchLink" class="text-red-400 hover:text-red-300 hover:underline cursor-pointer font-medium">Reset all filters</button>
           </div>
         </div>
 
-        <!-- Search Status & Quick Reset -->
-        <div id="forumSearchStats" class="hidden items-center justify-between text-[10px] text-slate-400 px-1 pt-1 border-t border-slate-700/50">
-          <span id="forumSearchStatsText">Found 0 discussions</span>
-          <button type="button" id="resetForumSearchLink" class="text-red-400 hover:text-red-300 hover:underline cursor-pointer font-medium">Reset all filters</button>
+        <!-- Type Dropdown (Fixed Width) -->
+        <div class="shrink-0 flex items-center h-10">
+          <select id="forumSearchTypeSelect" class="bg-slate-800/95 border border-slate-700/80 text-slate-200 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-red-500 cursor-pointer font-medium transition shadow-sm h-full" title="Filter by post type">
+            <option value="All">All Types</option>
+            <option value="Match Thread">🔥 Match</option>
+            <option value="Discussion">💬 Discussion</option>
+            <option value="Tactics">📋 Tactics</option>
+            <option value="Transfers">🔄 Transfers</option>
+            <option value="Meetups">🍻 Meetups</option>
+            <option value="Memes">😂 Memes</option>
+          </select>
         </div>
       </div>
 
