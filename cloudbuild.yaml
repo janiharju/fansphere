@@ -35,75 +35,74 @@ steps:
         done
 
         # Compare and merge all available stores (remote live + workspace local) so no posts are ever lost
-python3 -c "
-import json, os
+        python3 -c "
+        import json, os
 
-def load(f):
-    if os.path.exists(f):
-        try:
-            with open(f) as fp:
-                d = json.load(fp)
-                if isinstance(d, dict) and 'posts' in d:
-                    return d
-        except Exception:
-            pass
-    return None
-"
+        def load(f):
+            if os.path.exists(f):
+                try:
+                    with open(f) as fp:
+                        d = json.load(fp)
+                        if isinstance(d, dict) and 'posts' in d:
+                            return d
+                except Exception:
+                    pass
+            return None
 
-files = ['/workspace/backup_check/remote_store.json', 'data/store.json', 'data/store.backup.json']
-stores = [s for s in [load(f) for f in files] if s]
-
-if stores:
-    posts_map = {}
-    comments_map = {}
-    chat_map = {}
-    sessions_map = {}
-    realms_map = {}
-    max_post_id = 1
-    max_comment_id = 1
-    max_chat_id = 1
-
-    for s in stores:
-        for p in s.get('posts', []):
-            if p and 'id' in p:
-                pid = p['id']
-                posts_map[pid] = p
-                max_post_id = max(max_post_id, pid + 1)
-        for c in s.get('comments', []):
-            if c and 'id' in c:
-                cid = c['id']
-                comments_map[cid] = c
-                max_comment_id = max(max_comment_id, cid + 1)
-        for m in s.get('chatMessages', []):
-            if m and 'id' in m:
-                mid = m['id']
-                chat_map[mid] = m
-                max_chat_id = max(max_chat_id, mid + 1)
-        for sess in s.get('sessions', []):
-            if sess and 'id' in sess:
-                sessions_map[sess['id']] = sess
-        for r in s.get('realms', []):
-            if r and 'id' in r:
-                realms_map[r['id']] = r
-
-    merged = {
-        'posts': sorted(posts_map.values(), key=lambda x: x.get('id', 0), reverse=True),
-        'comments': sorted(comments_map.values(), key=lambda x: x.get('id', 0)),
-        'chatMessages': sorted(chat_map.values(), key=lambda x: x.get('id', 0)),
-        'sessions': list(sessions_map.values()),
-        'realms': list(realms_map.values()),
-        'nextPostId': max(max_post_id, 11),
-        'nextCommentId': max(max_comment_id, 12),
-        'nextChatId': max(max_chat_id, 18)
-    }
-
-    os.makedirs('/workspace/data', exist_ok=True)
-    with open('/workspace/data/store.json', 'w') as fp:
-        json.dump(merged, fp, indent=2)
-    with open('/workspace/data/store.backup.json', 'w') as fp:
-        json.dump(merged, fp, indent=2)
-    print(f'Preserved and merged store with {len(merged[\"posts\"])} posts, {len(merged[\"comments\"])} comments, and {len(merged[\"chatMessages\"])} chat messages.')
-"
+        files = ['/workspace/backup_check/remote_store.json', 'data/store.json', 'data/store.backup.json']
+        stores = [s for s in [load(f) for f in files] if s]
+        
+        if stores:
+            posts_map = {}
+            comments_map = {}
+            chat_map = {}
+            sessions_map = {}
+            realms_map = {}
+            max_post_id = 1
+            max_comment_id = 1
+            max_chat_id = 1
+        
+            for s in stores:
+                for p in s.get('posts', []):
+                    if p and 'id' in p:
+                        pid = p['id']
+                        posts_map[pid] = p
+                        max_post_id = max(max_post_id, pid + 1)
+                for c in s.get('comments', []):
+                    if c and 'id' in c:
+                        cid = c['id']
+                        comments_map[cid] = c
+                        max_comment_id = max(max_comment_id, cid + 1)
+                for m in s.get('chatMessages', []):
+                    if m and 'id' in m:
+                        mid = m['id']
+                        chat_map[mid] = m
+                        max_chat_id = max(max_chat_id, mid + 1)
+                for sess in s.get('sessions', []):
+                    if sess and 'id' in sess:
+                        sessions_map[sess['id']] = sess
+                for r in s.get('realms', []):
+                    if r and 'id' in r:
+                        realms_map[r['id']] = r
+        
+            merged = {
+                'posts': sorted(posts_map.values(), key=lambda x: x.get('id', 0), reverse=True),
+                'comments': sorted(comments_map.values(), key=lambda x: x.get('id', 0)),
+                'chatMessages': sorted(chat_map.values(), key=lambda x: x.get('id', 0)),
+                'sessions': list(sessions_map.values()),
+                'realms': list(realms_map.values()),
+                'nextPostId': max(max_post_id, 11),
+                'nextCommentId': max(max_comment_id, 12),
+                'nextChatId': max(max_chat_id, 18)
+            }
+        
+            os.makedirs('/workspace/data', exist_ok=True)
+            with open('/workspace/data/store.json', 'w') as fp:
+                json.dump(merged, fp, indent=2)
+            with open('/workspace/data/store.backup.json', 'w') as fp:
+                json.dump(merged, fp, indent=2)
+            print(f'Preserved and merged store with {len(merged[\"posts\"])} posts, {len(merged[\"comments\"])} comments, and {len(merged[\"chatMessages\"])} chat messages.')
+        "
 
         echo "Data preservation check complete. Active store.json verified."
 
