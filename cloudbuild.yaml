@@ -6,7 +6,7 @@ steps:
       - '-c'
       - |
         set -e
-        mkdir -p data /workspace/backup_check
+        mkdir -p /workspace/data /workspace/backup_check
         echo "=== [Publish Step 1] Checking live platform data preservation ==="
 
         # Try to dynamically query the live Cloud Run service URL in project
@@ -96,10 +96,10 @@ if stores:
         'nextChatId': max(max_chat_id, 18)
     }
 
-    os.makedirs('data', exist_ok=True)
-    with open('data/store.json', 'w') as fp:
+    os.makedirs('/workspace/data', exist_ok=True)
+    with open('/workspace/data/store.json', 'w') as fp:
         json.dump(merged, fp, indent=2)
-    with open('data/store.backup.json', 'w') as fp:
+    with open('/workspace/data/store.backup.json', 'w') as fp:
         json.dump(merged, fp, indent=2)
     print(f'Preserved and merged store with {len(merged[\"posts\"])} posts, {len(merged[\"comments\"])} comments, and {len(merged[\"chatMessages\"])} chat messages.')
 "
