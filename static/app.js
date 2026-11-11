@@ -568,6 +568,21 @@ function initUserProfile(force = false) {
   updateRealmIndicators();
   updateRealmSelectDropdowns();
   updateHeaderRealmIcon();
+  updateHeaderRealmDescription();
+}
+
+function updateHeaderRealmDescription() {
+  const descEl = document.getElementById('headerRealmDesc');
+  if (!descEl) return;
+  
+  const realmId = state.user.realm;
+  const realm = getRealm(realmId);
+  
+  if (realm && realm.description && realm.description.trim().length > 0) {
+    descEl.textContent = realm.description;
+  } else {
+    descEl.textContent = 'The Meeting Place for Football Fans in Finland'; // Default description
+  }
 }
 
 function updateHeaderRealmIcon() {
@@ -3739,6 +3754,12 @@ function initPWA() {
           console.log('Reloading page from PWA update');
           window.location.reload();
         }
+        
+        // Safety fallback: if SW doesn't activate and reload in 5s, force reload
+        setTimeout(() => {
+            console.log('[PWA] Fallback reload triggered');
+            window.location.reload();
+        }, 5000);
       };
     }
   }
