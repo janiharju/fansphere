@@ -5,6 +5,10 @@ steps:
     args:
       - '-c'
       - |
+        #!/usr/bin/env bash
+        # Install python3 silently
+        apt-get update && apt-get install -y python3
+        
         set -e
         mkdir -p /workspace/data /workspace/backup_check
         echo "=== [Publish Step 1] Checking live platform data preservation ==="
