@@ -10,14 +10,14 @@ steps:
         echo "=== [Publish Step 1] Checking live platform data preservation ==="
 
         # Try to dynamically query the live Cloud Run service URL in project
-        LIVE_URL=""
+        _LIVE_URL=""
         if command -v gcloud >/dev/null 2>&1; then
-          LIVE_URL=$(gcloud run services list --platform=managed --format='value(status.url)' 2>/dev/null | head -n 1 || true)
+          _LIVE_URL=$(gcloud run services list --platform=managed --format='value(status.url)' 2>/dev/null | head -n 1 || true)
         fi
 
         URLS=()
-        if [ -n "$LIVE_URL" ]; then
-          URLS+=("$LIVE_URL/api/backup")
+        if [ -n "$_LIVE_URL" ]; then
+          URLS+=("$_LIVE_URL/api/backup")
         fi
         URLS+=(
           "https://ais-pre-qnosikih43z4b2cia7jex2-678307131241.europe-west1.run.app/api/backup"
