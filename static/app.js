@@ -2070,10 +2070,7 @@ function scrollChatToBottom(force = false) {
     }
 
     if (isAtBottom) {
-      const toggle = document.getElementById('autoScrollToggle');
-      if (!toggle || toggle.checked) {
-        container.scrollTop = container.scrollHeight;
-      }
+      container.scrollTop = container.scrollHeight;
     }
   }
 }
