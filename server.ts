@@ -1653,12 +1653,7 @@ app.get('/admin', (_req, res) => {
   res.sendFile(path.join(staticDir, 'admin.html'));
 });
 
-app.get('/admin/*', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.sendFile(path.join(staticDir, 'admin.html'));
-});
+
 
 app.get('/', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -2054,7 +2049,7 @@ const PORT = 3000;
 const HOST = '0.0.0.0';
 
 // Catch-all for other non-API routes
-app.get('*', (req, res, next) => {
+app.use((req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/ws')) {
     return next();
   }
