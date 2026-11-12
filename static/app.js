@@ -3283,10 +3283,6 @@ function initEventHandlers() {
     persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
   });
 
-  document.getElementById('profileFlairInput')?.addEventListener('change', (e) => {
-    setRealmFilter(e.target.value);
-    persistProfileSessionChanges({ closeOnSuccess: false, isBlur: true });
-  });
 
   // Explicit Form Submission
   document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
